@@ -1,8 +1,0 @@
-Flask==2.3.2
-Flask-Cors==4.0.0
-moviepy==1.0.3
-requests==2.31.0
-pydub==0.25.1
-deep-translator==1.11.4
-proglog==0.1.10
-Pillow==9.5.0
