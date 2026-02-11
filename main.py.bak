@@ -1,4 +1,4 @@
-# Quran Reels Generator - Final Version (Safe Filter & Temp Storage)
+# Quran Reels Generator - Final Fixes (Natural Audio Flow & Random Video Fix)
 # ==========================================
 import PIL.Image
 if not hasattr(PIL.Image, 'ANTIALIAS'):
@@ -48,7 +48,7 @@ else:
 
 IM_HOME = os.path.dirname(IM_MAGICK_EXE) if os.path.isabs(IM_MAGICK_EXE) else ""
 
-# 📂 المجلدات (تخزين مؤقت)
+# 📂 المجلدات
 TEMP_DIR = os.path.join(EXEC_DIR, "temp_videos")
 VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
@@ -154,15 +154,17 @@ def download_audio(reciter_id, surah, ayah, idx):
             for chunk in r.iter_content(8192): f.write(chunk)
         
         snd = AudioSegment.from_file(out)
+        # 🔧 ضبط قص الصمت: لا تقص بعنف (عشان نسيب مساحة للنفس)
         start = detect_silence(snd, snd.dBFS-20) 
         end = detect_silence(snd.reverse(), snd.dBFS-20)
         
         trimmed = snd
         if start + end < len(snd):
+            # ترك مسافة أمان صغيرة (50ms) عشان الكلام مايتقطعش
             trimmed = snd[max(0, start-50):len(snd)-max(0, end-50)]
             
-        final_snd = trimmed.fade_in(20).fade_out(20)
-        final_snd.export(out, format='mp3')
+        # ❌ إلغاء الـ Fade Out لأنه هو اللي بيعمل صوت "الراديو اللي بيقطع"
+        trimmed.export(out, format='mp3')
         
     except Exception as e: raise ValueError(f"فشل تحميل الآية {ayah}")
     return out
@@ -211,42 +213,42 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0):
     ).set_duration(duration)
     return en_clip.fadein(0.25).fadeout(0.25)
 
-# === 🎥 الخلفيات (الفلتر الآمن الجديد) ===
+# === 🎥 الخلفيات (تعديل العشوائية) ===
 LAST_BG = None
 def pick_bg(user_key, custom_query=None):
     global LAST_BG
     if not user_key: return None
     try:
-        # 🎲 صفحة عشوائية
+        # 🎲 صفحة عشوائية للتنويع
         rand_page = random.randint(1, 10)
         
-        # 🛡️ فلتر الأمان: "no people" لإبعاد البشر
+        # 🛡️ فلتر الأمان: إضافة "no people" لإجبار الموقع على استبعاد الأشخاص
         safe_filter = " no people"
 
         if custom_query and custom_query.strip():
-            # ترجمة وإضافة الفلتر
+            # ترجمة بحث المستخدم وإضافة الفلتر
             trans_q = GoogleTranslator(source='auto', target='en').translate(custom_query.strip())
             q = trans_q + safe_filter
             add_log(f'🔍 بحث مخصص (فلتر آمن): {q}')
         else:
-            # قائمة كلمات "نظيفة" تماماً (جمادات وطبيعة فقط)
+            # قائمة كلمات مفتاحية "نظيفة" تماماً (جمادات وطبيعة فقط)
             safe_topics = [
                 'nature landscape',      # مناظر طبيعية
-                'mosque architecture',   # مساجد (مباني فقط)
-                'sky clouds timelapse',  # سحاب
-                'galaxy stars space',    # فضاء
-                'flowers garden macro',  # زهور
-                'ocean waves drone',     # بحر (تصوير جوي)
+                'mosque architecture',   # عمارة مساجد (بدون مصلين)
+                'sky clouds timelapse',  # سحب وحركة سماء
+                'galaxy stars space',    # فضاء ونجوم
+                'flowers garden macro',  # زهور عن قرب
+                'ocean waves drone',     # أمواج بحر (تصوير جوي)
                 'waterfall slow motion', # شلالات
-                'desert dunes',          # صحراء
-                'forest trees fog',      # غابة وضباب
-                'islamic geometric art'  # فن إسلامي
+                'desert dunes',          # كثبان رملية
+                'forest trees fog',      # غابات وضباب
+                'islamic geometric art'  # فن إسلامي هندسي
             ]
             q = random.choice(safe_topics) + safe_filter
             add_log(f'🎲 خلفية عشوائية (آمنة): {q}')
 
         headers = {'Authorization': user_key}
-        # 🚀 طلب 15 فيديو في الصفحة لضمان التنوع
+        # 🚀 البحث بالفلتر الجديد
         r = requests.get(f"https://api.pexels.com/videos/search?query={q}&per_page=15&page={rand_page}&orientation=portrait", headers=headers, timeout=15)
         
         if r.status_code == 401:
@@ -254,8 +256,8 @@ def pick_bg(user_key, custom_query=None):
             return None
             
         vids = r.json().get('videos', [])
-        # محاولة احتياطية بدون تحديد الصفحة
-        if not vids:
+        if not vids: 
+             # محاولة احتياطية بدون تحديد الصفحة لو لم نجد نتائج
              r = requests.get(f"https://api.pexels.com/videos/search?query={q}&per_page=15&orientation=portrait", headers=headers, timeout=15)
              vids = r.json().get('videos', [])
 
@@ -289,6 +291,7 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         last = min(end if end else start+9, max_ayah)
         
         items = []
+        # 🎵 مصفوفة لتجميع الصوت بشكل متصل
         full_audio_seg = AudioSegment.empty()
         
         for i, ayah in enumerate(range(start, last+1), 1):
@@ -300,7 +303,9 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
             ar_txt = f"{get_text(surah, ayah)} ({ayah})"
             en_txt = get_en_text(surah, ayah)
             
+            # دمج الصوت (Crossfade)
             seg = AudioSegment.from_file(ap)
+            # إضافة الآية الجديدة فوق نهاية اللي قبلها بـ 100ms عشان اللحام يكون ناعم
             full_audio_seg = full_audio_seg.append(seg, crossfade=100) if len(full_audio_seg) > 0 else seg
 
             clip_dur = seg.duration_seconds 
