@@ -11,11 +11,12 @@ RUN apt-get update && \
     fonts-noto-color-emoji && \
     rm -rf /var/lib/apt/lists/*
 
-# 2. 🚨 الخطوة الحاسمة (كسر الحماية):
-# الأمر ده بيدخل جوه ملف الإعدادات ويحول أي كلمة "none" (ممنوع) لـ "read|write" (مسموح)
-# ده هيحل مشكلة TXT ومشكلة @ ومشكلة PDF مرة واحدة
-RUN sed -i 's/rights="none"/rights="read|write"/g' /etc/ImageMagick-6/policy.xml
+# تثبيت ImageMagick
+RUN apt-get update && apt-get install -y imagemagick
 
+# تعديل سياسة الأمان للسماح لـ ImageMagick بقراءة وكتابة الملفات (مهم جداً لـ MoviePy)
+RUN sed -i 's/domain="coder" rights="none" pattern="PDF"/domain="coder" rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml || true
+RUN sed -i 's/domain="path" rights="none" pattern="@\*"/domain="path" rights="read|write" pattern="@\*"/' /etc/ImageMagick-6/policy.xml || true
 # 3. إعداد مجلدات العمل
 WORKDIR /app
 
