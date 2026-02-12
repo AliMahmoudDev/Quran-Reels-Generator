@@ -401,5 +401,6 @@ def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 
 @app.route('/outputs/<path:f>')
 def out(f): return send_from_directory(TEMP_DIR, f)
 
-if __name__ == '__main__':
-    app.run(port=5000, threaded=True)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host='0.0.0.0', port=port)
