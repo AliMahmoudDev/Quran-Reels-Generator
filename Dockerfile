@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y \
 RUN rm /etc/ImageMagick-6/policy.xml || rm /etc/ImageMagick-7/policy.xml
 
 # تأكد من وجود المجلد المؤقت ومنحه الصلاحيات
-RUN mkdir -p /app/my_temp && chmod 777 /app/my_temp# 3. إعداد مجلدات العمل
+RUN mkdir -p /app/my_temp && chmod 777 /app/my_temp
 WORKDIR /app
 
 # 4. نسخ ملفات المشروع وتثبيت المكتبات
