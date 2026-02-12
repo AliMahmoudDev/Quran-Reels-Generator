@@ -42,35 +42,41 @@ logging.basicConfig(filename=log_path, level=logging.INFO, format='%(asctime)s -
 # ==========================================
 # Paths - Docker Fixed Version
 # ==========================================
+# ==========================================
+# Paths (تعديل خاص للدوكر عشان الأخطاء تختفي)
+# ==========================================
+import os
+from moviepy.config import change_settings
+
+# 1. إعداد FFMPEG
 FFMPEG_EXE = "ffmpeg"
+os.environ["FFMPEG_BINARY"] = FFMPEG_EXE
 
-# في بيئة Docker القياسية، هذا هو المسار الصحيح دائماً
-IM_MAGICK_EXE = "/usr/bin/convert" 
+# 2. إعداد ImageMagick (ده الحل للمشكلة اللي بتطلعلك)
+# في الدوكر، المسار دايماً بيكون ده، فمش محتاجين دالة if/else
+IM_MAGICK_EXE = "/usr/bin/convert"
+change_settings({"IMAGEMAGICK_BINARY": IM_MAGICK_EXE})
 
-# باقي الكود كما هو...
-IM_HOME = "" 
+# 3. تعريف المجلدات (زي ما كانت عندك، بس متأكدين إنها جوه app/)
+# بما إننا جوه Docker والمجلد اسمه /app
+BASE_DIR = "/app"
 
-# 📂 المجلدات (تخزين مؤقت)
-TEMP_DIR = "/app/temp_videos" # استخدام مسار ثابت ومباشر
-VISION_DIR = "/app/vision"
-UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
-INTERNAL_AUDIO_DIR = "/app/temp_audio"
-FONT_DIR = os.path.join(EXEC_DIR, "fonts")
+TEMP_DIR = os.path.join(BASE_DIR, "temp_videos")
+VISION_DIR = os.path.join(BASE_DIR, "vision")
+INTERNAL_AUDIO_DIR = os.path.join(BASE_DIR, "temp_audio")
+
+# 4. تعريف الخطوط (مهم جداً متتمسحش)
+FONT_DIR = os.path.join(BASE_DIR, "fonts")
 FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Arabic.ttf") 
 FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
+
 FINAL_AUDIO_PATH = os.path.join(INTERNAL_AUDIO_DIR, "combined_final.mp3")
 
+# التأكد من إنشاء المجلدات
 for d in [TEMP_DIR, INTERNAL_AUDIO_DIR, FONT_DIR, VISION_DIR]:
     os.makedirs(d, exist_ok=True)
 
-# Env
-os.environ["FFMPEG_BINARY"] = FFMPEG_EXE
-os.environ["IMAGEIO_FFMPEG_EXE"] = FFMPEG_EXE
-os.environ["IMAGEMAGICK_BINARY"] = IM_MAGICK_EXE
-os.environ["MAGICK_HOME"] = IM_HOME
-os.environ["MAGICK_CONFIGURE_PATH"] = IM_HOME
-os.environ["MAGICK_CODER_MODULE_PATH"] = os.path.join(IM_HOME, "modules", "coders")
-os.environ["PATH"] = os.pathsep.join([os.environ.get("PATH", ""), IM_HOME])
+# ربط المكتبات ببعض
 AudioSegment.converter = FFMPEG_EXE
 AudioSegment.ffmpeg = FFMPEG_EXE
 AudioSegment.ffprobe = "ffprobe"
@@ -406,4 +412,5 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port)
+
 
