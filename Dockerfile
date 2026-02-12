@@ -12,12 +12,17 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # تثبيت ImageMagick
-RUN apt-get update && apt-get install -y imagemagick
+# تثبيت ImageMagick والمكتبات المساعدة
+RUN apt-get update && apt-get install -y \
+    imagemagick \
+    ghostscript \
+    --no-install-recommends
 
-# تعديل سياسة الأمان للسماح لـ ImageMagick بقراءة وكتابة الملفات (مهم جداً لـ MoviePy)
-RUN sed -i 's/domain="coder" rights="none" pattern="PDF"/domain="coder" rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml || true
-RUN sed -i 's/domain="path" rights="none" pattern="@\*"/domain="path" rights="read|write" pattern="@\*"/' /etc/ImageMagick-6/policy.xml || true
-# 3. إعداد مجلدات العمل
+# الحل الجذري: إزالة ملف السياسة الذي يمنع MoviePy من العمل
+RUN rm /etc/ImageMagick-6/policy.xml || rm /etc/ImageMagick-7/policy.xml
+
+# تأكد من وجود المجلد المؤقت ومنحه الصلاحيات
+RUN mkdir -p /app/my_temp && chmod 777 /app/my_temp# 3. إعداد مجلدات العمل
 WORKDIR /app
 
 # 4. نسخ ملفات المشروع وتثبيت المكتبات
