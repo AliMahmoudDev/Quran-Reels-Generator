@@ -39,20 +39,22 @@ BUNDLE_DIR = bundled_dir()
 log_path = os.path.join(EXEC_DIR, "runlog.txt")
 logging.basicConfig(filename=log_path, level=logging.INFO, format='%(asctime)s - %(message)s', force=True)
 
-# Paths
+# ==========================================
+# Paths - Docker Fixed Version
+# ==========================================
 FFMPEG_EXE = "ffmpeg"
-if os.path.exists("/data/data/com.termux/files/usr/bin/magick"):
-    IM_MAGICK_EXE = "/data/data/com.termux/files/usr/bin/magick"
-else:
-    IM_MAGICK_EXE = shutil.which("magick") or shutil.which("convert") or "magick"
 
-IM_HOME = os.path.dirname(IM_MAGICK_EXE) if os.path.isabs(IM_MAGICK_EXE) else ""
+# في بيئة Docker القياسية، هذا هو المسار الصحيح دائماً
+IM_MAGICK_EXE = "/usr/bin/convert" 
+
+# باقي الكود كما هو...
+IM_HOME = "" 
 
 # 📂 المجلدات (تخزين مؤقت)
-TEMP_DIR = os.path.join(EXEC_DIR, "temp_videos")
-VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
+TEMP_DIR = "/app/temp_videos" # استخدام مسار ثابت ومباشر
+VISION_DIR = "/app/vision"
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
-INTERNAL_AUDIO_DIR = os.path.join(EXEC_DIR, "temp_audio")
+INTERNAL_AUDIO_DIR = "/app/temp_audio"
 FONT_DIR = os.path.join(EXEC_DIR, "fonts")
 FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Arabic.ttf") 
 FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
@@ -404,3 +406,4 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port)
+
