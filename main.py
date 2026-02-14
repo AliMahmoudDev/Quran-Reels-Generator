@@ -197,11 +197,13 @@ def wrap_text(text, per_line):
 # === 🎨 دوال إنشاء النصوص (مع إصلاح العربي) ===
 
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
-    # 1. تعريف المتغيرات الأساسية (هنا بنحل مشكلة name 'box_w' is not defined)
-    box_w = int(target_w * 0.9) #
+    # مسار الخط اللي أنت قلت إنه مضمون
+    font_path = os.path.join(EXEC_DIR, "fonts", "Amiri-Regular.ttf")
     
+    # 1. تجهيز الخط
     words = arabic.split()
     wc = len(words)
+    # تظبيط حجم الخط حسب عدد الكلمات
     if wc > 60: base_fs, pl = 27, 10
     elif wc > 40: base_fs, pl = 32, 9
     elif wc > 25: base_fs, pl = 38, 8
@@ -209,28 +211,34 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     else: base_fs, pl = 45, 6
     
     final_fs = int(base_fs * scale_factor)
-
-    # 2. تحميل الخط
+    
     try:
-        font = ImageFont.truetype(FONT_PATH_ARABIC, final_fs)
+        font = ImageFont.truetype(font_path, final_fs)
     except:
+        # لو الخط مش موجود، استخدم الديفولت (بس هيطلع مربعات لو مفيش عربي)
+        print("Font not found, using default")
         font = ImageFont.load_default()
 
-    # 3. معالجة النص (Reshape -> Bidi)
-    # بنستخدم الـ wrap قبل المعالجة لضمان ترتيب الأسطر
-    wrapped_raw = wrap_text(arabic, pl)
-    reshaped_text = arabic_reshaper.reshape(wrapped_raw)
-    bidi_text = get_display(reshaped_text)
-    lines = bidi_text.split('\n')
+    # 2. اللغز كله هنا (تشبيك الحروف + عكس الاتجاه)
+    # أولاً: بنعمل wrap للنص عشان نقسمه أسطر
+    wrapped_text = wrap_text(arabic, pl)
+    
+    # ثانياً: بنطبق المعالجة على النص كله مرة واحدة
+    reshaped_text = arabic_reshaper.reshape(wrapped_text) # بيشبك الحروف
+    bidi_text = get_display(reshaped_text) # بيظبط الاتجاه يمين لشمال
 
-    # 4. حساب أبعاد الصورة الكلية
+    # 3. الرسم
     dummy_img = Image.new('RGBA', (target_w, 1000))
     draw = ImageDraw.Draw(dummy_img)
     
-    max_line_w = 0
+    # تقسيم النص لأسطر للرسم
+    lines = bidi_text.split('\n')
+    
     total_h = 0
     line_heights = []
+    max_line_w = 0
     
+    # حساب الأبعاد
     for line in lines:
         bbox = draw.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
@@ -239,24 +247,23 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
         line_heights.append(line_h + 20)
         total_h += line_h + 20
 
+    box_w = int(target_w * 0.9)
     img_w = max(box_w, int(max_line_w + 40))
     img_h = int(total_h + 40)
     
     final_image = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw_final = ImageDraw.Draw(final_image)
 
-    # 5. الرسم (إضافة ظل بسيط لتحسين الرؤية)
     current_y = 20
     for i, line in enumerate(lines):
         bbox = draw_final.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         start_x = (img_w - line_w) // 2
         
-        # رسم ظل خفيف (اختياري)
-        draw_final.text((start_x+2, current_y+2), line, font=font, fill=(0,0,0,150))
+        # رسم ظل خفيف (عشان الكلام يبان في الخلفيات الفاتحة)
+        draw_final.text((start_x+2, current_y+2), line, font=font, fill=(0,0,0,120))
         # رسم النص الأصلي
         draw_final.text((start_x, current_y), line, font=font, fill='white')
-        
         current_y += line_heights[i]
 
     np_img = np.array(final_image)
@@ -521,6 +528,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
