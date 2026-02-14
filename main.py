@@ -42,8 +42,6 @@ def app_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
 EXEC_DIR = app_dir()
-# BUNDLE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))) 
-# ^^^ تم التعديل: استخدام EXEC_DIR مباشرة لتجنب مشاكل المسارات في Hugging Face
 BUNDLE_DIR = EXEC_DIR 
 
 FFMPEG_EXE = "ffmpeg"
@@ -204,7 +202,6 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     try: font = ImageFont.truetype(font_path, final_fs)
     except: font = ImageFont.load_default()
 
-    # المعالجة الصحيحة للعربي
     try:
         wrapped_lines = wrap_text(arabic, pl).split('\n')
         processed_lines = []
@@ -298,7 +295,6 @@ def build_video(uid, user_pexels_key, reciter_id, surah, start, end=None, qualit
     success = False
     
     try:
-        # ⚠️ (ملاحظة: تم نقل is_running=True إلى دالة gen بالأسفل لحل مشكلة السباق)
         add_log(uid, '🚀 Starting Process...')
         clear_user_outputs(uid)
         
@@ -392,20 +388,31 @@ def gen():
     user_key = d.get('pexelsKey')
     if not user_key: return jsonify({'error': 'Pexels API Key Missing'}), 400
 
-    user_data['percent'] = 0; 
+    # 1. إعداد بيانات المستخدم
+    user_data['percent'] = 0
     user_data['status'] = "Preparing..."
     user_data['log'] = []
     
-    # 🔥🔥🔥 التعديل الحاسم هنا 🔥🔥🔥
-    # بنقول للسيرفر إننا شغالين قبل ما نبعت الخيط أصلاً
+    # 🔥 2. أهم تعديل: إجبار الحالة على "True" قبل بدء الخيط 🔥
     user_data['is_running'] = True 
     
-    user_data['is_complete'] = False; user_data['should_stop'] = False; user_data['error'] = None
+    user_data['is_complete'] = False
+    user_data['should_stop'] = False
+    user_data['error'] = None
+
+    # 3. التأكد من صحة الأرقام (Safety Check)
+    try:
+        s_ayah = int(d.get('startAyah', 1))
+        e_ayah = int(d.get('endAyah')) if d.get('endAyah') else None
+    except:
+        user_data['is_running'] = False
+        return jsonify({'error': 'Invalid Ayah Numbers'}), 400
 
     threading.Thread(target=build_video, args=(
-        uid, user_key, d.get('reciter'), int(d.get('surah')), int(d.get('startAyah')), 
-        int(d.get('endAyah')) if d.get('endAyah') else None, d.get('quality', '720'), d.get('bgQuery')
+        uid, user_key, d.get('reciter'), int(d.get('surah')), s_ayah, 
+        e_ayah, d.get('quality', '720'), d.get('bgQuery')
     ), daemon=True).start()
+    
     return jsonify({'ok': True})
 
 @app.route('/api/cancel', methods=['POST'])
@@ -421,7 +428,6 @@ def cancel_process():
 def prog():
     uid = request.args.get('uid')
     if uid and uid in users_progress: return jsonify(users_progress[uid])
-    # لو مفيش هوية، رجع جاهز (Ready)
     return jsonify({'percent': 0, 'status': 'ready'})
 
 @app.route('/api/config')
