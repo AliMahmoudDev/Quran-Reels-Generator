@@ -124,14 +124,16 @@ class QuranLogger(ProgressBarLogger):
                 percent = int((value / total) * 100)
                 if self.start_time is None: self.start_time = time.time()
                 elapsed = time.time() - self.start_time
+                
                 rem_str = "00:00"
                 if elapsed > 0 and value > 0:
                     rate = value / elapsed 
                     remaining = (total - value) / rate
                     rem_str = str(datetime.timedelta(seconds=int(remaining)))[2:] if remaining > 0 else "00:00"
-                
+
                 current_progress['percent'] = percent
-                current_progress['status'] = f"Processing... {percent}% ({rem_str})"
+                # الرسالة دي بتروح للواجهة، خليناها إنجليزي عشان الأمان
+                current_progress['status'] = f"Exporting... {percent}% ({rem_str})"
 
 # ==========================================
 # 🛠️ دوال المساعدة
@@ -324,9 +326,11 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
     final_audio_clip = None
     bg = None
     success = False
+    
     try:
         current_progress['is_running'] = True
-        add_log('🚀 Starting Process...')
+        # شيلنا الإيموجي والعربي عشان السيرفر ميزعلش
+        add_log('Starting Process...') 
         clear_outputs()
         
         target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
@@ -338,10 +342,11 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         full_audio_seg = AudioSegment.empty()
         
         for i, ayah in enumerate(range(start, last+1), 1):
-            if current_progress.get('should_stop'): raise Exception("Stopped by user")
-            add_log(f'⏳ Processing Ayah {ayah}...')
+            if current_progress.get('should_stop'): raise Exception("Stopped")
+            add_log(f'Processing Ayah {ayah}...')
             
             ap = download_audio(reciter_id, surah, ayah, i)
+            # هنا بنجيب النص العربي عشان الفيديو (ده تمام مفيهوش مشكلة)
             ar_txt = f"{get_text(surah, ayah)} ({ayah})"
             en_txt = get_en_text(surah, ayah)
             
@@ -360,7 +365,7 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         final_audio_clip = AudioFileClip(FINAL_AUDIO_PATH)
         full_dur = final_audio_clip.duration
 
-        add_log('🎨 Merging Background...')
+        add_log('Merging Background...')
         bg_path = pick_bg(user_pexels_key, bg_query)
         if not bg_path: raise ValueError("No background found")
         
@@ -382,6 +387,7 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         y_pos = target_h * 0.40 
         
         for ar, en, dur in items:
+            # دالة create_text_clip هي اللي بتتعامل مع العربي (جوه الفيديو بس)
             ac = create_text_clip(ar, dur, target_w, scale_factor).set_start(curr_t).set_position(('center', y_pos))
             gap = 30 * scale_factor 
             ec = create_english_clip(en, dur, target_w, scale_factor).set_start(curr_t).set_position(('center', y_pos + ac.h + gap))
@@ -389,10 +395,12 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
             curr_t += dur
 
         final = CompositeVideoClip(layers).set_audio(final_audio_clip)
-        fname = f"Quran_{SURAH_NAMES[surah-1]}_{start}-{last}_{quality}p.mp4"
+        
+        # تغيير اسم الملف لأرقام عشان نتفادى خطأ الـ Latin-1
+        fname = f"Quran_{surah}_{start}-{last}_{quality}p.mp4"
         out = os.path.join(TEMP_DIR, fname) 
         
-        add_log('🎬 Rendering Final Video...')
+        add_log('Rendering Final Video...')
         my_logger = QuranLogger()
         final.write_videofile(
             out, fps=15, codec='libx264', audio_bitrate='96k', preset='ultrafast', 
@@ -410,10 +418,7 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         current_progress['error'] = str(e)
         add_log(f"Error: {str(e)}")
     finally:
-        # هنا كان سبب الكراش المخفي (تم التعديل لإنجليزي)
-        print("🧹 Cleaning Memory...") 
-        if success: add_log("🧹 Cleaning Memory...")
-        
+        if success: add_log("Cleaning Memory...")
         current_progress['is_running'] = False
         try:
             if final: final.close()
@@ -464,4 +469,5 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
