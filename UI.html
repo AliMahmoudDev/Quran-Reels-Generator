@@ -369,19 +369,26 @@
                         document.getElementById('barFill').style.width = d.percent + "%";
                         document.getElementById('statusTxt').innerHTML = d.status;
 
-                        if(d.is_complete || d.status.includes("خطأ") || d.status.includes("الإلغاء")) {
+                        // 🔴 التعديل الجوهري هنا: بنشيك على حالة السيرفر الحقيقية (is_running)
+                        // بدل ما نعتمد على الكلمات العربي اللي ممكن تتغير
+                        if (!d.is_running) {
                             clearInterval(poll);
                             stopBtn.style.display = 'none';
                             btn.style.display = 'flex';
-                            if(!d.error && !d.status.includes("الإلغاء")) {
+                            
+                            // لو خلص بنجاح (فيه فيديو)
+                            if (d.is_complete && d.output_path) {
                                 prog.style.display = 'none';
                                 res.style.display = 'block';
-                                if(d.output_path) {
-                                    const filename = d.output_path.split('/').pop();
-                                    document.getElementById('player').src = `/outputs/${filename}`;
-                                    document.getElementById('dlLink').href = `/outputs/${filename}`;
-                                    res.scrollIntoView({behavior: "smooth"});
-                                }
+                                const filename = d.output_path.split('/').pop();
+                                document.getElementById('player').src = `/outputs/${filename}`;
+                                document.getElementById('dlLink').href = `/outputs/${filename}`;
+                                res.scrollIntoView({behavior: "smooth"});
+                            } else {
+                                // لو وقف أو حصل إيرور، بس مش نجاح كامل
+                                // هنخفي البروجرس بس مش هنظهر الفيديو، عشان يرجع يكتب بيانات جديدة
+                                prog.style.display = 'none';
+                                if (d.error) alert("حدث خطأ: " + d.error);
                             }
                         }
                     } catch(e) {}
