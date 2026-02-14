@@ -1,5 +1,9 @@
 # Quran Reels Generator - Full Version (Original Features + Fixes)
 # ==========================================
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
+from moviepy.editor import ImageClip
+
 import PIL.Image
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
@@ -190,6 +194,7 @@ def wrap_text(text, per_line):
 
 # === 🎨 دوال إنشاء النصوص (مع إصلاح العربي) ===
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
+    # 1. إعداد حجم الخط وعدد الكلمات
     words = arabic.split()
     wc = len(words)
     if wc > 60: base_fs, pl = 27, 10
@@ -197,28 +202,55 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     elif wc > 25: base_fs, pl = 38, 8
     elif wc > 15: base_fs, pl = 43, 7
     else: base_fs, pl = 45, 6
+    
     final_fs = int(base_fs * scale_factor)
-    box_w = int(target_w * 0.9)
-
-    # معالجة العربي
+    box_w = int(target_w * 0.9)  # عرض الصندوق
+    
+    # 2. معالجة النص العربي (Reshaping + Bidi)
+    # ملاحظة: تأكد أنك تستخدم arabic_reshaper و get_display كما في كودك الأصلي
     wrapped_text = wrap_text(arabic, pl)
     reshaped_text = arabic_reshaper.reshape(wrapped_text)
     bidi_text = get_display(reshaped_text)
 
-    ar_clip = TextClip(
-        bidi_text, font=FONT_PATH_ARABIC, fontsize=final_fs, 
-        color='white', method='caption', size=(box_w, None), align='center'
-    ).set_duration(duration)
-    return ar_clip.fadein(0.25).fadeout(0.25)
+    # 3. إعداد الخط باستخدام PIL
+    try:
+        font = ImageFont.truetype(FONT_PATH_ARABIC, final_fs)
+    except OSError:
+        # في حالة لم يجد الخط، يستخدم الخط الافتراضي (للتجربة فقط)
+        font = ImageFont.load_default()
+        print(f"Warning: Could not load font at {FONT_PATH_ARABIC}")
 
-def create_english_clip(text, duration, target_w, scale_factor=1.0):
-    final_fs = int(28 * scale_factor)
-    box_w = int(target_w * 0.85)
-    en_clip = TextClip(
-        wrap_text(text, 10), font=FONT_PATH_ENGLISH, fontsize=final_fs, 
-        color='#FFD700', method='caption', size=(box_w, None), align='center'
-    ).set_duration(duration)
-    return en_clip.fadein(0.25).fadeout(0.25)
+    # 4. حساب أبعاد الصورة المطلوبة للنص
+    # ننشئ صورة وهمية لحساب الأبعاد
+    dummy_img = Image.new('RGB', (1, 1))
+    draw = ImageDraw.Draw(dummy_img)
+    
+    # حساب حدود النص (left, top, right, bottom)
+    bbox = draw.textbbox((0, 0), bidi_text, font=font, align='center')
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    
+    # تحديد أبعاد الصورة النهائية (مع هوامش بسيطة)
+    img_w = max(box_w, int(text_width + 20))
+    img_h = int(text_height + 50) 
+
+    # 5. رسم النص فعلياً
+    # RGBA تعني أن الخلفية شفافة (0,0,0,0)
+    img = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    
+    # رسم النص في المنتصف
+    # anchor="mm" تعني Middle-Middle (المنتصف تماماً)
+    draw.text((img_w/2, img_h/2), bidi_text, font=font, fill='white', align='center', anchor="mm")
+
+    # 6. تحويل الصورة إلى كليب فيديو
+    # نحول صورة PIL إلى مصفوفة NumPy لأن MoviePy يتعامل مع المصفوفات
+    np_img = np.array(img)
+    
+    img_clip = ImageClip(np_img).set_duration(duration)
+    
+    # إضافة تأثيرات الظهور والاختفاء
+    return img_clip.fadein(0.25).fadeout(0.25)
 
 # === 🎥 الخلفيات (الفلتر الآمن الجديد - كما كان في الكود الأصلي) ===
 LAST_BG = None
@@ -412,3 +444,4 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
