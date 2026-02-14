@@ -11,8 +11,10 @@ from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import ImageClip, VideoFileClip, AudioFileClip, CompositeVideoClip, ColorClip
 import moviepy.video.fx.all as vfx
 from moviepy.config import change_settings
-import arabic_reshaper
-from bidi.algorithm import get_display
+
+# --- تم إيقاف مكتبات العربي بناءً على طلبك ---
+# import arabic_reshaper
+# from bidi.algorithm import get_display
 
 import PIL.Image
 if not hasattr(PIL.Image, 'ANTIALIAS'):
@@ -66,9 +68,8 @@ AudioSegment.ffmpeg = FFMPEG_EXE
 AudioSegment.ffprobe = "ffprobe"
 
 # ==========================================
-# 📝 إدارة الجلسة (مستخدم واحد - Global)
+# 📝 إدارة الجلسة (Global)
 # ==========================================
-# رجعنا للمتغير العام البسيط اللي بيشتغل دايماً
 current_progress = {'percent': 0, 'status': 'واقف', 'log': [], 'is_running': False, 'is_complete': False, 'output_path': None, 'should_stop': False, 'error': None}
 
 app = Flask(__name__, static_folder=EXEC_DIR)
@@ -156,6 +157,7 @@ def get_text(surah, ayah):
     try:
         r = requests.get(f'https://api.alquran.cloud/v1/ayah/{surah}:{ayah}/quran-simple')
         t = r.json()['data']['text']
+        # مسح البسملة (النسخة الأصلية)
         if surah != 1 and ayah == 1: 
             t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
         return t
@@ -171,7 +173,7 @@ def wrap_text(text, per_line):
     words = text.split()
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
-# === 🎨 دالة الكتابة (النسخة المستقرة) ===
+# === 🎨 دالة الكتابة (بدون أي مكتبات عربي - RAW) ===
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     font_path = FONT_PATH_ARABIC
     words = arabic.split()
@@ -185,14 +187,9 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     try: font = ImageFont.truetype(font_path, final_fs)
     except: font = ImageFont.load_default()
 
-    try:
-        wrapped_lines = wrap_text(arabic, pl).split('\n')
-        processed_lines = []
-        for line in wrapped_lines:
-            reshaped = arabic_reshaper.reshape(line)
-            bidi_line = get_display(reshaped)
-            processed_lines.append(bidi_line)
-    except: processed_lines = [arabic]
+    # استخدام النص الخام مباشرة
+    wrapped_text = wrap_text(arabic, pl)
+    lines = wrapped_text.split('\n')
 
     dummy_img = Image.new('RGBA', (target_w, 1000))
     draw = ImageDraw.Draw(dummy_img)
@@ -200,7 +197,7 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     total_h = 0
     line_heights = []
     
-    for line in processed_lines:
+    for line in lines:
         bbox = draw.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         line_h = bbox[3] - bbox[1]
@@ -214,7 +211,7 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     final_image = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw_final = ImageDraw.Draw(final_image)
     current_y = 20
-    for i, line in enumerate(processed_lines):
+    for i, line in enumerate(lines):
         bbox = draw_final.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         start_x = (img_w - line_w) // 2
