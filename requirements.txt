@@ -8,3 +8,5 @@ Pillow==9.5.0
 proglog==0.1.10
 decorator==4.4.2
 gunicorn
+arabic-reshaper
+python-bidi
