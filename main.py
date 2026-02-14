@@ -1,4 +1,4 @@
-# Quran Reels Generator - Final Version (Safe Filter & Temp Storage)
+# Quran Reels Generator - Final Stable Version
 # ==========================================
 import PIL.Image
 if not hasattr(PIL.Image, 'ANTIALIAS'):
@@ -7,10 +7,9 @@ if not hasattr(PIL.Image, 'ANTIALIAS'):
 import time
 from deep_translator import GoogleTranslator
 import moviepy.video.fx.all as vfx
-from moviepy.editor import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip, concatenate_audioclips, ColorClip
+from moviepy.editor import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip, ColorClip
 from pydub import AudioSegment
-import requests as http_requests
-import requests 
+import requests
 import os
 import sys
 import shutil
@@ -19,6 +18,7 @@ import threading
 import datetime
 import logging
 import traceback
+import gc
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from proglog import ProgressBarLogger
@@ -39,44 +39,39 @@ BUNDLE_DIR = bundled_dir()
 log_path = os.path.join(EXEC_DIR, "runlog.txt")
 logging.basicConfig(filename=log_path, level=logging.INFO, format='%(asctime)s - %(message)s', force=True)
 
-# ==========================================
-# Paths - Docker Fixed Version
-# ==========================================
-# ==========================================
-# Paths (تعديل خاص للدوكر عشان الأخطاء تختفي)
-# ==========================================
-import os
-from moviepy.config import change_settings
-
-# 1. إعداد FFMPEG
+# Paths
 FFMPEG_EXE = "ffmpeg"
-os.environ["FFMPEG_BINARY"] = FFMPEG_EXE
+# تحسين الكشف عن ImageMagick
+if os.path.exists("/data/data/com.termux/files/usr/bin/magick"):
+    IM_MAGICK_EXE = "/data/data/com.termux/files/usr/bin/magick"
+else:
+    IM_MAGICK_EXE = shutil.which("magick") or shutil.which("convert") or "magick"
 
-# 2. إعداد ImageMagick (ده الحل للمشكلة اللي بتطلعلك)
-# في الدوكر، المسار دايماً بيكون ده، فمش محتاجين دالة if/else
-IM_MAGICK_EXE = "/usr/bin/convert"
-change_settings({"IMAGEMAGICK_BINARY": IM_MAGICK_EXE})
+IM_HOME = os.path.dirname(IM_MAGICK_EXE) if os.path.isabs(IM_MAGICK_EXE) else ""
 
-# 3. تعريف المجلدات (زي ما كانت عندك، بس متأكدين إنها جوه app/)
-# بما إننا جوه Docker والمجلد اسمه /app
-BASE_DIR = "/app"
-
-TEMP_DIR = os.path.join(BASE_DIR, "temp_videos")
-VISION_DIR = os.path.join(BASE_DIR, "vision")
-INTERNAL_AUDIO_DIR = os.path.join(BASE_DIR, "temp_audio")
-
-# 4. تعريف الخطوط (مهم جداً متتمسحش)
-FONT_DIR = os.path.join(BASE_DIR, "fonts")
-FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Arabic.ttf") 
+# 📂 المجلدات
+TEMP_DIR = os.path.join(EXEC_DIR, "temp_videos")
+VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
+UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
+INTERNAL_AUDIO_DIR = os.path.join(EXEC_DIR, "temp_audio")
+FONT_DIR = os.path.join(EXEC_DIR, "fonts")
+FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Arabic.ttf")
 FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
-
 FINAL_AUDIO_PATH = os.path.join(INTERNAL_AUDIO_DIR, "combined_final.mp3")
 
-# التأكد من إنشاء المجلدات
+# إنشاء المجلدات
 for d in [TEMP_DIR, INTERNAL_AUDIO_DIR, FONT_DIR, VISION_DIR]:
     os.makedirs(d, exist_ok=True)
 
-# ربط المكتبات ببعض
+# Env Config
+os.environ["FFMPEG_BINARY"] = FFMPEG_EXE
+os.environ["IMAGEMAGICK_BINARY"] = IM_MAGICK_EXE
+if IM_HOME:
+    os.environ["MAGICK_HOME"] = IM_HOME
+    os.environ["MAGICK_CONFIGURE_PATH"] = IM_HOME
+    os.environ["MAGICK_CODER_MODULE_PATH"] = os.path.join(IM_HOME, "modules", "coders")
+    os.environ["PATH"] = os.pathsep.join([os.environ.get("PATH", ""), IM_HOME])
+
 AudioSegment.converter = FFMPEG_EXE
 AudioSegment.ffmpeg = FFMPEG_EXE
 AudioSegment.ffprobe = "ffprobe"
@@ -157,7 +152,7 @@ def download_audio(reciter_id, surah, ayah, idx):
     url = f'https://everyayah.com/data/{reciter_id}/{surah:03d}{ayah:03d}.mp3'
     out = os.path.join(INTERNAL_AUDIO_DIR, f'part{idx}.mp3')
     try:
-        r = http_requests.get(url, stream=True, timeout=30)
+        r = requests.get(url, stream=True, timeout=30)
         with open(out, 'wb') as f:
             for chunk in r.iter_content(8192): f.write(chunk)
         
@@ -177,15 +172,15 @@ def download_audio(reciter_id, surah, ayah, idx):
 
 def get_text(surah, ayah):
     try:
-        r = http_requests.get(f'https://api.alquran.cloud/v1/ayah/{surah}:{ayah}/quran-uthmani')
+        r = requests.get(f'https://api.alquran.cloud/v1/ayah/{surah}:{ayah}/quran-uthmani')
         t = r.json()['data']['text']
-        if surah!=1 and ayah==1: t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
+        if surah!=1 and ayah==1: t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
         return t
     except: return "خطأ في النص"
 
 def get_en_text(surah, ayah):
     try:
-        r = http_requests.get(f'http://api.alquran.cloud/v1/ayah/{surah}:{ayah}/en.sahih')
+        r = requests.get(f'http://api.alquran.cloud/v1/ayah/{surah}:{ayah}/en.sahih')
         return r.json()['data']['text']
     except: return ""
 
@@ -239,16 +234,16 @@ def pick_bg(user_key, custom_query=None):
         else:
             # قائمة كلمات "نظيفة" تماماً (جمادات وطبيعة فقط)
             safe_topics = [
-                'nature landscape',      # مناظر طبيعية
-                'mosque architecture',   # مساجد (مباني فقط)
-                'sky clouds timelapse',  # سحاب
-                'galaxy stars space',    # فضاء
-                'flowers garden macro',  # زهور
-                'ocean waves drone',     # بحر (تصوير جوي)
+                'nature landscape',       # مناظر طبيعية
+                'mosque architecture',    # مساجد (مباني فقط)
+                'sky clouds timelapse',   # سحاب
+                'galaxy stars space',     # فضاء
+                'flowers garden macro',   # زهور
+                'ocean waves drone',      # بحر (تصوير جوي)
                 'waterfall slow motion', # شلالات
-                'desert dunes',          # صحراء
-                'forest trees fog',      # غابة وضباب
-                'islamic geometric art'  # فن إسلامي
+                'desert dunes',           # صحراء
+                'forest trees fog',       # غابة وضباب
+                'islamic geometric art'   # فن إسلامي
             ]
             q = random.choice(safe_topics) + safe_filter
             add_log(f'🎲 خلفية عشوائية (آمنة): {q}')
@@ -285,6 +280,9 @@ def pick_bg(user_key, custom_query=None):
 # 🎬 بناء الفيديو
 def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='720', bg_query=None):
     global current_progress
+    final = None
+    final_audio_clip = None
+    bg = None
     try:
         current_progress['is_running'] = True
         add_log('🚀 بدء المعالجة...')
@@ -351,14 +349,13 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         
         add_log('🎬 جاري التصدير النهائي (Render)...')
         my_logger = QuranLogger()
+        
+        # 🔥 تم إصلاح المشكلة هنا: threads=1
         final.write_videofile(
             out, fps=15, codec='libx264', audio_bitrate='96k', preset='ultrafast', 
-            threads=4, verbose=False, logger=my_logger, 
+            threads=1, verbose=False, logger=my_logger, 
             ffmpeg_params=['-movflags', '+faststart', '-pix_fmt', 'yuv420p', '-crf', '28']
         )
-        final.close()
-        final_audio_clip.close() 
-        clear_vision_cache()
         
         update_progress(100, 'تم الانتهاء!')
         current_progress['is_complete'] = True 
@@ -369,7 +366,16 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         current_progress['error'] = str(e)
         add_log(f"❌ خطأ: {str(e)}")
     finally:
+        # 🗑️ تنظيف الذاكرة الإجباري (Garbage Collection)
+        add_log("🧹 تنظيف الذاكرة...")
         current_progress['is_running'] = False
+        try:
+            if final: final.close()
+            if final_audio_clip: final_audio_clip.close()
+            if bg: bg.close()
+            del final, final_audio_clip, bg
+        except: pass
+        gc.collect() # تفريغ الرام فوراً
 
 @app.route('/')
 def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "UI Missing"
@@ -412,8 +418,3 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
-
-
-
-
-
