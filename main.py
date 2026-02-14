@@ -230,13 +230,14 @@ def wrap_text(text, per_line):
 # === 🎨 دوال إنشاء النصوص (مع إصلاح العربي) ===
 
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
-    # مسار الخط اللي أنت قلت إنه مضمون
+    # 1. Font Setup
+    # تأكد إن المسار ده صح عندك، لو مش صح غير "Amiri-Regular.ttf" لاسم الخط اللي عندك
     font_path = os.path.join(EXEC_DIR, "fonts", "Amiri-Regular.ttf")
     
-    # 1. تجهيز الخط
     words = arabic.split()
     wc = len(words)
-    # تظبيط حجم الخط حسب عدد الكلمات
+    
+    # Font size logic
     if wc > 60: base_fs, pl = 27, 10
     elif wc > 40: base_fs, pl = 32, 9
     elif wc > 25: base_fs, pl = 38, 8
@@ -244,34 +245,39 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     else: base_fs, pl = 45, 6
     
     final_fs = int(base_fs * scale_factor)
-    
+
+    # Load Font (English Logs ONLY to prevent crash)
     try:
         font = ImageFont.truetype(font_path, final_fs)
-    except:
-        # لو الخط مش موجود، استخدم الديفولت (بس هيطلع مربعات لو مفيش عربي)
-        print("Font not found, using default")
+    except Exception as e:
+        print(f"WARNING: Could not load font at {font_path}. Using default. Error: {e}")
         font = ImageFont.load_default()
 
-    # 2. اللغز كله هنا (تشبيك الحروف + عكس الاتجاه)
-    # أولاً: بنعمل wrap للنص عشان نقسمه أسطر
-    wrapped_text = wrap_text(arabic, pl)
-    
-    # ثانياً: بنطبق المعالجة على النص كله مرة واحدة
-    reshaped_text = arabic_reshaper.reshape(wrapped_text) # بيشبك الحروف
-    bidi_text = get_display(reshaped_text) # بيظبط الاتجاه يمين لشمال
+    # 2. Text Processing (Standard Reshape + Bidi)
+    # This logic connects letters and fixes direction
+    try:
+        # Wrap text first
+        wrapped_text = wrap_text(arabic, pl)
+        
+        # Reshape (Connect letters)
+        reshaped_text = arabic_reshaper.reshape(wrapped_text)
+        
+        # Bidi (Fix RTL direction)
+        bidi_text = get_display(reshaped_text)
+    except Exception as e:
+        print(f"Error in text reshaping: {e}")
+        bidi_text = arabic  # Fallback
 
-    # 3. الرسم
+    lines = bidi_text.split('\n')
+
+    # 3. Calculate Dimensions
     dummy_img = Image.new('RGBA', (target_w, 1000))
     draw = ImageDraw.Draw(dummy_img)
     
-    # تقسيم النص لأسطر للرسم
-    lines = bidi_text.split('\n')
-    
+    max_line_w = 0
     total_h = 0
     line_heights = []
-    max_line_w = 0
     
-    # حساب الأبعاد
     for line in lines:
         bbox = draw.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
@@ -287,16 +293,19 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     final_image = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw_final = ImageDraw.Draw(final_image)
 
+    # 4. Draw Text
     current_y = 20
     for i, line in enumerate(lines):
         bbox = draw_final.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         start_x = (img_w - line_w) // 2
         
-        # رسم ظل خفيف (عشان الكلام يبان في الخلفيات الفاتحة)
+        # Draw Shadow (Optional, for visibility)
         draw_final.text((start_x+2, current_y+2), line, font=font, fill=(0,0,0,120))
-        # رسم النص الأصلي
+        
+        # Draw Main Text
         draw_final.text((start_x, current_y), line, font=font, fill='white')
+        
         current_y += line_heights[i]
 
     np_img = np.array(final_image)
@@ -561,6 +570,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
