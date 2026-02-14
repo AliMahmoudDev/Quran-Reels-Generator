@@ -1,9 +1,9 @@
-# Quran Reels Generator - Final Polish (Timer + Cancel + Fixed Arabic)
+# Quran Reels Generator - Final Fixed Version (App Only)
 import sys
 import io
 import os
 
-# 1. إجبار النظام على استخدام UTF-8 (عشان السيرفر ميزعلش من العربي)
+# 1. إجبار النظام على استخدام UTF-8
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
@@ -60,7 +60,6 @@ VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
 INTERNAL_AUDIO_DIR = os.path.join(EXEC_DIR, "temp_audio")
 FONT_DIR = os.path.join(EXEC_DIR, "fonts")
-# تأكد إن اسم الخط هنا مطابق لاسم الملف اللي رفعته
 FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Amiri.ttf") 
 FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
 FINAL_AUDIO_PATH = os.path.join(INTERNAL_AUDIO_DIR, "combined_final.mp3")
@@ -73,7 +72,7 @@ AudioSegment.ffmpeg = FFMPEG_EXE
 AudioSegment.ffprobe = "ffprobe"
 
 # ==========================================
-# 📝 إدارة الحالة واللوج
+# 📝 إدارة الحالة
 # ==========================================
 current_progress = {'percent': 0, 'status': 'واقف', 'log': [], 'is_running': False, 'is_complete': False, 'output_path': None, 'should_stop': False}
 
@@ -85,7 +84,6 @@ def reset_progress():
     current_progress = {'percent': 0, 'status': 'جاري التحضير...', 'log': [], 'is_running': False, 'is_complete': False, 'output_path': None, 'error': None, 'should_stop': False}
 
 def add_log(message):
-    # بنكتب في الواجهة بس، وبلاش كونسول عشان مشاكل الـ Encoding
     current_progress['log'].append(message)
     current_progress['status'] = message
 
@@ -103,16 +101,15 @@ def clear_outputs():
     else:
         os.makedirs(TEMP_DIR, exist_ok=True)
 
-# === ⏱️ كلاس العداد (تم إصلاحه ليعرض الوقت المتبقي) ===
+# === ⏱️ كلاس العداد (تم استرجاع التايمر) ===
 class QuranLogger(ProgressBarLogger):
     def __init__(self):
         super().__init__()
         self.start_time = None
 
     def bars_callback(self, bar, attr, value, old_value=None):
-        # التحقق من طلب الإيقاف أثناء الريندر
         if current_progress.get('should_stop'):
-            raise Exception("تم الإيقاف بواسطة المستخدم")
+            raise Exception("Stopped by user")
 
         if bar == 't':
             total = self.bars[bar]['total']
@@ -121,7 +118,7 @@ class QuranLogger(ProgressBarLogger):
                 if self.start_time is None: self.start_time = time.time()
                 elapsed = time.time() - self.start_time
                 
-                # حساب الوقت المتبقي (Timer)
+                # حساب الوقت المتبقي
                 rem_str = "00:00"
                 if elapsed > 0 and value > 0:
                     rate = value / elapsed 
@@ -129,7 +126,7 @@ class QuranLogger(ProgressBarLogger):
                     rem_str = str(datetime.timedelta(seconds=int(remaining)))[2:] if remaining > 0 else "00:00"
                 
                 current_progress['percent'] = percent
-                # رسالة الحالة بتظهر الوقت المتبقي
+                # الرسالة دي اللي هتروح للمتصفح وفيها التايمر
                 current_progress['status'] = f"جاري التصدير... {percent}% (متبقي {rem_str})"
 
 # ==========================================
@@ -181,7 +178,7 @@ def wrap_text(text, per_line):
     words = text.split()
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
-# === 🎨 دالة إنشاء النصوص (تم إصلاح الخط العربي + الحجم) ===
+# === 🎨 دالة إنشاء النصوص (إصلاح العربي + عدم القلب) ===
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     font_path = FONT_PATH_ARABIC
     words = arabic.split()
@@ -320,6 +317,7 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         full_audio_seg = AudioSegment.empty()
         
         for i, ayah in enumerate(range(start, last+1), 1):
+            # 🛑 تحقق من الإيقاف في كل لفة
             if current_progress.get('should_stop'): raise Exception("Stopped by user")
             add_log(f'Processing Ayah {ayah}...')
             
@@ -364,7 +362,9 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         y_pos = target_h * 0.40 
         
         for ar, en, dur in items:
+            # 🛑 تحقق من الإيقاف قبل معالجة النصوص
             if current_progress.get('should_stop'): raise Exception("Stopped by user")
+            
             ac = create_text_clip(ar, dur, target_w, scale_factor).set_start(curr_t).set_position(('center', y_pos))
             gap = 30 * scale_factor 
             ec = create_english_clip(en, dur, target_w, scale_factor).set_start(curr_t).set_position(('center', y_pos + ac.h + gap))
@@ -373,7 +373,6 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
 
         final = CompositeVideoClip(layers).set_audio(final_audio_clip)
         
-        # === استخدام اسم ملف بالأرقام لتجنب الكراش ===
         fname = f"Quran_{surah}_{start}-{last}_{quality}p.mp4"
         out = os.path.join(TEMP_DIR, fname) 
         
@@ -396,7 +395,10 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         add_log(f"Error: {str(e)}")
     finally:
         if success: add_log("Cleaning Memory...")
+        
+        # ⚠️ هنا التعديل المهم: بنقول للمتصفح إن العملية وقفت رسمياً
         current_progress['is_running'] = False
+        
         try:
             if final: final.close()
             if final_audio_clip: final_audio_clip.close()
@@ -427,7 +429,6 @@ def gen():
 
 @app.route('/api/cancel')
 def cancel_process():
-    global current_progress
     if current_progress['is_running']:
         current_progress['should_stop'] = True
         current_progress['status'] = "Stopping..."
