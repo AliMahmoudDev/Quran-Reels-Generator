@@ -1,4 +1,12 @@
 # Quran Reels Generator - Full Version (Original Features + Fixes)
+import sys
+import io
+
+# إجبار النظام على استخدام UTF-8 في الطباعة والشاشة السوداء
+# الكود ده بيحل مشكلة Latin-1 codec نهائياً
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 # ==========================================
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -553,6 +561,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
