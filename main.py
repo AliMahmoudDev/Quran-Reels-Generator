@@ -197,7 +197,7 @@ def wrap_text(text, per_line):
 # === 🎨 دوال إنشاء النصوص (مع إصلاح العربي) ===
 
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
-    # 1. إعدادات القياسات
+    # 1. إعدادات القياسات (نفس كودك)
     words = arabic.split()
     wc = len(words)
     if wc > 60: base_fs, pl = 27, 10
@@ -214,16 +214,22 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     except:
         font = ImageFont.load_default()
 
-    # 2. معالجة النص: تشكيل الحروف فقط (بدون bidi)
-    # إحنا هنعتمد على reshaper عشان يخلي الحروف متصلة
-    reshaped_text = arabic_reshaper.reshape(wrap_text(arabic, pl))
-    lines = reshaped_text.split('\n')
+    # 2. معالجة النص: (التعديل هنا)
+    # أولاً: بنعمل wrap للنص العادي قبل التشكيل
+    wrapped_raw = wrap_text(arabic, pl)
+    
+    # ثانياً: بنعمل reshape عشان الحروف تشبك في بعضها
+    reshaped_text = arabic_reshaper.reshape(wrapped_raw)
+    
+    # ثالثاً: بنستخدم bidi عشان يظبط الاتجاه من اليمين للشمال (RTL) بشكل احترافي
+    bidi_text = get_display(reshaped_text)
+    
+    lines = bidi_text.split('\n')
 
-    # 3. حساب أبعاد الصورة الكلية
+    # 3. حساب أبعاد الصورة (نفس كودك)
     dummy_img = Image.new('RGBA', (target_w, 1000))
     draw = ImageDraw.Draw(dummy_img)
     
-    # حساب أقصى عرض وطول للأسطر
     max_line_w = 0
     total_h = 0
     line_heights = []
@@ -233,7 +239,7 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
         line_w = bbox[2] - bbox[0]
         line_h = bbox[3] - bbox[1]
         max_line_w = max(max_line_w, line_w)
-        line_heights.append(line_h + 20) # 20 مسافة بين الأسطر
+        line_heights.append(line_h + 20)
         total_h += line_h + 20
 
     img_w = max(box_w, int(max_line_w + 40))
@@ -242,25 +248,21 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     final_image = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw_final = ImageDraw.Draw(final_image)
 
-    # 4. الرسم السحري: رسم كل سطر "مقلوب يدوياً"
+    # 4. الرسم: (التعديل هنا)
     current_y = 20
     for i, line in enumerate(lines):
-        # قلب السطر يدوياً (عشان نضمن إن "بسم" تبقى أول حاجة عاليمين)
-        # الطريقة دي بتخلي Pillow يفتكر إنه بيرسم حروف جنب بعضها وبس
-        line_to_draw = line[::-1] 
-        
-        # حساب مكان بداية السطر ليكون في المنتصف
-        bbox = draw_final.textbbox((0, 0), line_to_draw, font=font)
+        bbox = draw_final.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
+        # توسيط النص في الصورة
         start_x = (img_w - line_w) // 2
         
-        draw_final.text((start_x, current_y), line_to_draw, font=font, fill='white')
+        # بنرسم السطر زي ما هو طالع من bidi بدون [::-1]
+        draw_final.text((start_x, current_y), line, font=font, fill='white')
         current_y += line_heights[i]
 
     # تحويل لـ MoviePy
     np_img = np.array(final_image)
     return ImageClip(np_img).set_duration(duration).fadein(0.25).fadeout(0.25)
-
 
     
 def create_english_clip(text, duration, target_w, scale_factor=1.0):
@@ -521,6 +523,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
