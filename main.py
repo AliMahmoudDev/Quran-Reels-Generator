@@ -396,7 +396,7 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
 
         final = CompositeVideoClip(layers).set_audio(final_audio_clip)
         
-        # تغيير اسم الملف لأرقام عشان نتفادى خطأ الـ Latin-1
+        # تغيير اسم الملف لأرقام عشان نتفادى خطأ الـ
         fname = f"Quran_{surah}_{start}-{last}_{quality}p.mp4"
         out = os.path.join(TEMP_DIR, fname) 
         
@@ -469,5 +469,6 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
