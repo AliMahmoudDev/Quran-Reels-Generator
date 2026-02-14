@@ -197,7 +197,7 @@ def wrap_text(text, per_line):
 # === 🎨 دوال إنشاء النصوص (مع إصلاح العربي) ===
 
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
-    # إعدادات الحجم والأسطر
+    # 1. إعدادات القياسات
     words = arabic.split()
     wc = len(words)
     if wc > 60: base_fs, pl = 27, 10
@@ -209,43 +209,58 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     final_fs = int(base_fs * scale_factor)
     box_w = int(target_w * 0.9)
 
+    # 2. تحميل الخط
     try:
         font = ImageFont.truetype(FONT_PATH_ARABIC, final_fs)
     except:
         font = ImageFont.load_default()
 
-    # --- المعالجة الحاسمة ---
-    # 1. تقسيم النص لأسطر أولاً
-    wrapped_lines = wrap_text(arabic, pl).split('\n')
-    
+    # 3. المعالجة اليدوية (سطر بسطر) لمنع Pillow من التدخل
+    raw_lines = wrap_text(arabic, pl).split('\n')
     processed_lines = []
-    for line in wrapped_lines:
-        # 2. تشكيل الحروف لكل سطر على حدة
+    
+    for line in raw_lines:
+        # تشكيل الحروف
         reshaped = arabic_reshaper.reshape(line)
-        # 3. ضبط الاتجاه بصرياً (إجباري)
+        # قلب الاتجاه يدوياً
         bidi_line = get_display(reshaped)
         processed_lines.append(bidi_line)
     
-    # دمج الأسطر مرة أخرى
+    # دمج الأسطر المعالجة
     final_text = '\n'.join(processed_lines)
 
-    # --- الرسم بدون محركات إضافية ---
-    dummy_img = Image.new('RGBA', (1, 1))
+    # 4. حساب أبعاد النص بدقة
+    dummy_img = Image.new('RGBA', (target_w, 500))
     draw = ImageDraw.Draw(dummy_img)
     
-    # حساب الأبعاد (مهم جداً عدم وضع direction هنا)
+    # الحصول على حدود النص
     bbox = draw.textbbox((0, 0), final_text, font=font, align='center')
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
     
+    # إنشاء الصورة الشفافة بالمقاس المظبوط
     img_w = max(box_w, int(text_w + 40))
     img_h = int(text_h + 40)
-
-    img = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
     
-    # السر هنا: نرسم النص كما هو (L-to-R بصریاً) لأننا عالجناه يدوياً
-    draw.text((img_w/2, img_h/2), final_text, font=font, fill='white', align='center', anchor="mm")
+    text_surface = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
+    draw_surface = ImageDraw.Draw(text_surface)
+
+    # 5. الرسم (السر هنا: لا نستخدم أي باراميتر للاتجاه)
+    # نرسم النص كأنه نص "أعجمي" لأننا رتبنا الحروف يدوياً خلاص
+    draw_surface.multiline_text(
+        (img_w/2, img_h/2), 
+        final_text, 
+        font=font, 
+        fill='white', 
+        align='center', 
+        anchor="mm",
+        spacing=10 # مسافة بين الأسطر لزيادة الوضوح
+    )
+
+    # تحويل لـ MoviePy
+    np_img = np.array(text_surface)
+    return ImageClip(np_img).set_duration(duration).fadein(0.25).fadeout(0.25)
+ل
 
     np_img = np.array(img)
     return ImageClip(np_img).set_duration(duration).fadein(0.25).fadeout(0.25)
@@ -507,6 +522,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
