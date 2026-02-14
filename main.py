@@ -167,7 +167,9 @@ def wrap_text(text, per_line):
 # ==========================================
 # دالة الكتابة القديمة (اللي كانت شغالة بس معكوس)
 # ==========================================
+# === 🎨 دالة معالجة النص العربي (التعديل الجديد) ===
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
+    # إعداد حجم الخط
     words = arabic.split()
     wc = len(words)
     if wc > 60: base_fs, pl = 27, 10
@@ -179,15 +181,30 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     final_fs = int(base_fs * scale_factor)
     box_w = int(target_w * 0.9)
 
+    # تحميل الخط (بصمت عشان لو مش موجود ميعملش كراش)
     try:
         font = ImageFont.truetype(FONT_PATH_ARABIC, final_fs)
     except:
         font = ImageFont.load_default()
 
-    # هنا الجزء القديم اللي كان بيستخدم reshaper بس
-    reshaped_text = arabic_reshaper.reshape(wrap_text(arabic, pl))
-    lines = reshaped_text.split('\n')
+    # --- بداية التعديل الجوهري ---
+    try:
+        # 1. تقسيم النص لأسطر
+        wrapped_text = wrap_text(arabic, pl)
+        
+        # 2. تشبيك الحروف (Reshape)
+        reshaped_text = arabic_reshaper.reshape(wrapped_text)
+        
+        # 3. تعديل الاتجاه (Bidi) - دي اللي هتظبط اليمين والشمال
+        bidi_text = get_display(reshaped_text)
+    except:
+        # لو حصلت أي مشكلة في المعالجة، ارسم النص زي ما هو وخلاص
+        bidi_text = arabic
 
+    lines = bidi_text.split('\n')
+    # ---------------------------
+
+    # حساب الأبعاد
     dummy_img = Image.new('RGBA', (target_w, 1000))
     draw = ImageDraw.Draw(dummy_img)
     
@@ -209,17 +226,19 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     final_image = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw_final = ImageDraw.Draw(final_image)
 
+    # الرسم النهائي
     current_y = 20
     for i, line in enumerate(lines):
-        # ده السطر اللي كان موجود في كودك القديم
-        # هو اللي بيخلي الكلام يظهر بس معكوس
-        line_to_draw = line[::-1] 
-        
-        bbox = draw_final.textbbox((0, 0), line_to_draw, font=font)
+        bbox = draw_final.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         start_x = (img_w - line_w) // 2
         
-        draw_final.text((start_x, current_y), line_to_draw, font=font, fill='white')
+        # رسمنا السطر زي ما هو طالع من Bidi (من غير قلب يدوي)
+        # 1. ظل خفيف للقراءة
+        draw_final.text((start_x+2, current_y+2), line, font=font, fill=(0,0,0,120))
+        # 2. النص الأصلي
+        draw_final.text((start_x, current_y), line, font=font, fill='white')
+        
         current_y += line_heights[i]
 
     np_img = np.array(final_image)
@@ -409,3 +428,4 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
