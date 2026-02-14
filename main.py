@@ -185,35 +185,42 @@ def wrap_text(text, per_line):
 # === 🎨 دوال إنشاء النصوص (الإصلاح النهائي) ===
 
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
-    # نستخدم المتغير العام عشان نوحد المسار
-    font_path = FONT_PATH_ARABIC
+    # 1. تحديد مسار الخط بدقة
+    font_path = os.path.join(EXEC_DIR, "fonts", "Amiri-Regular.ttf")
     
-    words = arabic.split()
-    wc = len(words)
-    if wc > 60: base_fs, pl = 27, 10
-    elif wc > 40: base_fs, pl = 32, 9
-    elif wc > 25: base_fs, pl = 38, 8
-    elif wc > 15: base_fs, pl = 43, 7
-    else: base_fs, pl = 45, 6
-    
-    final_fs = int(base_fs * scale_factor)
-
-    try:
-        font = ImageFont.truetype(font_path, final_fs)
-    except Exception as e:
-        print(f"Font Error: {e}. Using default.")
+    # 2. التأكد من وجود الخط (بدون طباعة عربي عشان السيرفر ميزعلش)
+    if not os.path.exists(font_path):
+        # لو الخط مش موجود، هنستخدم الديفولت بصمت
         font = ImageFont.load_default()
+    else:
+        # حساب حجم الخط
+        words = arabic.split()
+        wc = len(words)
+        if wc > 60: base_fs, pl = 27, 10
+        elif wc > 40: base_fs, pl = 32, 9
+        elif wc > 25: base_fs, pl = 38, 8
+        elif wc > 15: base_fs, pl = 43, 7
+        else: base_fs, pl = 45, 6
+        final_fs = int(base_fs * scale_factor)
+        try:
+            font = ImageFont.truetype(font_path, final_fs)
+        except:
+            font = ImageFont.load_default()
 
-    # معالجة النص: Reshape + Bidi
+    # 3. معالجة النص (القلب النابض)
     try:
+        # Wrap -> Reshape -> Bidi
+        # الترتيب ده مهم جداً: بنقسم الأسطر الأول، وبعدين نعالج كل سطر
         wrapped_text = wrap_text(arabic, pl)
         reshaped_text = arabic_reshaper.reshape(wrapped_text)
         bidi_text = get_display(reshaped_text)
-    except Exception as e:
-        print(f"Reshape Error: {e}")
-        bidi_text = arabic 
+    except:
+        # لو حصلت مصيبة، رجع النص زي ما هو عشان الفيديو ميعطلش
+        bidi_text = arabic
 
     lines = bidi_text.split('\n')
+
+    # 4. الرسم
     dummy_img = Image.new('RGBA', (target_w, 1000))
     draw = ImageDraw.Draw(dummy_img)
     
@@ -221,6 +228,7 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     total_h = 0
     line_heights = []
     
+    # حساب الأبعاد
     for line in lines:
         bbox = draw.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
@@ -242,7 +250,9 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
         line_w = bbox[2] - bbox[0]
         start_x = (img_w - line_w) // 2
         
+        # الظل
         draw_final.text((start_x+2, current_y+2), line, font=font, fill=(0,0,0,120))
+        # النص
         draw_final.text((start_x, current_y), line, font=font, fill='white')
         current_y += line_heights[i]
 
@@ -454,3 +464,4 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
