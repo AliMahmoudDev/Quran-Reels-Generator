@@ -141,18 +141,15 @@ def reset_progress():
     current_progress = {'percent': 0, 'status': 'جاري التحضير...', 'log': [], 'is_running': False, 'is_complete': False, 'output_path': None, 'error': None, 'should_stop': False}
 
 def add_log(message):
-    # تحديث الواجهة (ده المهم ومش هيعمل مشاكل)
+    # بنضيف الرسالة للوج بتاع الموقع (ده شغال ومفيهوش مشاكل)
     current_progress['log'].append(message)
     current_progress['status'] = message
     
-    # محاولة الطباعة في التيرمينال (لو فشلت مش هنوقف البرنامج)
+    # هنا بنحاول نطبع في الشاشة السوداء، لو ضرب إيرور هنتجاهله ونكمل
     try:
         print(f'>>> {message}', flush=True)
-    except UnicodeEncodeError:
-        # لو السيرفر مش قابل العربي، مش مهم نطبع في الشاشة
-        pass 
-    except Exception:
-        pass
+    except:
+        pass # لو السيرفر غبي ومش فاهم عربي، كمل شغل عادي ومتقفش
 
 
 def update_progress(percent, status):
@@ -556,6 +553,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
