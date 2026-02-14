@@ -10,3 +10,4 @@ decorator==4.4.2
 gunicorn
 arabic-reshaper
 python-bidi
+numpy
