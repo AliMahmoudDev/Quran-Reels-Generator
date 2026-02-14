@@ -1,8 +1,8 @@
-# Quran Reels Generator - Multi-User Fix
+# Quran Reels Generator - Final Fix (Manual ID + Arabic Fix)
 import sys
 import io
 import os
-import uuid  # مكتبة لإنشاء هوية فريدة لكل مستخدم
+import uuid
 
 # 1. UTF-8 Fix
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
@@ -31,7 +31,7 @@ import datetime
 import logging
 import traceback
 import gc
-from flask import Flask, request, jsonify, send_file, send_from_directory, make_response
+from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from proglog import ProgressBarLogger
 
@@ -42,12 +42,8 @@ def app_dir():
     if getattr(sys, "frozen", False): return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
 
-def bundled_dir():
-    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"): return sys._MEIPASS
-    return os.path.dirname(os.path.abspath(__file__))
-
 EXEC_DIR = app_dir()
-BUNDLE_DIR = bundled_dir()
+BUNDLE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 
 FFMPEG_EXE = "ffmpeg"
 os.environ["FFMPEG_BINARY"] = FFMPEG_EXE
@@ -60,44 +56,33 @@ FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Amiri.ttf")
 FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
 VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
-
-# مجلدات مؤقتة عامة (سننشئ مجلدات فرعية لكل مستخدم لاحقاً)
 TEMP_BASE = os.path.join(EXEC_DIR, "temp_users")
-os.makedirs(TEMP_BASE, exist_ok=True)
-os.makedirs(FONT_DIR, exist_ok=True)
-os.makedirs(VISION_DIR, exist_ok=True)
+
+for d in [TEMP_BASE, FONT_DIR, VISION_DIR]:
+    os.makedirs(d, exist_ok=True)
 
 AudioSegment.converter = FFMPEG_EXE
 AudioSegment.ffmpeg = FFMPEG_EXE
 AudioSegment.ffprobe = "ffprobe"
 
 # ==========================================
-# 📝 إدارة الجلسات (Multi-User Logic)
+# 📝 إدارة الجلسات (Dictionary)
 # ==========================================
-# هذا القاموس سيحمل بيانات كل مستخدم على حدة
-# Key: UserID -> Value: {status, percent, log, is_running...}
 users_progress = {}
 
 app = Flask(__name__, static_folder=EXEC_DIR)
 CORS(app)
 
-# دالة لتهيئة بيانات المستخدم الجديد
 def init_user(uid):
     if uid not in users_progress:
-        # إنشاء مجلدات خاصة بالمستخدم
         user_dir = os.path.join(TEMP_BASE, uid)
         os.makedirs(user_dir, exist_ok=True)
         os.makedirs(os.path.join(user_dir, "audio"), exist_ok=True)
         os.makedirs(os.path.join(user_dir, "video"), exist_ok=True)
         
         users_progress[uid] = {
-            'percent': 0, 
-            'status': 'واقف', 
-            'log': [], 
-            'is_running': False, 
-            'is_complete': False, 
-            'output_path': None, 
-            'should_stop': False,
+            'percent': 0, 'status': 'جاهز', 'log': [], 'is_running': False, 
+            'is_complete': False, 'output_path': None, 'should_stop': False, 'error': None,
             'dirs': {
                 'root': user_dir,
                 'audio': os.path.join(user_dir, "audio"),
@@ -106,11 +91,6 @@ def init_user(uid):
             }
         }
     return users_progress[uid]
-
-# دالة لتنظيف بيانات المستخدمين القديمة (اختياري)
-def cleanup_inactive_users():
-    # يمكن إضافة كود هنا لحذف المستخدمين الذين مر عليهم ساعة مثلاً
-    pass
 
 def add_log(uid, message):
     if uid in users_progress:
@@ -125,13 +105,11 @@ def update_progress(uid, percent, status):
 def clear_user_outputs(uid):
     user_data = users_progress.get(uid)
     if user_data:
-        # مسح محتويات مجلدات الصوت والفيديو الخاصة بالمستخدم فقط
         for folder in [user_data['dirs']['audio'], user_data['dirs']['video']]:
             for f in os.listdir(folder):
                 try: os.remove(os.path.join(folder, f))
                 except: pass
 
-# === ⏱️ كلاس العداد (معدل ليدعم تعدد المستخدمين) ===
 class QuranLogger(ProgressBarLogger):
     def __init__(self, uid):
         super().__init__()
@@ -140,7 +118,7 @@ class QuranLogger(ProgressBarLogger):
 
     def bars_callback(self, bar, attr, value, old_value=None):
         user_data = users_progress.get(self.uid)
-        if not user_data: return # المستخدم اختفى
+        if not user_data: return
 
         if user_data.get('should_stop'):
             raise Exception("Stopped by user")
@@ -151,18 +129,16 @@ class QuranLogger(ProgressBarLogger):
                 percent = int((value / total) * 100)
                 if self.start_time is None: self.start_time = time.time()
                 elapsed = time.time() - self.start_time
-                
                 rem_str = "00:00"
                 if elapsed > 0 and value > 0:
-                    rate = value / elapsed 
-                    remaining = (total - value) / rate
+                    remaining = (total - value) / (value / elapsed)
                     rem_str = str(datetime.timedelta(seconds=int(remaining)))[2:] if remaining > 0 else "00:00"
                 
                 user_data['percent'] = percent
-                user_data['status'] = f"جاري التصدير... {percent}% (متبقي {rem_str})"
+                user_data['status'] = f"جاري التصدير... {percent}% ({rem_str})"
 
 # ==========================================
-# 🛠️ الدوال المساعدة (بدون تغييرات جوهرية)
+# 🛠️ الدوال المساعدة
 # ==========================================
 VERSE_COUNTS = {1: 7, 2: 286, 3: 200, 4: 176, 5: 120, 6: 165, 7: 206, 8: 75, 9: 129, 10: 109, 11: 123, 12: 111, 13: 43, 14: 52, 15: 99, 16: 128, 17: 111, 18: 110, 19: 98, 20: 135, 21: 112, 22: 78, 23: 118, 24: 64, 25: 77, 26: 227, 27: 93, 28: 88, 29: 69, 30: 60, 31: 34, 32: 30, 33: 73, 34: 54, 35: 45, 36: 83, 37: 182, 38: 88, 39: 75, 40: 85, 41: 54, 42: 53, 43: 89, 44: 59, 45: 37, 46: 35, 47: 38, 48: 29, 49: 18, 50: 45, 51: 60, 52: 49, 53: 62, 54: 55, 55: 78, 56: 96, 57: 29, 58: 22, 59: 24, 60: 13, 61: 14, 62: 11, 63: 11, 64: 18, 65: 12, 66: 12, 67: 30, 68: 52, 69: 52, 70: 44, 71: 28, 72: 28, 73: 20, 74: 56, 75: 40, 76: 31, 77: 50, 78: 40, 79: 46, 80: 42, 81: 29, 82: 19, 83: 36, 84: 25, 85: 22, 86: 17, 87: 19, 88: 26, 89: 30, 90: 20, 91: 15, 92: 21, 93: 11, 94: 8, 95: 8, 96: 19, 97: 5, 98: 8, 99: 8, 100: 11, 101: 11, 102: 8, 103: 3, 104: 9, 105: 5, 106: 4, 107: 7, 108: 3, 109: 6, 110: 3, 111: 5, 112: 4, 113: 5, 114: 6}
 SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه', 'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم', 'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر', 'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق', 'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة', 'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج', 'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد', 'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس']
@@ -173,31 +149,25 @@ def detect_silence(sound, thresh):
     while t < len(sound) and sound[t:t+10].dBFS < thresh: t += 10
     return t
 
-# تم تعديل دالة الصوت لتأخذ المسار الخاص بالمستخدم
 def download_audio(uid, reciter_id, surah, ayah, idx):
     user_data = users_progress[uid]
     audio_dir = user_data['dirs']['audio']
-    
     url = f'https://everyayah.com/data/{reciter_id}/{surah:03d}{ayah:03d}.mp3'
     out = os.path.join(audio_dir, f'part{idx}.mp3')
     try:
         r = requests.get(url, stream=True, timeout=30)
         with open(out, 'wb') as f:
             for chunk in r.iter_content(8192): f.write(chunk)
-        
         snd = AudioSegment.from_file(out)
         start = detect_silence(snd, snd.dBFS-20) 
         end = detect_silence(snd.reverse(), snd.dBFS-20)
-        
         trimmed = snd
         if start + end < len(snd):
             trimmed = snd[max(0, start-50):len(snd)-max(0, end-50)]
-            
         padding = AudioSegment.silent(duration=200) 
         final_snd = padding + trimmed.fade_in(20).fade_out(20)
         final_snd.export(out, format='mp3')
-        
-    except Exception as e: raise ValueError(f"فشل تحميل الآية {ayah}")
+    except Exception as e: raise ValueError(f"Download Error: {ayah}")
     return out
 
 def get_text(surah, ayah):
@@ -207,7 +177,7 @@ def get_text(surah, ayah):
         if surah != 1 and ayah == 1: 
             t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
         return t
-    except: return "خطأ في النص"
+    except: return "Text Error"
 
 def get_en_text(surah, ayah):
     try:
@@ -228,27 +198,27 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     elif wc > 25: base_fs, pl = 38, 8
     elif wc > 15: base_fs, pl = 43, 7
     else: base_fs, pl = 45, 6
-    
     final_fs = int(base_fs * scale_factor)
-
     try: font = ImageFont.truetype(font_path, final_fs)
     except: font = ImageFont.load_default()
 
+    # معالجة العربي: تقسيم الأسطر -> Reshape -> Bidi
     try:
-        wrapped_text = wrap_text(arabic, pl)
-        reshaped_text = arabic_reshaper.reshape(wrapped_text)
-        bidi_text = get_display(reshaped_text)
-    except: bidi_text = arabic 
+        wrapped_lines = wrap_text(arabic, pl).split('\n')
+        processed_lines = []
+        for line in wrapped_lines:
+            reshaped = arabic_reshaper.reshape(line)
+            bidi_line = get_display(reshaped)
+            processed_lines.append(bidi_line)
+    except: processed_lines = [arabic]
 
-    lines = bidi_text.split('\n')
     dummy_img = Image.new('RGBA', (target_w, 1000))
     draw = ImageDraw.Draw(dummy_img)
-    
     max_line_w = 0
     total_h = 0
     line_heights = []
     
-    for line in lines:
+    for line in processed_lines:
         bbox = draw.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         line_h = bbox[3] - bbox[1]
@@ -259,21 +229,17 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     box_w = int(target_w * 0.9)
     img_w = max(box_w, int(max_line_w + 40))
     img_h = int(total_h + 40)
-    
     final_image = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw_final = ImageDraw.Draw(final_image)
-
     current_y = 20
-    for i, line in enumerate(lines):
+    for i, line in enumerate(processed_lines):
         bbox = draw_final.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         start_x = (img_w - line_w) // 2
         draw_final.text((start_x+2, current_y+2), line, font=font, fill=(0,0,0,120))
         draw_final.text((start_x, current_y), line, font=font, fill='white')
         current_y += line_heights[i]
-
-    np_img = np.array(final_image)
-    return ImageClip(np_img).set_duration(duration).fadein(0.25).fadeout(0.25)
+    return ImageClip(np.array(final_image)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
 def create_english_clip(text, duration, target_w, scale_factor=1.0):
     final_fs = int(28 * scale_factor)
@@ -281,19 +247,15 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0):
     wrapped_text = wrap_text(text, 10)
     try: font = ImageFont.truetype(FONT_PATH_ENGLISH, final_fs)
     except: font = ImageFont.load_default()
-
     dummy_img = Image.new('RGB', (1, 1))
     draw = ImageDraw.Draw(dummy_img)
     bbox = draw.textbbox((0, 0), wrapped_text, font=font, align='center')
     img_w = max(box_w, int((bbox[2]-bbox[0]) + 20))
     img_h = int((bbox[3]-bbox[1]) + 20)
-
     img = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill='#FFD700', align='center', anchor="mm")
-    
-    np_img = np.array(img)
-    return ImageClip(np_img).set_duration(duration).fadein(0.25).fadeout(0.25)
+    return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
 def pick_bg(uid, user_key, custom_query=None):
     if not user_key: return None
@@ -308,18 +270,13 @@ def pick_bg(uid, user_key, custom_query=None):
             safe_topics = ['nature landscape', 'mosque architecture', 'sky clouds', 'galaxy stars', 'flowers garden', 'ocean waves']
             q = random.choice(safe_topics) + safe_filter
             add_log(uid, f'Random BG: {q}')
-
         headers = {'Authorization': user_key}
         r = requests.get(f"https://api.pexels.com/videos/search?query={q}&per_page=15&page={rand_page}&orientation=portrait", headers=headers, timeout=15)
-        
         if r.status_code == 401: return None
         vids = r.json().get('videos', [])
         if not vids: return None
-        
         vid = random.choice(vids)
         f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), vid['video_files'][0])
-        
-        # حفظ الخلفية في مجلد المستخدم
         path = os.path.join(users_progress[uid]['dirs']['video'], f"bg_{vid['id']}.mp4")
         if not os.path.exists(path):
             with requests.get(f['link'], stream=True) as rv:
@@ -328,12 +285,11 @@ def pick_bg(uid, user_key, custom_query=None):
     except: return None
 
 # ==========================================
-# 🎬 بناء الفيديو (مع دعم UID)
+# 🎬 بناء الفيديو (مع UID)
 # ==========================================
 def build_video(uid, user_pexels_key, reciter_id, surah, start, end=None, quality='720', bg_query=None):
     user_data = users_progress.get(uid)
     if not user_data: return
-
     final = None
     final_audio_clip = None
     bg = None
@@ -348,29 +304,23 @@ def build_video(uid, user_pexels_key, reciter_id, surah, start, end=None, qualit
         scale_factor = 1.0 if quality == '1080' else 0.67
         max_ayah = VERSE_COUNTS[surah]
         last = min(end if end else start+9, max_ayah)
-        
         items = []
         full_audio_seg = AudioSegment.empty()
         
         for i, ayah in enumerate(range(start, last+1), 1):
             if user_data.get('should_stop'): raise Exception("Stopped by user")
             add_log(uid, f'Processing Ayah {ayah}...')
-            
-            # تمرير UID لدالة التحميل
             ap = download_audio(uid, reciter_id, surah, ayah, i)
             ar_txt = f"{get_text(surah, ayah)} ({ayah})"
             en_txt = get_en_text(surah, ayah)
-            
             seg = AudioSegment.from_file(ap)
             full_audio_seg = full_audio_seg.append(seg, crossfade=100) if len(full_audio_seg) > 0 else seg
             clip_dur = seg.duration_seconds 
-            
             if len(ar_txt.split()) > 30:
                 mid = len(ar_txt.split()) // 2
                 items.append(( " ".join(ar_txt.split()[:mid]), " ".join(en_txt.split()[:len(en_txt.split())//2])+"...", clip_dur/2 ))
                 items.append(( " ".join(ar_txt.split()[mid:]), "..."+" ".join(en_txt.split()[len(en_txt.split())//2:]), clip_dur/2 ))
-            else:
-                items.append((ar_txt, en_txt, clip_dur))
+            else: items.append((ar_txt, en_txt, clip_dur))
         
         final_audio_path = user_data['dirs']['final_audio']
         full_audio_seg.export(final_audio_path, format="mp3")
@@ -379,26 +329,18 @@ def build_video(uid, user_pexels_key, reciter_id, surah, start, end=None, qualit
 
         add_log(uid, 'Merging Background...')
         bg_path = pick_bg(uid, user_pexels_key, bg_query)
-        if not bg_path: raise ValueError("No background found")
-        
+        if not bg_path: raise ValueError("No background")
         bg = VideoFileClip(bg_path)
-        bg_ratio = bg.w / bg.h
-        target_ratio = target_w / target_h
-
-        if bg_ratio > target_ratio: bg = bg.resize(height=target_h)
+        if bg.w/bg.h > target_w/target_h: bg = bg.resize(height=target_h)
         else: bg = bg.resize(width=target_w)
-            
         bg = bg.crop(width=target_w, height=target_h, x_center=bg.w/2, y_center=bg.h/2)
         bg = bg.fx(vfx.loop, duration=full_dur).subclip(0, full_dur)
-        
         layers = [bg, ColorClip(bg.size, color=(0,0,0), duration=full_dur).set_opacity(0.6)]
         
         curr_t = 0.0
         y_pos = target_h * 0.40 
-        
         for ar, en, dur in items:
             if user_data.get('should_stop'): raise Exception("Stopped by user")
-            
             ac = create_text_clip(ar, dur, target_w, scale_factor).set_start(curr_t).set_position(('center', y_pos))
             gap = 30 * scale_factor 
             ec = create_english_clip(en, dur, target_w, scale_factor).set_start(curr_t).set_position(('center', y_pos + ac.h + gap))
@@ -406,21 +348,15 @@ def build_video(uid, user_pexels_key, reciter_id, surah, start, end=None, qualit
             curr_t += dur
 
         final = CompositeVideoClip(layers).set_audio(final_audio_clip)
-        
         fname = f"Quran_{surah}_{start}-{last}_{quality}p.mp4"
         out = os.path.join(user_data['dirs']['video'], fname) 
-        
         add_log(uid, 'Rendering Final Video...')
         my_logger = QuranLogger(uid)
-        final.write_videofile(
-            out, fps=15, codec='libx264', audio_bitrate='96k', preset='ultrafast', 
-            threads=1, verbose=False, logger=my_logger, 
-            ffmpeg_params=['-movflags', '+faststart', '-pix_fmt', 'yuv420p', '-crf', '28']
-        )
+        final.write_videofile(out, fps=15, codec='libx264', audio_bitrate='96k', preset='ultrafast', threads=1, verbose=False, logger=my_logger, ffmpeg_params=['-movflags', '+faststart', '-pix_fmt', 'yuv420p', '-crf', '28'])
         
         update_progress(uid, 100, 'Done!')
         user_data['is_complete'] = True 
-        user_data['output_path'] = fname # نحفظ الاسم فقط
+        user_data['output_path'] = fname
         success = True
         
     except Exception as e:
@@ -438,47 +374,33 @@ def build_video(uid, user_pexels_key, reciter_id, surah, start, end=None, qualit
         except: pass
         gc.collect()
 
-# Routes
+# Routes (Updated for Manual ID)
 @app.route('/')
 def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "UI Missing"
 
-# عملنا كوكي للمستخدم عشان نعرفه لما يرجع
 @app.route('/api/generate', methods=['POST'])
 def gen():
-    uid = request.cookies.get('user_uid')
-    if not uid: uid = str(uuid.uuid4()) # إنشاء هوية جديدة لو مش موجودة
+    d = request.json
+    uid = d.get('uid') # استقبال الهوية من المتصفح
+    if not uid: return jsonify({'error': 'UID Missing'}), 400
     
     user_data = init_user(uid)
-    d = request.json
-    
     if user_data['is_running']: return jsonify({'error': 'Busy'}), 400
     
     user_key = d.get('pexelsKey')
     if not user_key: return jsonify({'error': 'Pexels API Key Missing'}), 400
 
-    # تصفير بيانات المستخدم ده بس
-    user_data['percent'] = 0
-    user_data['status'] = "Preparing..."
-    user_data['log'] = []
-    user_data['is_running'] = False
-    user_data['is_complete'] = False
-    user_data['should_stop'] = False
-    user_data['error'] = None
+    user_data['percent'] = 0; user_data['status'] = "Preparing..."; user_data['log'] = []; user_data['is_running'] = False; user_data['is_complete'] = False; user_data['should_stop'] = False; user_data['error'] = None
 
     threading.Thread(target=build_video, args=(
-        uid, user_key,
-        d.get('reciter'), int(d.get('surah')), int(d.get('startAyah')), 
-        int(d.get('endAyah')) if d.get('endAyah') else None, 
-        d.get('quality', '720'), d.get('bgQuery')
+        uid, user_key, d.get('reciter'), int(d.get('surah')), int(d.get('startAyah')), 
+        int(d.get('endAyah')) if d.get('endAyah') else None, d.get('quality', '720'), d.get('bgQuery')
     ), daemon=True).start()
-    
-    resp = make_response(jsonify({'ok': True}))
-    resp.set_cookie('user_uid', uid, max_age=3600*24) # حفظ الهوية لمدة يوم
-    return resp
+    return jsonify({'ok': True})
 
-@app.route('/api/cancel')
+@app.route('/api/cancel', methods=['POST'])
 def cancel_process():
-    uid = request.cookies.get('user_uid')
+    uid = request.json.get('uid')
     if uid and uid in users_progress:
         users_progress[uid]['should_stop'] = True
         users_progress[uid]['status'] = "Stopping..."
@@ -487,19 +409,17 @@ def cancel_process():
 
 @app.route('/api/progress')
 def prog():
-    uid = request.cookies.get('user_uid')
-    if uid and uid in users_progress:
-        return jsonify(users_progress[uid])
-    return jsonify({'percent': 0, 'status': 'Ready'})
+    uid = request.args.get('uid')
+    if uid and uid in users_progress: return jsonify(users_progress[uid])
+    return jsonify({'percent': 0, 'status': 'Ready'}) # لو مفيش هوية، رجع ريدي بس متقفلش التطبيق
 
 @app.route('/api/config')
 def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 'reciters': RECITERS_MAP})
 
 @app.route('/outputs/<path:f>')
 def out(f):
-    uid = request.cookies.get('user_uid')
+    uid = request.args.get('uid')
     if uid and uid in users_progress:
-        # السماح بتحميل الملف من مجلد الفيديو الخاص بالمستخدم
         return send_from_directory(users_progress[uid]['dirs']['video'], f)
     return "Not Found", 404
 
