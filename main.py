@@ -3,6 +3,8 @@
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import ImageClip
+import arabic_reshaper
+from bidi.algorithm import get_display
 
 import PIL.Image
 if not hasattr(PIL.Image, 'ANTIALIAS'):
@@ -194,7 +196,7 @@ def wrap_text(text, per_line):
 
 # === 🎨 دوال إنشاء النصوص (مع إصلاح العربي) ===
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
-    # 1. إعداد حجم الخط وعدد الكلمات
+    # 1. إعداد القياسات
     words = arabic.split()
     wc = len(words)
     if wc > 60: base_fs, pl = 27, 10
@@ -204,53 +206,48 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     else: base_fs, pl = 45, 6
     
     final_fs = int(base_fs * scale_factor)
-    box_w = int(target_w * 0.9)  # عرض الصندوق
-    
-    # 2. معالجة النص العربي (Reshaping + Bidi)
-    # ملاحظة: تأكد أنك تستخدم arabic_reshaper و get_display كما في كودك الأصلي
-    wrapped_text = wrap_text(arabic, pl)
-    reshaped_text = arabic_reshaper.reshape(wrapped_text)
-    bidi_text = get_display(reshaped_text)
+    box_w = int(target_w * 0.9)
 
-    # 3. إعداد الخط باستخدام PIL
+    # 2. تجهيز الخط (Amiri أو Arabic.ttf)
     try:
         font = ImageFont.truetype(FONT_PATH_ARABIC, final_fs)
-    except OSError:
-        # في حالة لم يجد الخط، يستخدم الخط الافتراضي (للتجربة فقط)
+    except Exception:
         font = ImageFont.load_default()
-        print(f"Warning: Could not load font at {FONT_PATH_ARABIC}")
 
-    # 4. حساب أبعاد الصورة المطلوبة للنص
-    # ننشئ صورة وهمية لحساب الأبعاد
+    # 3. معالجة النص العربي (السحر كله هنا) 🎩
+    # الخطوة الأولى: تغليف النص لأسطر
+    wrapped_text = wrap_text(arabic, pl)
+    
+    # الخطوة الثانية: إعادة تشكيل الحروف (لتتصل ببعضها)
+    reshaped_text = arabic_reshaper.reshape(wrapped_text)
+    
+    # الخطوة الثالثة: قلب الترتيب ليكون من اليمين لليسار بصرياً
+    bidi_text = get_display(reshaped_text)
+
+    # 4. الرسم
     dummy_img = Image.new('RGB', (1, 1))
     draw = ImageDraw.Draw(dummy_img)
     
-    # حساب حدود النص (left, top, right, bottom)
+    # حساب الأبعاد
+    # ملاحظة مهمة: لا نستخدم direction='rtl' هنا لأن bidi_text قام بالمهمة بالفعل
     bbox = draw.textbbox((0, 0), bidi_text, font=font, align='center')
     text_width = bbox[2] - bbox[0]
     text_height = bbox[3] - bbox[1]
     
-    # تحديد أبعاد الصورة النهائية (مع هوامش بسيطة)
-    img_w = max(box_w, int(text_width + 20))
-    img_h = int(text_height + 50) 
+    img_w = max(box_w, int(text_width + 40))
+    img_h = int(text_height + 40)
 
-    # 5. رسم النص فعلياً
-    # RGBA تعني أن الخلفية شفافة (0,0,0,0)
     img = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
-    # رسم النص في المنتصف
-    # anchor="mm" تعني Middle-Middle (المنتصف تماماً)
+    # الرسم النهائي
+    # align='center' يضبط محاذاة الأسطر في المنتصف
     draw.text((img_w/2, img_h/2), bidi_text, font=font, fill='white', align='center', anchor="mm")
 
-    # 6. تحويل الصورة إلى كليب فيديو
-    # نحول صورة PIL إلى مصفوفة NumPy لأن MoviePy يتعامل مع المصفوفات
     np_img = np.array(img)
     
-    img_clip = ImageClip(np_img).set_duration(duration)
-    
     # إضافة تأثيرات الظهور والاختفاء
-    return img_clip.fadein(0.25).fadeout(0.25)
+    return ImageClip(np_img).set_duration(duration).fadein(0.25).fadeout(0.25)
 
 def create_english_clip(text, duration, target_w, scale_factor=1.0):
     # 1. إعداد حجم الخط
@@ -510,6 +507,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
