@@ -179,10 +179,14 @@ def wrap_text(text, per_line):
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
 # === 🎨 دالة إنشاء النصوص (إصلاح العربي + عدم القلب) ===
+# === دالة الكتابة الخام (بدون معالجة عربي) ===
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
+    # مسار الخط
     font_path = FONT_PATH_ARABIC
+    
     words = arabic.split()
     wc = len(words)
+    # تظبيط حجم الخط
     if wc > 60: base_fs, pl = 27, 10
     elif wc > 40: base_fs, pl = 32, 9
     elif wc > 25: base_fs, pl = 38, 8
@@ -190,21 +194,27 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     else: base_fs, pl = 45, 6
     
     final_fs = int(base_fs * scale_factor)
+    box_w = int(target_w * 0.9)
 
+    # تحميل الخط
     try:
         font = ImageFont.truetype(font_path, final_fs)
     except:
         font = ImageFont.load_default()
 
-    # معالجة النص: Reshape + Bidi (الحل الصحيح)
+    # ====================================================
+    # 🚫 تم إلغاء المعالجة (Raw Text)
+    # ====================================================
+    # بنعمل Wrap بس عشان الكلام ميوصلش لآخر الشارع
     try:
         wrapped_text = wrap_text(arabic, pl)
-        reshaped_text = arabic_reshaper.reshape(wrapped_text)
-        bidi_text = get_display(reshaped_text)
+        # بناخد النص زي ما هو بالظبط بدون تشبيك ولا قلب
+        lines = wrapped_text.split('\n')
     except:
-        bidi_text = arabic 
+        lines = [arabic]
+    # ====================================================
 
-    lines = bidi_text.split('\n')
+    # حساب الأبعاد
     dummy_img = Image.new('RGBA', (target_w, 1000))
     draw = ImageDraw.Draw(dummy_img)
     
@@ -220,23 +230,23 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
         line_heights.append(line_h + 20)
         total_h += line_h + 20
 
-    box_w = int(target_w * 0.9)
     img_w = max(box_w, int(max_line_w + 40))
     img_h = int(total_h + 40)
     
     final_image = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw_final = ImageDraw.Draw(final_image)
 
+    # الرسم
     current_y = 20
     for i, line in enumerate(lines):
         bbox = draw_final.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         start_x = (img_w - line_w) // 2
         
-        # الظل
-        draw_final.text((start_x+2, current_y+2), line, font=font, fill=(0,0,0,120))
-        # النص
+        # رسم النص كما هو
+        draw_final.text((start_x+2, current_y+2), line, font=font, fill=(0,0,0,150))
         draw_final.text((start_x, current_y), line, font=font, fill='white')
+        
         current_y += line_heights[i]
 
     np_img = np.array(final_image)
@@ -447,3 +457,4 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
