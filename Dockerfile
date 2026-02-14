@@ -1,29 +1,31 @@
-FROM python:3.9-slim
+# استخدام بايثون 3.9
+FROM python:3.9
 
-# 1. تثبيت البرامج الأساسية
+# 1. تثبيت ffmpeg و imagemagick
 RUN apt-get update && \
-    apt-get install -y ffmpeg imagemagick libmagick++-dev ghostscript fonts-dejavu coreutils && \
+    apt-get install -y ffmpeg imagemagick ghostscript && \
     apt-get clean
 
+# 2. الحل الجذري والنهائي لمشكلة السياسة (ImageMagick Policy)
+# بنمسح الملف القديم ونكتب واحد جديد يسمح بكل حاجة (Text + PDF)
+RUN echo '<policymap><policy domain="path" rights="read|write" pattern="@*" /></policymap>' > /etc/ImageMagick-6/policy.xml
+
+# 3. إعداد مجلد العمل
 WORKDIR /app
 
-# 2. نسخ ملف المكتبات وتثبيتها
+# 4. نسخ وتثبيت المكتبات
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ========================================================
-# 🔥 الحل النهائي (الاستبدال الكامل) 🔥
-# هنا بننسخ ملف السياسة المفتوح بتاعنا مكان ملف السيرفر المقفول
-# ========================================================
-COPY policy.xml /etc/ImageMagick-6/policy.xml
-
-# 3. نسخ باقي ملفات المشروع
+# 5. نسخ باقي الملفات
 COPY . .
 
-# التأكد من المجلدات
-RUN mkdir -p temp_videos temp_audio vision fonts
+# 6. إعطاء صلاحيات كاملة لمجلدات العمل (مهم جداً لـ Hugging Face)
+RUN mkdir -p temp_videos temp_audio vision fonts && \
+    chmod -R 777 temp_videos temp_audio vision fonts /app
 
-EXPOSE 8000
+# 7. البورت الرسمي لـ Hugging Face هو 7860
+EXPOSE 7860
 
-# تشغيل التطبيق (Thread واحد فقط)
-CMD ["gunicorn", "main:app", "--workers", "1", "--threads", "1", "--timeout", "120", "--bind", "0.0.0.0:8000"]
+# 8. أمر التشغيل
+CMD ["gunicorn", "main:app", "--workers", "1", "--threads", "1", "--timeout", "120", "--bind", "0.0.0.0:7860"]
