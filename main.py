@@ -1,11 +1,16 @@
 # Quran Reels Generator - Final Fix
 import sys
-import io
 import os
 
-# 1. إجبار النظام على استخدام UTF-8 (الحل الجذري لمشاكل الطباعة)
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+# الحل ده أضمن عشان مبيعملش Double Wrapping
+try:
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8')
+except Exception as e:
+    pass # لو فشل مش مشكلة، الـ ENV هيقوم بالواجب
+
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -469,6 +474,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
