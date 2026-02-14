@@ -312,6 +312,8 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
     final = None
     final_audio_clip = None
     bg = None
+    success = False  # 1. متغير لتتبع حالة النجاح
+
     try:
         current_progress['is_running'] = True
         add_log('🚀 بدء المعالجة...')
@@ -353,7 +355,7 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
 
         add_log('🎨 جاري دمج الخلفية...')
         bg_path = pick_bg(user_pexels_key, bg_query)
-        if not bg_path: raise ValueError("لم يتم العثور على خلفية")
+        if not bg_path: raise ValueError("لم يتم العثور على خلفية (تأكد من مفتاح Pexels)")
         
         bg = VideoFileClip(bg_path)
         if bg.h != target_h: bg = bg.resize(height=target_h)
@@ -366,6 +368,7 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         y_pos = target_h * 0.40 
         
         for ar, en, dur in items:
+            # هنا يتم استدعاء دالة PIL الجديدة
             ac = create_text_clip(ar, dur, target_w, scale_factor).set_start(curr_t).set_position(('center', y_pos))
             gap = 30 * scale_factor 
             ec = create_english_clip(en, dur, target_w, scale_factor).set_start(curr_t).set_position(('center', y_pos + ac.h + gap))
@@ -387,13 +390,19 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         update_progress(100, 'تم الانتهاء!')
         current_progress['is_complete'] = True 
         current_progress['output_path'] = out
+        success = True # تمت العملية بنجاح
         
     except Exception as e:
         logging.error(traceback.format_exc())
         current_progress['error'] = str(e)
-        add_log(f"❌ خطأ: {str(e)}")
+        add_log(f"❌ خطأ: {str(e)}") # هذا السطر لن يتم تغطيته الآن
     finally:
-        add_log("🧹 تنظيف الذاكرة...")
+        # 2. تعديل شرط التنظيف
+        # لا نغير الحالة في الـ UI إذا كان هناك خطأ، نطبع فقط في الكونسول
+        print("🧹 تنظيف الذاكرة (داخلي)...")
+        if success:
+             add_log("🧹 تنظيف الذاكرة...")
+
         current_progress['is_running'] = False
         try:
             if final: final.close()
@@ -444,4 +453,5 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
