@@ -1,4 +1,3 @@
-# Quran Reels Generator - Final Fix (Manual ID + Arabic Fix)
 import sys
 import io
 import os
@@ -43,7 +42,9 @@ def app_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
 EXEC_DIR = app_dir()
-BUNDLE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+# BUNDLE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))) 
+# ^^^ تم التعديل: استخدام EXEC_DIR مباشرة لتجنب مشاكل المسارات في Hugging Face
+BUNDLE_DIR = EXEC_DIR 
 
 FFMPEG_EXE = "ffmpeg"
 os.environ["FFMPEG_BINARY"] = FFMPEG_EXE
@@ -66,7 +67,7 @@ AudioSegment.ffmpeg = FFMPEG_EXE
 AudioSegment.ffprobe = "ffprobe"
 
 # ==========================================
-# 📝 إدارة الجلسات (Dictionary)
+# 📝 إدارة الجلسات
 # ==========================================
 users_progress = {}
 
@@ -81,7 +82,7 @@ def init_user(uid):
         os.makedirs(os.path.join(user_dir, "video"), exist_ok=True)
         
         users_progress[uid] = {
-            'percent': 0, 'status': 'جاهز', 'log': [], 'is_running': False, 
+            'percent': 0, 'status': 'ready', 'log': [], 'is_running': False, 
             'is_complete': False, 'output_path': None, 'should_stop': False, 'error': None,
             'dirs': {
                 'root': user_dir,
@@ -189,6 +190,7 @@ def wrap_text(text, per_line):
     words = text.split()
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
+# === 🎨 دالة الكتابة (مضبوطة: Reshape + Bidi) ===
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     font_path = FONT_PATH_ARABIC
     words = arabic.split()
@@ -202,7 +204,7 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     try: font = ImageFont.truetype(font_path, final_fs)
     except: font = ImageFont.load_default()
 
-    # معالجة العربي: تقسيم الأسطر -> Reshape -> Bidi
+    # المعالجة الصحيحة للعربي
     try:
         wrapped_lines = wrap_text(arabic, pl).split('\n')
         processed_lines = []
@@ -296,7 +298,7 @@ def build_video(uid, user_pexels_key, reciter_id, surah, start, end=None, qualit
     success = False
     
     try:
-        user_data['is_running'] = True
+        # ⚠️ (ملاحظة: تم نقل is_running=True إلى دالة gen بالأسفل لحل مشكلة السباق)
         add_log(uid, '🚀 Starting Process...')
         clear_user_outputs(uid)
         
@@ -374,14 +376,14 @@ def build_video(uid, user_pexels_key, reciter_id, surah, start, end=None, qualit
         except: pass
         gc.collect()
 
-# Routes (Updated for Manual ID)
+# Routes
 @app.route('/')
 def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "UI Missing"
 
 @app.route('/api/generate', methods=['POST'])
 def gen():
     d = request.json
-    uid = d.get('uid') # استقبال الهوية من المتصفح
+    uid = d.get('uid')
     if not uid: return jsonify({'error': 'UID Missing'}), 400
     
     user_data = init_user(uid)
@@ -390,7 +392,15 @@ def gen():
     user_key = d.get('pexelsKey')
     if not user_key: return jsonify({'error': 'Pexels API Key Missing'}), 400
 
-    user_data['percent'] = 0; user_data['status'] = "Preparing..."; user_data['log'] = []; user_data['is_running'] = False; user_data['is_complete'] = False; user_data['should_stop'] = False; user_data['error'] = None
+    user_data['percent'] = 0; 
+    user_data['status'] = "Preparing..."
+    user_data['log'] = []
+    
+    # 🔥🔥🔥 التعديل الحاسم هنا 🔥🔥🔥
+    # بنقول للسيرفر إننا شغالين قبل ما نبعت الخيط أصلاً
+    user_data['is_running'] = True 
+    
+    user_data['is_complete'] = False; user_data['should_stop'] = False; user_data['error'] = None
 
     threading.Thread(target=build_video, args=(
         uid, user_key, d.get('reciter'), int(d.get('surah')), int(d.get('startAyah')), 
@@ -411,7 +421,8 @@ def cancel_process():
 def prog():
     uid = request.args.get('uid')
     if uid and uid in users_progress: return jsonify(users_progress[uid])
-    return jsonify({'percent': 0, 'status': 'Ready'}) # لو مفيش هوية، رجع ريدي بس متقفلش التطبيق
+    # لو مفيش هوية، رجع جاهز (Ready)
+    return jsonify({'percent': 0, 'status': 'ready'})
 
 @app.route('/api/config')
 def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 'reciters': RECITERS_MAP})
