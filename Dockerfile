@@ -1,16 +1,16 @@
 FROM python:3.9-slim
 
-# 1. تحديث النظام وتثبيت البرامج (بما فيها أدوات البحث)
+# 1. تثبيت الحزم المطلوبة
 RUN apt-get update && \
     apt-get install -y ffmpeg imagemagick libmagick++-dev ghostscript fonts-dejavu coreutils findutils && \
     apt-get clean
 
 # ========================================================
-# 🔥 الحل النووي (Brute Force Fix) 🔥
-# هذا الأمر يبحث عن ملف policy.xml في أي مكان داخل /etc
-# ويقوم باستبدال "none" بـ "read|write" للسماح بالكتابة
+# 🔥 تنفيذ الحل اللي في الفيديو (طريقة الحذف) 🔥
+# الأمر ده هيدور على أي ملف policy.xml في النظام
+# ويقوم بحذف السطر اللي بيعمل Block للـ Text والـ PDF نهائياً
 # ========================================================
-RUN find /etc -name "policy.xml" -exec sed -i 's/rights="none" pattern="@\*"/rights="read|write" pattern="@*"/g' {} +
+RUN find /etc -name "policy.xml" -exec sed -i '/pattern="@\*"/d' {} +
 
 WORKDIR /app
 
@@ -24,5 +24,5 @@ RUN mkdir -p temp_videos temp_audio vision fonts
 
 EXPOSE 8000
 
-# تشغيل التطبيق بـ Thread واحد فقط
+# تشغيل التطبيق (Thread واحد للأمان)
 CMD ["gunicorn", "main:app", "--workers", "1", "--threads", "1", "--timeout", "120", "--bind", "0.0.0.0:8000"]
