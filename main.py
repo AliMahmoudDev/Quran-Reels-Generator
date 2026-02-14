@@ -260,10 +260,8 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     # تحويل لـ MoviePy
     np_img = np.array(text_surface)
     return ImageClip(np_img).set_duration(duration).fadein(0.25).fadeout(0.25)
-ل
 
-    np_img = np.array(img)
-    return ImageClip(np_img).set_duration(duration).fadein(0.25).fadeout(0.25)
+    
 def create_english_clip(text, duration, target_w, scale_factor=1.0):
     # 1. إعداد حجم الخط
     final_fs = int(28 * scale_factor)
@@ -522,6 +520,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
