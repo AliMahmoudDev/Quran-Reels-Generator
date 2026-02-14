@@ -52,7 +52,7 @@ change_settings({"IMAGEMAGICK_BINARY": IM_MAGICK_EXE})
 
 # المجلدات العامة
 FONT_DIR = os.path.join(EXEC_DIR, "fonts")
-FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Amiri.ttf") 
+FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Arabic.ttf") 
 FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
 VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
@@ -146,8 +146,8 @@ def download_audio(reciter_id, surah, ayah, idx):
         end = detect_silence(snd.reverse(), snd.dBFS-20)
         trimmed = snd
         if start + end < len(snd):
-            trimmed = snd[max(0, start-50):len(snd)-max(0, end-50)]
-        padding = AudioSegment.silent(duration=200) 
+            trimmed = snd[max(0, start-30):len(snd)-max(0, end-30)]
+        padding = AudioSegment.silent(duration=50) 
         final_snd = padding + trimmed.fade_in(20).fade_out(20)
         final_snd.export(out, format='mp3')
     except Exception as e: raise ValueError(f"Download Error: {ayah}")
@@ -178,11 +178,11 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     font_path = FONT_PATH_ARABIC
     words = arabic.split()
     wc = len(words)
-    if wc > 60: base_fs, pl = 27, 10
-    elif wc > 40: base_fs, pl = 32, 9
-    elif wc > 25: base_fs, pl = 38, 8
-    elif wc > 15: base_fs, pl = 43, 7
-    else: base_fs, pl = 45, 6
+    if wc > 60: base_fs, pl = 30, 12
+    elif wc > 40: base_fs, pl = 35, 10
+    elif wc > 25: base_fs, pl = 41, 9
+    elif wc > 15: base_fs, pl = 46, 8
+    else: base_fs, pl = 48, 7
     final_fs = int(base_fs * scale_factor)
     try: font = ImageFont.truetype(font_path, final_fs)
     except: font = ImageFont.load_default()
@@ -388,3 +388,4 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
