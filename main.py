@@ -158,11 +158,11 @@ def download_audio(reciter_id, surah, ayah, idx):
         
         trimmed = snd
         if start + end < len(snd):
-            trimmed = snd[max(0, start-50):len(snd)-max(0, end-50)]
+            trimmed = snd[max(0, start-30):len(snd)-max(0, end-30)]
             
         # --- التعديل هنا: إضافة سكتة صغيرة في البداية (Delay) ---
         # 200 مللي ثانية تأخير عشان الصوت ميبدأش قبل الصورة
-        padding = AudioSegment.silent(duration=200) 
+        padding = AudioSegment.silent(duration=50) 
         final_snd = padding + trimmed.fade_in(20).fade_out(20)
         # -------------------------------------------------------
         
@@ -170,16 +170,38 @@ def download_audio(reciter_id, surah, ayah, idx):
         
     except Exception as e: raise ValueError(f"فشل تحميل الآية {ayah}")
     return out
+    
 def get_text(surah, ayah):
     try:
-        # استخدام quran-simple لضمان ظهور النص
         r = requests.get(f'https://api.alquran.cloud/v1/ayah/{surah}:{ayah}/quran-simple')
         t = r.json()['data']['text']
-        # الكود القديم اللي كان شغال: استبدال النص العثماني المحدد
-        if surah != 1 and ayah == 1: 
-            t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
+        
+        # لو الآية رقم 1 والسورة مش الفاتحة (رقم 1) ولا التوبة (رقم 9)
+        if surah != 1 and ayah == 1:
+            # قائمة باحتمالات البسملة المختلفة في الرسم الإملائي والعثماني
+            basmalah_variations = [
+                "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", # الرسم العثماني الشائع
+                "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ",   # الرسم الإملائي
+                "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"  # تنويع آخر في التشكيل
+            ]
+            
+            # محاولة مسح البسملة لو موجودة في بداية النص
+            for b in basmalah_variations:
+                if t.startswith(b):
+                    t = t.replace(b, "").strip()
+                    break
+            
+            # حل أخير: لو لسه متمسحتش، امسح أول 39 حرف (طول البسملة تقريباً)
+            # لأن أحياناً المسافات بتكون مختلفة
+            if len(t) > 40 and t.startswith("بِسْمِ"): 
+                 # نتأكد إننا مابنمسحش الآية نفسها، بنشوف أول مسافة بعد البسملة
+                 split_text = t.split()
+                 if len(split_text) > 4: # البسملة 4 كلمات
+                     # نجمع الكلمات ما عدا أول 4
+                     t = " ".join(split_text[4:])
+                     
         return t
-    except: return "خطأ في النص"
+    except: return "خطأ"
 
 def get_en_text(surah, ayah):
     try:
@@ -470,6 +492,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
