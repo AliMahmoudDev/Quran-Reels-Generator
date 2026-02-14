@@ -68,7 +68,7 @@ VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
 INTERNAL_AUDIO_DIR = os.path.join(EXEC_DIR, "temp_audio")
 FONT_DIR = os.path.join(EXEC_DIR, "fonts")
-FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Arabic.ttf")
+FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Amiri.ttf")
 FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
 FINAL_AUDIO_PATH = os.path.join(INTERNAL_AUDIO_DIR, "combined_final.mp3")
 
@@ -195,8 +195,9 @@ def wrap_text(text, per_line):
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
 # === 🎨 دوال إنشاء النصوص (مع إصلاح العربي) ===
+
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
-    # 1. إعداد القياسات
+    # إعدادات الحجم والأسطر
     words = arabic.split()
     wc = len(words)
     if wc > 60: base_fs, pl = 27, 10
@@ -208,47 +209,46 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     final_fs = int(base_fs * scale_factor)
     box_w = int(target_w * 0.9)
 
-    # 2. تجهيز الخط (Amiri أو Arabic.ttf)
     try:
         font = ImageFont.truetype(FONT_PATH_ARABIC, final_fs)
-    except Exception:
+    except:
         font = ImageFont.load_default()
 
-    # 3. معالجة النص العربي (السحر كله هنا) 🎩
-    # الخطوة الأولى: تغليف النص لأسطر
-    wrapped_text = wrap_text(arabic, pl)
+    # --- المعالجة الحاسمة ---
+    # 1. تقسيم النص لأسطر أولاً
+    wrapped_lines = wrap_text(arabic, pl).split('\n')
     
-    # الخطوة الثانية: إعادة تشكيل الحروف (لتتصل ببعضها)
-    reshaped_text = arabic_reshaper.reshape(wrapped_text)
+    processed_lines = []
+    for line in wrapped_lines:
+        # 2. تشكيل الحروف لكل سطر على حدة
+        reshaped = arabic_reshaper.reshape(line)
+        # 3. ضبط الاتجاه بصرياً (إجباري)
+        bidi_line = get_display(reshaped)
+        processed_lines.append(bidi_line)
     
-    # الخطوة الثالثة: قلب الترتيب ليكون من اليمين لليسار بصرياً
-    bidi_text = get_display(reshaped_text)
+    # دمج الأسطر مرة أخرى
+    final_text = '\n'.join(processed_lines)
 
-    # 4. الرسم
-    dummy_img = Image.new('RGB', (1, 1))
+    # --- الرسم بدون محركات إضافية ---
+    dummy_img = Image.new('RGBA', (1, 1))
     draw = ImageDraw.Draw(dummy_img)
     
-    # حساب الأبعاد
-    # ملاحظة مهمة: لا نستخدم direction='rtl' هنا لأن bidi_text قام بالمهمة بالفعل
-    bbox = draw.textbbox((0, 0), bidi_text, font=font, align='center')
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
+    # حساب الأبعاد (مهم جداً عدم وضع direction هنا)
+    bbox = draw.textbbox((0, 0), final_text, font=font, align='center')
+    text_w = bbox[2] - bbox[0]
+    text_h = bbox[3] - bbox[1]
     
-    img_w = max(box_w, int(text_width + 40))
-    img_h = int(text_height + 40)
+    img_w = max(box_w, int(text_w + 40))
+    img_h = int(text_h + 40)
 
     img = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
-    # الرسم النهائي
-    # align='center' يضبط محاذاة الأسطر في المنتصف
-    draw.text((img_w/2, img_h/2), bidi_text, font=font, fill='white', align='center', anchor="mm")
+    # السر هنا: نرسم النص كما هو (L-to-R بصریاً) لأننا عالجناه يدوياً
+    draw.text((img_w/2, img_h/2), final_text, font=font, fill='white', align='center', anchor="mm")
 
     np_img = np.array(img)
-    
-    # إضافة تأثيرات الظهور والاختفاء
     return ImageClip(np_img).set_duration(duration).fadein(0.25).fadeout(0.25)
-
 def create_english_clip(text, duration, target_w, scale_factor=1.0):
     # 1. إعداد حجم الخط
     final_fs = int(28 * scale_factor)
@@ -507,6 +507,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
