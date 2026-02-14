@@ -30,6 +30,10 @@ COPY . .
 RUN mkdir -p temp_videos temp_audio vision && \
     chmod -R 777 temp_videos temp_audio vision /app
 
+ENV PYTHONIOENCODING=utf-8
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
 # 7. المنفذ
 EXPOSE 7860
 
