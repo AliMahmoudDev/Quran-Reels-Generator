@@ -10,7 +10,8 @@ RUN apt-get update && \
     libharfbuzz-dev \
     libraqm-dev \
     && rm -rf /var/lib/apt/lists/*
-
+# تأكد من وجود هذه المكتبات فقط للأساسيات
+RUN apt-get update && apt-get install -y ffmpeg libfribidi0 && rm -rf /var/lib/apt/lists/*
 # 2. إعداد مجلد العمل
 WORKDIR /app
 
