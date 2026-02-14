@@ -252,6 +252,45 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     # إضافة تأثيرات الظهور والاختفاء
     return img_clip.fadein(0.25).fadeout(0.25)
 
+def create_english_clip(text, duration, target_w, scale_factor=1.0):
+    # 1. إعداد حجم الخط
+    final_fs = int(28 * scale_factor)
+    box_w = int(target_w * 0.85)
+
+    # 2. التفاف النص (Word Wrap)
+    # نستخدم نفس دالة wrap_text الموجودة في كودك
+    wrapped_text = wrap_text(text, 10)
+
+    # 3. تحميل الخط الإنجليزي
+    try:
+        font = ImageFont.truetype(FONT_PATH_ENGLISH, final_fs)
+    except OSError:
+        font = ImageFont.load_default()
+
+    # 4. حساب الأبعاد باستخدام PIL
+    dummy_img = Image.new('RGB', (1, 1))
+    draw = ImageDraw.Draw(dummy_img)
+    
+    bbox = draw.textbbox((0, 0), wrapped_text, font=font, align='center')
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    
+    img_w = max(box_w, int(text_width + 20))
+    img_h = int(text_height + 20)
+
+    # 5. الرسم (لون ذهبي #FFD700)
+    img = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    
+    draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill='#FFD700', align='center', anchor="mm")
+
+    # 6. التحويل إلى فيديو
+    np_img = np.array(img)
+    en_clip = ImageClip(np_img).set_duration(duration)
+    
+    return en_clip.fadein(0.25).fadeout(0.25)
+
+
 # === 🎥 الخلفيات (الفلتر الآمن الجديد - كما كان في الكود الأصلي) ===
 LAST_BG = None
 def pick_bg(user_key, custom_query=None):
@@ -453,5 +492,6 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
