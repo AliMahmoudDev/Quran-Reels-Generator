@@ -27,5 +27,9 @@ RUN mkdir -p temp_videos temp_audio vision fonts && \
 # 7. البورت الرسمي لـ Hugging Face هو 7860
 EXPOSE 7860
 
+# تأكد من نسخ الخطوط ومنحها صلاحيات القراءة
+COPY fonts /app/fonts
+RUN chmod -R 755 /app/fonts
+
 # 8. أمر التشغيل
 CMD ["gunicorn", "main:app", "--workers", "1", "--threads", "1", "--timeout", "120", "--bind", "0.0.0.0:7860"]
