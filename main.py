@@ -1,4 +1,4 @@
-# Quran Reels Generator - Docker Fixed Version
+# Quran Reels Generator - Arabic Fixed Version
 # ==========================================
 import PIL.Image
 # Fix for Pillow 10+
@@ -21,6 +21,10 @@ import datetime
 import logging
 import traceback
 import gc
+# --- مكتبات إصلاح العربي ---
+import arabic_reshaper
+from bidi.algorithm import get_display
+# ---------------------------
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from proglog import ProgressBarLogger
@@ -28,22 +32,17 @@ from proglog import ProgressBarLogger
 # ==========================================
 # 🔧 إعدادات المسارات (معدلة خصيصاً لـ Docker)
 # ==========================================
-
-# 1. تحديد المجلد الأساسي
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EXEC_DIR = BASE_DIR
 BUNDLE_DIR = BASE_DIR
 
-# 2. إعداد FFMPEG
 FFMPEG_EXE = "ffmpeg"
 os.environ["FFMPEG_BINARY"] = FFMPEG_EXE
 
-# 3. إعداد ImageMagick (الحل النهائي للدوكر)
-# نجبر المكتبة على استخدام المسار القياسي في لينكس
+# إجبار استخدام ImageMagick الصحيح
 IM_MAGICK_EXE = "/usr/bin/convert"
 change_settings({"IMAGEMAGICK_BINARY": IM_MAGICK_EXE})
 
-# 4. إعدادات Pydub
 AudioSegment.converter = FFMPEG_EXE
 AudioSegment.ffmpeg = FFMPEG_EXE
 AudioSegment.ffprobe = "ffprobe"
@@ -55,12 +54,10 @@ VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
 INTERNAL_AUDIO_DIR = os.path.join(EXEC_DIR, "temp_audio")
 FONT_DIR = os.path.join(EXEC_DIR, "fonts")
-# تأكد من أن أسماء ملفات الخطوط مطابقة تماماً لما ترفعه
 FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Arabic.ttf")
 FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
 FINAL_AUDIO_PATH = os.path.join(INTERNAL_AUDIO_DIR, "combined_final.mp3")
 
-# إنشاء المجلدات عند البدء
 for d in [TEMP_DIR, INTERNAL_AUDIO_DIR, FONT_DIR, VISION_DIR]:
     os.makedirs(d, exist_ok=True)
 
@@ -74,10 +71,7 @@ VERSE_COUNTS = {1: 7, 2: 286, 3: 200, 4: 176, 5: 120, 6: 165, 7: 206, 8: 75, 9: 
 SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه', 'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم', 'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر', 'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق', 'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة', 'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج', 'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد', 'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس']
 RECITERS_MAP = {'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 'الشيخ عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 'الشيخ ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 'الشيخ محمد صديق المنشاوي (مجود)': 'Minshawy_Mujawwad_64kbps', 'الشيخ سعود الشريم': 'Saood_ash-Shuraym_64kbps', 'الشيخ مشاري العفاسي': 'Alafasy_64kbps', 'الشيخ محمود خليل الحصري': 'Husary_64kbps', 'الشيخ أبو بكر الشاطري': 'Abu_Bakr_Ash-Shaatree_128kbps', 'ناصر القطامي':'Nasser_Alqatami_128kbps', 'هاني الرافعي':'Hani_Rifai_192kbps', 'علي جابر' :'Ali_Jaber_64kbps'}
 
-# ==========================================
-# 📊 مراقب التقدم
 current_progress = {'percent': 0, 'status': 'واقف', 'log': [], 'is_running': False, 'is_complete': False, 'output_path': None, 'should_stop': False}
-
 app = Flask(__name__, static_folder=EXEC_DIR)
 CORS(app)
 
@@ -85,29 +79,22 @@ class QuranLogger(ProgressBarLogger):
     def __init__(self):
         super().__init__()
         self.start_time = None
-
     def bars_callback(self, bar, attr, value, old_value=None):
-        if current_progress.get('should_stop'):
-            raise Exception("تم إيقاف العملية يدوياً!")
-
+        if current_progress.get('should_stop'): raise Exception("تم إيقاف العملية يدوياً!")
         if bar == 't':
             total = self.bars[bar]['total']
             if total > 0:
                 percent = int((value / total) * 100)
                 if self.start_time is None: self.start_time = time.time()
                 elapsed = time.time() - self.start_time
-                
                 rem_str = "00:00"
                 if elapsed > 0 and value > 0:
                     rate = value / elapsed 
                     remaining = (total - value) / rate
                     rem_str = str(datetime.timedelta(seconds=int(remaining)))[2:] if remaining > 0 else "00:00"
-
                 current_progress['percent'] = percent
                 current_progress['status'] = f"جاري التصدير... {percent}% (⏳ {rem_str})"
 
-# ==========================================
-# 🛠️ دوال المساعدة
 def reset_progress():
     global current_progress
     current_progress = {'percent': 0, 'status': 'جاري التحضير...', 'log': [], 'is_running': False, 'is_complete': False, 'output_path': None, 'error': None, 'should_stop': False}
@@ -150,18 +137,13 @@ def download_audio(reciter_id, surah, ayah, idx):
         r = requests.get(url, stream=True, timeout=30)
         with open(out, 'wb') as f:
             for chunk in r.iter_content(8192): f.write(chunk)
-        
         snd = AudioSegment.from_file(out)
         start = detect_silence(snd, snd.dBFS-20) 
         end = detect_silence(snd.reverse(), snd.dBFS-20)
-        
         trimmed = snd
-        if start + end < len(snd):
-            trimmed = snd[max(0, start-50):len(snd)-max(0, end-50)]
-            
+        if start + end < len(snd): trimmed = snd[max(0, start-50):len(snd)-max(0, end-50)]
         final_snd = trimmed.fade_in(20).fade_out(20)
         final_snd.export(out, format='mp3')
-        
     except Exception as e: raise ValueError(f"فشل تحميل الآية {ayah}")
     return out
 
@@ -183,7 +165,7 @@ def wrap_text(text, per_line):
     words = text.split()
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
-# === 🎨 دوال إنشاء النصوص ===
+# === 🎨 دوال إنشاء النصوص (مع إصلاح العربي) ===
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     words = arabic.split()
     wc = len(words)
@@ -192,10 +174,26 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     elif wc > 25: base_fs, pl = 38, 8
     elif wc > 15: base_fs, pl = 43, 7
     else: base_fs, pl = 45, 6
+    
     final_fs = int(base_fs * scale_factor)
     box_w = int(target_w * 0.9)
+    
+    # --- بداية الإصلاح: معالجة العربي ---
+    # 1. تقسيم النص لأسطر
+    wrapped_text = wrap_text(arabic, pl)
+    
+    # 2. تشبيك وعكس كل سطر لوحده
+    final_lines = []
+    for line in wrapped_text.split('\n'):
+        reshaped_text = arabic_reshaper.reshape(line)    # تشبيك الحروف
+        bidi_text = get_display(reshaped_text)           # عكس الاتجاه (RTL)
+        final_lines.append(bidi_text)
+        
+    final_arabic_text = "\n".join(final_lines)
+    # -----------------------------------
+
     ar_clip = TextClip(
-        wrap_text(arabic, pl), font=FONT_PATH_ARABIC, fontsize=final_fs, 
+        final_arabic_text, font=FONT_PATH_ARABIC, fontsize=final_fs, 
         color='white', method='caption', size=(box_w, None), align='center'
     ).set_duration(duration)
     return ar_clip.fadein(0.25).fadeout(0.25)
@@ -209,7 +207,7 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0):
     ).set_duration(duration)
     return en_clip.fadein(0.25).fadeout(0.25)
 
-# === 🎥 الخلفيات (الفلتر الآمن الجديد) ===
+# === 🎥 الخلفيات ===
 LAST_BG = None
 def pick_bg(user_key, custom_query=None):
     global LAST_BG
@@ -217,33 +215,22 @@ def pick_bg(user_key, custom_query=None):
     try:
         rand_page = random.randint(1, 10)
         safe_filter = " no people"
-
         if custom_query and custom_query.strip():
             trans_q = GoogleTranslator(source='auto', target='en').translate(custom_query.strip())
             q = trans_q + safe_filter
-            add_log(f'🔍 بحث مخصص (فلتر آمن): {q}')
+            add_log(f'🔍 بحث مخصص: {q}')
         else:
-            safe_topics = [
-                'nature landscape', 'mosque architecture', 'sky clouds timelapse',
-                'galaxy stars space', 'flowers garden macro', 'ocean waves drone',
-                'waterfall slow motion', 'desert dunes', 'forest trees fog',
-                'islamic geometric art'
-            ]
+            safe_topics = ['nature landscape', 'mosque architecture', 'sky clouds timelapse', 'galaxy stars space', 'flowers garden macro', 'ocean waves drone', 'waterfall slow motion', 'desert dunes', 'forest trees fog', 'islamic geometric art']
             q = random.choice(safe_topics) + safe_filter
-            add_log(f'🎲 خلفية عشوائية (آمنة): {q}')
+            add_log(f'🎲 خلفية عشوائية: {q}')
 
         headers = {'Authorization': user_key}
         r = requests.get(f"https://api.pexels.com/videos/search?query={q}&per_page=15&page={rand_page}&orientation=portrait", headers=headers, timeout=15)
-        
-        if r.status_code == 401:
-            add_log("❌ خطأ: مفتاح Pexels غير صحيح!")
-            return None
-            
+        if r.status_code == 401: return None
         vids = r.json().get('videos', [])
         if not vids:
              r = requests.get(f"https://api.pexels.com/videos/search?query={q}&per_page=15&orientation=portrait", headers=headers, timeout=15)
              vids = r.json().get('videos', [])
-
         if not vids: return None
         
         vid = random.choice(vids)
@@ -272,7 +259,6 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         
         target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
         scale_factor = 1.0 if quality == '1080' else 0.67
-
         max_ayah = VERSE_COUNTS[surah]
         last = min(end if end else start+9, max_ayah)
         
@@ -281,16 +267,13 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         
         for i, ayah in enumerate(range(start, last+1), 1):
             if current_progress.get('should_stop'): raise Exception("تم الإلغاء بواسطة المستخدم")
-            
             add_log(f'⏳ جاري تجهيز الآية {ayah}...')
             ap = download_audio(reciter_id, surah, ayah, i)
-            
             ar_txt = f"{get_text(surah, ayah)} ({ayah})"
             en_txt = get_en_text(surah, ayah)
             
             seg = AudioSegment.from_file(ap)
             full_audio_seg = full_audio_seg.append(seg, crossfade=100) if len(full_audio_seg) > 0 else seg
-
             clip_dur = seg.duration_seconds 
             
             if len(ar_txt.split()) > 30:
@@ -314,7 +297,6 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         bg = bg.fx(vfx.loop, duration=full_dur).subclip(0, full_dur)
         
         layers = [bg, ColorClip(bg.size, color=(0,0,0), duration=full_dur).set_opacity(0.6)]
-        
         curr_t = 0.0
         y_pos = target_h * 0.40 
         
@@ -331,13 +313,11 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         
         add_log('🎬 جاري التصدير النهائي (Render)...')
         my_logger = QuranLogger()
-        
         final.write_videofile(
             out, fps=15, codec='libx264', audio_bitrate='96k', preset='ultrafast', 
             threads=1, verbose=False, logger=my_logger, 
             ffmpeg_params=['-movflags', '+faststart', '-pix_fmt', 'yuv420p', '-crf', '28']
         )
-        
         update_progress(100, 'تم الانتهاء!')
         current_progress['is_complete'] = True 
         current_progress['output_path'] = out
@@ -357,8 +337,6 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         except: pass
         gc.collect()
 
-# ==========================================
-# 🌐 API Routes
 @app.route('/')
 def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "UI Missing"
 
@@ -366,10 +344,8 @@ def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "UI Missing"
 def gen():
     d = request.json
     if current_progress['is_running']: return jsonify({'error': 'Busy'}), 400
-    
     user_key = d.get('pexelsKey')
     if not user_key: return jsonify({'error': 'Pexels API Key Missing'}), 400
-
     reset_progress()
     threading.Thread(target=build_video, args=(
         user_key,
