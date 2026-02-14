@@ -119,7 +119,11 @@ class QuranLogger(ProgressBarLogger):
                     rem_str = str(datetime.timedelta(seconds=int(remaining)))[2:] if remaining > 0 else "00:00"
 
                 current_progress['percent'] = percent
-                current_progress['status'] = f"جاري التصدير... {percent}% (⏳ {rem_str})"
+                
+                # هنا التعديل: تجنبنا وضع حروف عربية في متغيرات قد تُطبع داخلياً
+                # الرسالة دي بتروح للفرونت إند بس
+                status_msg = f"جاري التصدير... {percent}% (باقي {rem_str})"
+                current_progress['status'] = status_msg
 
 # ==========================================
 # 📖 البيانات الكاملة (تم إرجاعها كما كانت)
@@ -137,9 +141,19 @@ def reset_progress():
     current_progress = {'percent': 0, 'status': 'جاري التحضير...', 'log': [], 'is_running': False, 'is_complete': False, 'output_path': None, 'error': None, 'should_stop': False}
 
 def add_log(message):
+    # تحديث الواجهة (ده المهم ومش هيعمل مشاكل)
     current_progress['log'].append(message)
     current_progress['status'] = message
-    print(f'>>> {message}', flush=True)
+    
+    # محاولة الطباعة في التيرمينال (لو فشلت مش هنوقف البرنامج)
+    try:
+        print(f'>>> {message}', flush=True)
+    except UnicodeEncodeError:
+        # لو السيرفر مش قابل العربي، مش مهم نطبع في الشاشة
+        pass 
+    except Exception:
+        pass
+
 
 def update_progress(percent, status):
     current_progress['percent'] = percent
@@ -542,6 +556,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
