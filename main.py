@@ -2,7 +2,7 @@
 # ==========================================
 import PIL.Image
 if not hasattr(PIL.Image, 'ANTIALIAS'):
-    PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
+    PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
 # ==========================================
 import time
 from deep_translator import GoogleTranslator
@@ -418,3 +418,4 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
