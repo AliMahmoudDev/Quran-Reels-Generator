@@ -66,7 +66,7 @@ VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
 INTERNAL_AUDIO_DIR = os.path.join(EXEC_DIR, "temp_audio")
 FONT_DIR = os.path.join(EXEC_DIR, "fonts")
-FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Arabic.ttf")
+FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Amiri.ttf")
 FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
 FINAL_AUDIO_PATH = os.path.join(INTERNAL_AUDIO_DIR, "combined_final.mp3")
 
@@ -492,6 +492,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
