@@ -197,33 +197,40 @@ def wrap_text(text, per_line):
 # === 🎨 دوال إنشاء النصوص (مع إصلاح العربي) ===
 
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
-    # 1. إعدادات القياسات (نفس كودك)
+    # 1. التأكد من وجود الخط (عشان نعرف ليه بيختفي)
+    if not os.path.exists(FONT_PATH_ARABIC):
+        print(f"⚠️ Warning: Font file not found at {FONT_PATH_ARABIC}")
+        # ممكن تستخدم خط السيستم كبديل مؤقت
+        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf" 
+    else:
+        font_path = FONT_PATH_ARABIC
+
+    # 2. إعدادات المقاسات (نفس كودك)
     words = arabic.split()
     wc = len(words)
-    if wc > 60: base_fs, pl = 27, 10
-    elif wc > 40: base_fs, pl = 32, 9
-    elif wc > 25: base_fs, pl = 38, 8
-    elif wc > 15: base_fs, pl = 43, 7
-    else: base_fs, pl = 45, 6
-    
+    base_fs, pl = (45, 6) if wc <= 15 else (38, 8) # تبسيط للحسبة
     final_fs = int(base_fs * scale_factor)
-    box_w = int(target_w * 0.9)
 
     try:
-        font = ImageFont.truetype(FONT_PATH_ARABIC, final_fs)
+        font = ImageFont.truetype(font_path, final_fs)
     except:
         font = ImageFont.load_default()
 
-    # 2. السر هنا: معالجة النص سطر بسطر
-    # أولاً: بنقسم النص لأسطر بناءً على pl
+    # 3. معالجة النص - الإعدادات الاحترافية
+    configuration = {
+        'delete_harakat': False,
+        'support_ligatures': True,
+    }
+    reshaper = arabic_reshaper.ArabicReshaper(configuration)
+    
+    # تقسيم النص لأسطر
     raw_lines = wrap_text(arabic, pl).split('\n')
     processed_lines = []
     
     for line in raw_lines:
-        # بنعمل reshape للسطر عشان الحروف تشبك
-        reshaped = arabic_reshaper.reshape(line)
-        # بنستخدم bidi عشان يظبط اتجاه الحروف داخل الكلمات
-        bidi_line = get_display(reshaped)
+        # Reshape + Bidi (الترتيب ده مقدس)
+        reshaped_line = reshaper.reshape(line)
+        bidi_line = get_display(reshaped_line)
         processed_lines.append(bidi_line)
 
     # 3. حساب أبعاد الصورة
@@ -521,6 +528,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
