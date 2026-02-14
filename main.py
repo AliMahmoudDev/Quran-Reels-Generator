@@ -209,56 +209,56 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     final_fs = int(base_fs * scale_factor)
     box_w = int(target_w * 0.9)
 
-    # 2. تحميل الخط
     try:
         font = ImageFont.truetype(FONT_PATH_ARABIC, final_fs)
     except:
         font = ImageFont.load_default()
 
-    # 3. المعالجة اليدوية الصارمة
-    # تقسيم النص لأسطر ومعالجة كل سطر بشكل مستقل تماماً
-    raw_lines = wrap_text(arabic, pl).split('\n')
-    processed_lines = []
-    
-    for line in raw_lines:
-        # دمج الحروف (Reshaping)
-        reshaped = arabic_reshaper.reshape(line)
-        # قلب الاتجاه (Bidi) ليكون سليم بصرياً من اليمين لليسار
-        bidi_line = get_display(reshaped)
-        processed_lines.append(bidi_line)
-    
-    # دمج الأسطر مرة ثانية
-    final_text = '\n'.join(processed_lines)
+    # 2. معالجة النص: تشكيل الحروف فقط (بدون bidi)
+    # إحنا هنعتمد على reshaper عشان يخلي الحروف متصلة
+    reshaped_text = arabic_reshaper.reshape(wrap_text(arabic, pl))
+    lines = reshaped_text.split('\n')
 
-    # 4. حساب أبعاد النص
+    # 3. حساب أبعاد الصورة الكلية
     dummy_img = Image.new('RGBA', (target_w, 1000))
     draw = ImageDraw.Draw(dummy_img)
     
-    bbox = draw.textbbox((0, 0), final_text, font=font, align='center')
-    text_w = bbox[2] - bbox[0]
-    text_h = bbox[3] - bbox[1]
+    # حساب أقصى عرض وطول للأسطر
+    max_line_w = 0
+    total_h = 0
+    line_heights = []
     
-    img_w = max(box_w, int(text_w + 40))
-    img_h = int(text_h + 40)
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=font)
+        line_w = bbox[2] - bbox[0]
+        line_h = bbox[3] - bbox[1]
+        max_line_w = max(max_line_w, line_w)
+        line_heights.append(line_h + 20) # 20 مسافة بين الأسطر
+        total_h += line_h + 20
+
+    img_w = max(box_w, int(max_line_w + 40))
+    img_h = int(total_h + 40)
     
-    text_surface = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
-    draw_surface = ImageDraw.Draw(text_surface)
+    final_image = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
+    draw_final = ImageDraw.Draw(final_image)
 
-    # 5. الرسم (السر في البارامترات دي)
-    # بنرسم النص كأنه نص "لاتيني" (Ltr) عشان Pillow ميحاولش يقلبه تاني
-    draw_surface.multiline_text(
-        (img_w/2, img_h/2), 
-        final_text, 
-        font=font, 
-        fill='white', 
-        align='center', 
-        anchor="mm",
-        spacing=10,
-        direction='ltr',   # إجبار الاتجاه من اليسار لليمين (لأننا قلبنا النص فعلياً خلاص)
-        features=None      # تعطيل الميزات الذكية اللي بتبوظ التشكيل اليدوي
-    )
+    # 4. الرسم السحري: رسم كل سطر "مقلوب يدوياً"
+    current_y = 20
+    for i, line in enumerate(lines):
+        # قلب السطر يدوياً (عشان نضمن إن "بسم" تبقى أول حاجة عاليمين)
+        # الطريقة دي بتخلي Pillow يفتكر إنه بيرسم حروف جنب بعضها وبس
+        line_to_draw = line[::-1] 
+        
+        # حساب مكان بداية السطر ليكون في المنتصف
+        bbox = draw_final.textbbox((0, 0), line_to_draw, font=font)
+        line_w = bbox[2] - bbox[0]
+        start_x = (img_w - line_w) // 2
+        
+        draw_final.text((start_x, current_y), line_to_draw, font=font, fill='white')
+        current_y += line_heights[i]
 
-    np_img = np.array(text_surface)
+    # تحويل لـ MoviePy
+    np_img = np.array(final_image)
     return ImageClip(np_img).set_duration(duration).fadein(0.25).fadeout(0.25)
 
 
@@ -521,6 +521,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
