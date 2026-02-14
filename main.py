@@ -149,24 +149,37 @@ def download_audio(reciter_id, surah, ayah, idx):
         r = requests.get(url, stream=True, timeout=30)
         with open(out, 'wb') as f:
             for chunk in r.iter_content(8192): f.write(chunk)
+        
         snd = AudioSegment.from_file(out)
+        
+        # كود القص القديم (Trim Silence)
         start = detect_silence(snd, snd.dBFS-20) 
         end = detect_silence(snd.reverse(), snd.dBFS-20)
+        
         trimmed = snd
         if start + end < len(snd):
             trimmed = snd[max(0, start-50):len(snd)-max(0, end-50)]
-        final_snd = trimmed.fade_in(20).fade_out(20)
+            
+        # --- التعديل هنا: إضافة سكتة صغيرة في البداية (Delay) ---
+        # 200 مللي ثانية تأخير عشان الصوت ميبدأش قبل الصورة
+        padding = AudioSegment.silent(duration=200) 
+        final_snd = padding + trimmed.fade_in(20).fade_out(20)
+        # -------------------------------------------------------
+        
         final_snd.export(out, format='mp3')
-    except: raise ValueError(f"Audio Download Error: {ayah}")
+        
+    except Exception as e: raise ValueError(f"فشل تحميل الآية {ayah}")
     return out
-
 def get_text(surah, ayah):
     try:
+        # استخدام quran-simple لضمان ظهور النص
         r = requests.get(f'https://api.alquran.cloud/v1/ayah/{surah}:{ayah}/quran-simple')
         t = r.json()['data']['text']
-        if surah!=1 and ayah==1: t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
+        # الكود القديم اللي كان شغال: استبدال النص العثماني المحدد
+        if surah != 1 and ayah == 1: 
+            t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
         return t
-    except: return "خطأ"
+    except: return "خطأ في النص"
 
 def get_en_text(surah, ayah):
     try:
@@ -457,6 +470,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
