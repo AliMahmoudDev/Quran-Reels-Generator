@@ -197,57 +197,47 @@ def wrap_text(text, per_line):
 # === 🎨 دوال إنشاء النصوص (مع إصلاح العربي) ===
 
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
-    # 1. التأكد من وجود الخط (عشان نعرف ليه بيختفي)
-    if not os.path.exists(FONT_PATH_ARABIC):
-        print(f"⚠️ Warning: Font file not found at {FONT_PATH_ARABIC}")
-        # ممكن تستخدم خط السيستم كبديل مؤقت
-        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf" 
-    else:
-        font_path = FONT_PATH_ARABIC
-
-    # 2. إعدادات المقاسات (نفس كودك)
+    # 1. تعريف المتغيرات الأساسية (هنا بنحل مشكلة name 'box_w' is not defined)
+    box_w = int(target_w * 0.9) #
+    
     words = arabic.split()
     wc = len(words)
-    base_fs, pl = (45, 6) if wc <= 15 else (38, 8) # تبسيط للحسبة
+    if wc > 60: base_fs, pl = 27, 10
+    elif wc > 40: base_fs, pl = 32, 9
+    elif wc > 25: base_fs, pl = 38, 8
+    elif wc > 15: base_fs, pl = 43, 7
+    else: base_fs, pl = 45, 6
+    
     final_fs = int(base_fs * scale_factor)
 
+    # 2. تحميل الخط
     try:
-        font = ImageFont.truetype(font_path, final_fs)
+        font = ImageFont.truetype(FONT_PATH_ARABIC, final_fs)
     except:
         font = ImageFont.load_default()
 
-    # 3. معالجة النص - الإعدادات الاحترافية
-    configuration = {
-        'delete_harakat': False,
-        'support_ligatures': True,
-    }
-    reshaper = arabic_reshaper.ArabicReshaper(configuration)
-    
-    # تقسيم النص لأسطر
-    raw_lines = wrap_text(arabic, pl).split('\n')
-    processed_lines = []
-    
-    for line in raw_lines:
-        # Reshape + Bidi (الترتيب ده مقدس)
-        reshaped_line = reshaper.reshape(line)
-        bidi_line = get_display(reshaped_line)
-        processed_lines.append(bidi_line)
+    # 3. معالجة النص (Reshape -> Bidi)
+    # بنستخدم الـ wrap قبل المعالجة لضمان ترتيب الأسطر
+    wrapped_raw = wrap_text(arabic, pl)
+    reshaped_text = arabic_reshaper.reshape(wrapped_raw)
+    bidi_text = get_display(reshaped_text)
+    lines = bidi_text.split('\n')
 
-    # 3. حساب أبعاد الصورة
+    # 4. حساب أبعاد الصورة الكلية
     dummy_img = Image.new('RGBA', (target_w, 1000))
     draw = ImageDraw.Draw(dummy_img)
     
+    max_line_w = 0
     total_h = 0
     line_heights = []
-    max_line_w = 0
     
-    for line in processed_lines:
+    for line in lines:
         bbox = draw.textbbox((0, 0), line, font=font)
-        lw = bbox[2] - bbox[0]
-        lh = bbox[3] - bbox[1]
-        max_line_w = max(max_line_w, lw)
-        line_heights.append(lh + 20)
-        total_h += lh + 20
+        line_w = bbox[2] - bbox[0]
+        line_h = bbox[3] - bbox[1]
+        max_line_w = max(max_line_w, line_w)
+        line_heights.append(line_h + 20)
+        total_h += line_h + 20
 
     img_w = max(box_w, int(max_line_w + 40))
     img_h = int(total_h + 40)
@@ -255,15 +245,18 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     final_image = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw_final = ImageDraw.Draw(final_image)
 
-    # 4. الرسم النهائي
+    # 5. الرسم (إضافة ظل بسيط لتحسين الرؤية)
     current_y = 20
-    for i, line in enumerate(processed_lines):
+    for i, line in enumerate(lines):
         bbox = draw_final.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         start_x = (img_w - line_w) // 2
         
-        # بنرسم السطر "كما هو" بعد الـ bidi
+        # رسم ظل خفيف (اختياري)
+        draw_final.text((start_x+2, current_y+2), line, font=font, fill=(0,0,0,150))
+        # رسم النص الأصلي
         draw_final.text((start_x, current_y), line, font=font, fill='white')
+        
         current_y += line_heights[i]
 
     np_img = np.array(final_image)
@@ -528,6 +521,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
