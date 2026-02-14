@@ -394,11 +394,29 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
 
         add_log('🎨 جاري دمج الخلفية...')
         bg_path = pick_bg(user_pexels_key, bg_query)
-        if not bg_path: raise ValueError("لم يتم العثور على خلفية (تأكد من مفتاح Pexels)")
+        if not bg_path: raise ValueError("لم يتم العثور على خلفية")
         
         bg = VideoFileClip(bg_path)
-        if bg.h != target_h: bg = bg.resize(height=target_h)
-        if bg.w > target_w: bg = bg.crop(x1=bg.w//2 - target_w//2, width=target_w, height=target_h)
+
+        # === بداية التعديل: خوارزمية Smart Resize لضمان الأبعاد الزوجية ===
+        # الهدف: جعل الخلفية تغطي الشاشة بالكامل دون مط (Aspect Ratio) ودون أرقام فردية
+        
+        bg_ratio = bg.w / bg.h
+        target_ratio = target_w / target_h
+
+        if bg_ratio > target_ratio:
+            # الفيديو أعرض من المطلوب: نضبط الارتفاع ونقص الزيادة من الجوانب
+            bg = bg.resize(height=target_h)
+        else:
+            # الفيديو أطول/أرفع من المطلوب: نضبط العرض ونقص الزيادة من فوق وتحت
+            # هذه الحالة هي التي كانت تسبب مشكلة 675 بكسل سابقاً
+            bg = bg.resize(width=target_w)
+            
+        # الآن نقوم بالقص الإجباري ليكون الفيديو بنفس مقاس التصدير بالضبط
+        # x_center و y_center يضمنان أن القص يكون من المنتصف
+        bg = bg.crop(width=target_w, height=target_h, x_center=bg.w/2, y_center=bg.h/2)
+        # ================================================================
+
         bg = bg.fx(vfx.loop, duration=full_dur).subclip(0, full_dur)
         
         layers = [bg, ColorClip(bg.size, color=(0,0,0), duration=full_dur).set_opacity(0.6)]
@@ -492,6 +510,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
