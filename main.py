@@ -163,32 +163,62 @@ def wrap_text(text, per_line):
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
 # === 🎨 دوال إنشاء النصوص ===
-def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
-    words = arabic.split()
-    wc = len(words)
-    if wc > 60: base_fs, pl = 27, 10
-    elif wc > 40: base_fs, pl = 32, 9
-    elif wc > 25: base_fs, pl = 38, 8
-    elif wc > 15: base_fs, pl = 43, 7
-    else: base_fs, pl = 45, 6
-    
-    final_fs = int(base_fs * scale_factor)
+import numpy as np
+from PIL import Image, ImageFont, ImageDraw
+
+def create_text_clip(arabic_text, duration, target_w, scale_factor=1.0):
+    # إعدادات الحجم والخط
+    base_fs = 45
     box_w = int(target_w * 0.9)
+    final_fs = int(base_fs * scale_factor)
     
-    # معالجة العربي
-    wrapped_text = wrap_text(arabic, pl)
+    # محاولة تحميل الخط (مهم جداً للتأكد من المسار)
+    try:
+        font = ImageFont.truetype(FONT_PATH_ARABIC, final_fs)
+    except:
+        # خط احتياطي لو الخط العربي مش مقرؤ
+        font = ImageFont.load_default()
+        print("⚠️ Warning: Could not load Arabic font, using default.")
+
+    # معالجة النص العربي (تشبيك + عكس)
+    wrapped_text = wrap_text(arabic_text, 8) # تقليل عدد الكلمات في السطر لضمان الظهور
     final_lines = []
     for line in wrapped_text.split('\n'):
-        reshaped_text = arabic_reshaper.reshape(line) 
+        reshaped_text = arabic_reshaper.reshape(line)
         bidi_text = get_display(reshaped_text)
         final_lines.append(bidi_text)
-    final_arabic_text = "\n".join(final_lines)
+    final_text = "\n".join(final_lines)
 
-    ar_clip = TextClip(
-        final_arabic_text, font=FONT_PATH_ARABIC, fontsize=final_fs, 
-        color='white', method='caption', size=(box_w, None), align='center'
-    ).set_duration(duration)
-    return ar_clip.fadein(0.25).fadeout(0.25)
+    # 🎨 إنشاء صورة شفافة بحجم الفيديو
+    # نحسب ارتفاع النص المتوقع
+    dummy_img = Image.new('RGBA', (1, 1))
+    draw = ImageDraw.Draw(dummy_img)
+    
+    # حساب حجم النص (bbox)
+    text_w, text_h = 0, 0
+    # طريقة حديثة لحساب الحجم في Pillow
+    left, top, right, bottom = draw.textbbox((0, 0), final_text, font=font, align='center')
+    text_w = right - left
+    text_h = bottom - top
+    
+    # إضافة هامش
+    img_w = target_w
+    img_h = text_h + 50 
+
+    # إنشاء الصورة الفعلية
+    img = Image.new('RGBA', (img_w, img_h), (255, 255, 255, 0)) # خلفية شفافة
+    draw = ImageDraw.Draw(img)
+
+    # رسم النص في المنتصف
+    # ملاحظة: Pillow يرسم العربي بشكل ممتاز لو تم عمل reshape قبله
+    draw.text(((img_w - text_w) / 2, 10), final_text, font=font, fill='white', align='center')
+
+    # تحويل صورة Pillow إلى Clip لـ MoviePy
+    # هذه الخطوة هي التي تحل مشكلة ImageMagick
+    img_np = np.array(img)
+    txt_clip = vfx.ImageClip(img_np).set_duration(duration)
+    
+    return txt_clip.fadein(0.25).fadeout(0.25)
 
 def create_english_clip(text, duration, target_w, scale_factor=1.0):
     final_fs = int(28 * scale_factor)
@@ -370,3 +400,4 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
