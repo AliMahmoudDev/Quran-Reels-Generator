@@ -214,33 +214,33 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     except:
         font = ImageFont.load_default()
 
-    # 2. معالجة النص: (التعديل هنا)
-    # أولاً: بنعمل wrap للنص العادي قبل التشكيل
-    wrapped_raw = wrap_text(arabic, pl)
+    # 2. السر هنا: معالجة النص سطر بسطر
+    # أولاً: بنقسم النص لأسطر بناءً على pl
+    raw_lines = wrap_text(arabic, pl).split('\n')
+    processed_lines = []
     
-    # ثانياً: بنعمل reshape عشان الحروف تشبك في بعضها
-    reshaped_text = arabic_reshaper.reshape(wrapped_raw)
-    
-    # ثالثاً: بنستخدم bidi عشان يظبط الاتجاه من اليمين للشمال (RTL) بشكل احترافي
-    bidi_text = get_display(reshaped_text)
-    
-    lines = bidi_text.split('\n')
+    for line in raw_lines:
+        # بنعمل reshape للسطر عشان الحروف تشبك
+        reshaped = arabic_reshaper.reshape(line)
+        # بنستخدم bidi عشان يظبط اتجاه الحروف داخل الكلمات
+        bidi_line = get_display(reshaped)
+        processed_lines.append(bidi_line)
 
-    # 3. حساب أبعاد الصورة (نفس كودك)
+    # 3. حساب أبعاد الصورة
     dummy_img = Image.new('RGBA', (target_w, 1000))
     draw = ImageDraw.Draw(dummy_img)
     
-    max_line_w = 0
     total_h = 0
     line_heights = []
+    max_line_w = 0
     
-    for line in lines:
+    for line in processed_lines:
         bbox = draw.textbbox((0, 0), line, font=font)
-        line_w = bbox[2] - bbox[0]
-        line_h = bbox[3] - bbox[1]
-        max_line_w = max(max_line_w, line_w)
-        line_heights.append(line_h + 20)
-        total_h += line_h + 20
+        lw = bbox[2] - bbox[0]
+        lh = bbox[3] - bbox[1]
+        max_line_w = max(max_line_w, lw)
+        line_heights.append(lh + 20)
+        total_h += lh + 20
 
     img_w = max(box_w, int(max_line_w + 40))
     img_h = int(total_h + 40)
@@ -248,19 +248,17 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     final_image = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw_final = ImageDraw.Draw(final_image)
 
-    # 4. الرسم: (التعديل هنا)
+    # 4. الرسم النهائي
     current_y = 20
-    for i, line in enumerate(lines):
+    for i, line in enumerate(processed_lines):
         bbox = draw_final.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
-        # توسيط النص في الصورة
         start_x = (img_w - line_w) // 2
         
-        # بنرسم السطر زي ما هو طالع من bidi بدون [::-1]
+        # بنرسم السطر "كما هو" بعد الـ bidi
         draw_final.text((start_x, current_y), line, font=font, fill='white')
         current_y += line_heights[i]
 
-    # تحويل لـ MoviePy
     np_img = np.array(final_image)
     return ImageClip(np_img).set_duration(duration).fadein(0.25).fadeout(0.25)
 
@@ -523,6 +521,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
