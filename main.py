@@ -390,7 +390,7 @@ def build_video(user_pexels_key, reciter_id, surah, start, end=None, quality='72
         my_logger = QuranLogger()
         final.write_videofile(
             out, fps=15, codec='libx264', audio_bitrate='96k', preset='ultrafast', 
-            threads=1, verbose=False, logger=my_logger, 
+            threads=4, verbose=False, logger=my_logger, 
             ffmpeg_params=['-movflags', '+faststart', '-pix_fmt', 'yuv420p', '-crf', '28']
         )
         
@@ -457,5 +457,6 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
