@@ -215,38 +215,37 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     except:
         font = ImageFont.load_default()
 
-    # 3. المعالجة اليدوية (سطر بسطر) لمنع Pillow من التدخل
+    # 3. المعالجة اليدوية الصارمة
+    # تقسيم النص لأسطر ومعالجة كل سطر بشكل مستقل تماماً
     raw_lines = wrap_text(arabic, pl).split('\n')
     processed_lines = []
     
     for line in raw_lines:
-        # تشكيل الحروف
+        # دمج الحروف (Reshaping)
         reshaped = arabic_reshaper.reshape(line)
-        # قلب الاتجاه يدوياً
+        # قلب الاتجاه (Bidi) ليكون سليم بصرياً من اليمين لليسار
         bidi_line = get_display(reshaped)
         processed_lines.append(bidi_line)
     
-    # دمج الأسطر المعالجة
+    # دمج الأسطر مرة ثانية
     final_text = '\n'.join(processed_lines)
 
-    # 4. حساب أبعاد النص بدقة
-    dummy_img = Image.new('RGBA', (target_w, 500))
+    # 4. حساب أبعاد النص
+    dummy_img = Image.new('RGBA', (target_w, 1000))
     draw = ImageDraw.Draw(dummy_img)
     
-    # الحصول على حدود النص
     bbox = draw.textbbox((0, 0), final_text, font=font, align='center')
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
     
-    # إنشاء الصورة الشفافة بالمقاس المظبوط
     img_w = max(box_w, int(text_w + 40))
     img_h = int(text_h + 40)
     
     text_surface = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw_surface = ImageDraw.Draw(text_surface)
 
-    # 5. الرسم (السر هنا: لا نستخدم أي باراميتر للاتجاه)
-    # نرسم النص كأنه نص "أعجمي" لأننا رتبنا الحروف يدوياً خلاص
+    # 5. الرسم (السر في البارامترات دي)
+    # بنرسم النص كأنه نص "لاتيني" (Ltr) عشان Pillow ميحاولش يقلبه تاني
     draw_surface.multiline_text(
         (img_w/2, img_h/2), 
         final_text, 
@@ -254,12 +253,14 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
         fill='white', 
         align='center', 
         anchor="mm",
-        spacing=10 # مسافة بين الأسطر لزيادة الوضوح
+        spacing=10,
+        direction='ltr',   # إجبار الاتجاه من اليسار لليمين (لأننا قلبنا النص فعلياً خلاص)
+        features=None      # تعطيل الميزات الذكية اللي بتبوظ التشكيل اليدوي
     )
 
-    # تحويل لـ MoviePy
     np_img = np.array(text_surface)
     return ImageClip(np_img).set_duration(duration).fadein(0.25).fadeout(0.25)
+
 
     
 def create_english_clip(text, duration, target_w, scale_factor=1.0):
@@ -520,6 +521,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
