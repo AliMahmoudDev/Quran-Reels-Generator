@@ -48,8 +48,22 @@ BUNDLE_DIR = bundled_dir()
 
 # Logging
 log_path = os.path.join(EXEC_DIR, "runlog.txt")
-logging.basicConfig(filename=log_path, level=logging.INFO, format='%(asctime)s - %(message)s', force=True)
 
+# نستخدم Handlers عشان نضمن إن التشفير يبقى UTF-8
+file_handler = logging.FileHandler(log_path, mode='a', encoding='utf-8')
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+
+logging.basicConfig(
+    level=logging.INFO, 
+    handlers=[file_handler], # استخدام الـ handler المخصص
+    force=True
+)
+
+# حل مشكلة الطباعة في التيرمينال (Print) لو السيرفر مش بيدعم عربي
+import sys
+import io
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 # ==========================================
 # 🔧 إعدادات المسارات (تم تعديلها لتناسب Docker)
 # ==========================================
@@ -528,6 +542,7 @@ def out(f): return send_from_directory(TEMP_DIR, f)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
