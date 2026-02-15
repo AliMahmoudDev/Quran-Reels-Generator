@@ -114,10 +114,6 @@
         }
         .social-link:hover { background: var(--gradient-gold); color: #000; transform: translateY(-3px); }
         .social-link svg { fill: currentColor; }
-
-        .color-row { display: flex; gap: 10px; margin-bottom: 15px; }
-        .color-group { flex: 1; }
-        .color-input { width: 100%; height: 40px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); border-radius: 8px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -187,17 +183,6 @@
                     </select>
                 </div>
 
-                <div class="color-row">
-                    <div class="color-group">
-                        <label class="label">لون الخط العربي</label>
-                        <input type="color" id="arabicColor" class="color-input" value="#FFFFFF">
-                    </div>
-                    <div class="color-group">
-                        <label class="label">لون الخط الإنجليزي</label>
-                        <input type="color" id="englishColor" class="color-input" value="#FFD700">
-                    </div>
-                </div>
-
                 <div class="toggle-box">
                     <span style="font-size:0.9rem;">🔍 بحث مخصص (خلفية)</span>
                     <label class="switch"><input type="checkbox" id="useSearch" onchange="toggleSearch()"><span class="slider"></span></label>
@@ -215,7 +200,6 @@
                 <div class="toggle-box" style="background: rgba(212, 175, 55, 0.1); border: 1px solid var(--border-glow);">
                     <div style="display:flex; flex-direction:column;">
                         <span style="font-size:0.9rem; color: var(--primary-gold);">✨ توهج النص (Glow)</span>
-                        <span style="font-size:0.65rem; color:#aaa;">(تأثير هالة خفيفة)</span>
                     </div>
                     <label class="switch"><input type="checkbox" id="useGlow" checked><span class="slider"></span></label>
                 </div>
@@ -225,6 +209,13 @@
                         <span style="font-size:0.9rem; color: var(--primary-gold);">🎬 تعتيم سينمائي (Vignette)</span>
                     </div>
                     <label class="switch"><input type="checkbox" id="useVignette" checked><span class="slider"></span></label>
+                </div>
+
+                <div class="toggle-box" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-glow);">
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-size:0.9rem; color: var(--primary-gold);">🌫️ تمويه الخلفية (Blur)</span>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="useBlur"><span class="slider"></span></label>
                 </div>
 
                 <button type="submit" id="btn" class="btn-main">✨ إنشاء الفيديو</button>
@@ -368,9 +359,8 @@
             const useGlow = document.getElementById('useGlow').checked;
             const useVignette = document.getElementById('useVignette').checked;
             
-            // قراءة الألوان
-            const arColor = document.getElementById('arabicColor').value;
-            const enColor = document.getElementById('englishColor').value;
+            // ✅ قراءة حالة الخيار الجديد
+            const useBlur = document.getElementById('useBlur').checked;
 
             try {
                 const res = await fetch(`/api/generate`, {
@@ -385,8 +375,7 @@
                         dynamicBg: isDynamicBg,
                         useGlow: useGlow,
                         useVignette: useVignette,
-                        arabicColor: arColor,
-                        englishColor: enColor
+                        useBlur: useBlur  // ✅ إرسال الخيار للسيرفر
                     })
                 });
                 
