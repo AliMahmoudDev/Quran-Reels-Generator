@@ -3,8 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>مولد الريلز القرآني السريع 🚀</title>
+    <title>صانع الريلز القرآني | Quran Reels</title>
+    
+    <link rel="icon" href="https://ibb.co/zWy3WBhD"> 
+    
+    <meta property="og:title" content="صانع الريلز القرآني 🚀">
+    <meta property="og:description" content="أنشئ فيديوهات قرانية احترافية في ثوانٍ. صدقة جارية ومجانية.">
+    <meta property="og:image" content="https://ibb.co/zWy3WBhD">
+    <meta property="og:url" content="https://huggingface.co/spaces/Ali112009/Quran_Reels_Generator">
+    <meta name="theme-color" content="#0a0a0e">
+
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
     <style>
         :root {
             --primary-gold: #d4af37;
@@ -30,6 +40,17 @@
         }
 
         .container { width: 100%; max-width: 500px; padding-bottom: 50px; }
+        
+        /* 🖼️ تنسيق اللوجو في الهيدر */
+        .logo-img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 2px solid var(--primary-gold);
+            margin-bottom: 10px;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+        }
+
         .card {
             background: var(--bg-glass); backdrop-filter: blur(10px);
             border-radius: 16px; border: 1px solid var(--border-glow);
@@ -67,12 +88,7 @@
             border: 1px solid rgba(255,255,255,0.05);
         }
         .hist-info { display: flex; flex-direction: column; }
-        /* تفاصيل إضافية في الـ History */
-        .hist-meta {
-            font-size: 0.65rem;
-            color: #aaa;
-            margin-top: 2px;
-        }
+        .hist-meta { font-size: 0.65rem; color: #aaa; margin-top: 2px; }
         .hist-date { font-size: 0.6rem; color: #666; margin-top: 2px; }
         .hist-btn {
             background: var(--primary-gold);
@@ -112,44 +128,22 @@
         input:checked + .slider:before { transform: translateX(24px); }
         .btn-rand { width: 100%; height: 45px; margin-bottom: 20px; background: var(--random-purple); border: none; border-radius: 12px; color: #fff; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
 
-        /* --- Footer Contact --- */
         .footer-contact {
             margin-top: 30px;
             padding-top: 20px;
             text-align: center;
             border-top: 1px solid var(--border-glow);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
+            display: flex; flex-direction: column; align-items: center; gap: 15px;
         }
-        .contact-links {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
+        .contact-links { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
         .social-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--primary-gold);
-            text-decoration: none;
-            font-weight: 600;
-            transition: 0.3s;
-            background: rgba(212, 175, 55, 0.05);
-            padding: 8px 16px;
-            border-radius: 50px;
-            border: 1px solid var(--border-glow);
-            font-size: 0.9rem;
+            display: inline-flex; align-items: center; gap: 8px; color: var(--primary-gold);
+            text-decoration: none; font-weight: 600; transition: 0.3s;
+            background: rgba(212, 175, 55, 0.05); padding: 8px 16px; border-radius: 50px;
+            border: 1px solid var(--border-glow); font-size: 0.9rem;
         }
-        .social-link:hover {
-            background: var(--gradient-gold);
-            color: #000;
-            transform: translateY(-3px);
-        }
+        .social-link:hover { background: var(--gradient-gold); color: #000; transform: translateY(-3px); }
         .social-link svg { fill: currentColor; }
-
     </style>
 </head>
 <body>
@@ -157,6 +151,7 @@
     <div class="container">
         <div class="card">
             <div class="header">
+                <img src="https://ibb.co/zWy3WBhD" alt="Logo" class="logo-img" onerror="this.style.display='none'">
                 <h1 class="title">صانع الريلز القرآني</h1>
                 <p style="color:#888; font-size:0.8rem;">نسخة التوربو 🚀</p>
             </div>
@@ -166,6 +161,9 @@
             <div style="background: rgba(212, 175, 55, 0.05); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed var(--primary-gold);">
                 <label class="label">🔑 مفتاح Pexels</label>
                 <input type="text" id="pexelsKey" class="input-box" placeholder="الصق الـ API Key هنا">
+                <div style="text-align:center; margin-top:5px;">
+                   <a href="https://www.pexels.com/api/" target="_blank" style="color:var(--primary-gold); font-size:0.75rem;">احصل على مفتاح مجاني</a>
+                </div>
             </div>
 
             <form id="vForm">
@@ -305,13 +303,13 @@
             if(currentJobId && confirm("إيقاف؟")) await fetch('/api/cancel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({jobId:currentJobId})});
         }
 
-        // ✅ Updated History Function
+        // ✅ NEW: Enhanced History with details
         function saveToHistory(surahTxt, ayahs, url, reciter, fps, quality) {
             let hist = JSON.parse(localStorage.getItem('quran_hist') || '[]');
             const newItem = {
                 id: Date.now(),
                 title: `${surahTxt} (${ayahs})`,
-                details: `${reciter} • ${quality}p • ${fps}fps`, // بيانات اضافية
+                details: `${reciter} • ${quality}p • ${fps}fps`, // تفاصيل أنيقة
                 date: new Date().toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'}),
                 url: url
             };
@@ -363,6 +361,7 @@
             const selQuality = qSelect.value;
 
             try {
+                // ✅ Fix for "No Job ID": Wait for response
                 const res = await fetch(`/api/generate`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -374,8 +373,11 @@
                         bgQuery: document.getElementById('useSearch').checked ? document.getElementById('bgQuery').value : ""
                     })
                 });
+                
                 const dStart = await res.json();
                 if(dStart.error) throw new Error(dStart.error);
+                
+                // ✅ Capture Job ID correctly
                 currentJobId = dStart.jobId;
 
                 let poll = setInterval(async () => {
@@ -408,7 +410,6 @@
                             
                             const sName = sSelect.options[sSelect.selectedIndex].text.split('. ')[1];
                             
-                            // Save with extra details
                             saveToHistory(sName, `${startAyah.value}-${endAyah.value}`, url, selReciter, selFps, selQuality);
 
                             document.getElementById('progArea').style.display = 'none';
