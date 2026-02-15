@@ -211,7 +211,7 @@ def create_vignette_mask(w, h):
     
     # Intesify the effect (0 = transparent, 1 = opaque black)
     # The curve ^3 makes the center clearer and edges darker faster
-    mask = np.clip(mask * 1.5, 0, 1) ** 3 
+    mask = np.clip(mask *.5, 0, 1) ** 3 
     
     # Convert to image (H, W, 1) -> RGBA
     mask_img = np.zeros((h, w, 4), dtype=np.uint8)
@@ -450,7 +450,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             # Cinematic Vignette (Dark Edges)
             mask_clip = create_vignette_mask(target_w, target_h).set_duration(full_dur)
             # We add a base dark layer underneath to ensure even center isn't too bright
-            base_dark = ColorClip((target_w, target_h), color=(0,0,0), duration=full_dur).set_opacity(0.3)
+            base_dark = ColorClip((target_w, target_h), color=(0,0,0), duration=full_dur).set_opacity(0.2)
             overlay_layers = [base_dark, mask_clip]
         else:
             # Standard Flat Dark Layer
@@ -631,5 +631,6 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+
 
 
