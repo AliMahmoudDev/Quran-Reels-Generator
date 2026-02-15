@@ -257,8 +257,8 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     draw_final = ImageDraw.Draw(final_image)
     current_y = 20
     
-    shadow_offset = 2
-    stroke_w = 3
+    shadow_offset = 1
+    stroke_w = 2
 
     for i, line in enumerate(lines):
         bbox = draw_final.textbbox((0, 0), line, font=font)
@@ -268,9 +268,9 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
         # ✅ GLOW EFFECT LOGIC (If enabled)
         if glow:
             # Outer faint glow
-            draw_final.text((start_x, current_y), line, font=font, fill=(255, 215, 0, 50), stroke_width=15, stroke_fill=(255, 215, 0, 50))
+            draw_final.text((start_x, current_y), line, font=font, fill=(255, 215, 0, 30), stroke_width=8, stroke_fill=(255, 215, 0, 30))
             # Inner stronger glow
-            draw_final.text((start_x, current_y), line, font=font, fill=(255, 215, 0, 100), stroke_width=8, stroke_fill=(255, 215, 0, 100))
+            draw_final.text((start_x, current_y), line, font=font, fill=(255, 215, 0, 70), stroke_width=4, stroke_fill=(255, 215, 0, 70))
 
         # Drop Shadow
         draw_final.text((start_x + shadow_offset, current_y + shadow_offset), line, font=font, fill=(0,0,0,180))
@@ -296,7 +296,7 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
     img = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
-    stroke_w = 2
+    stroke_w = 1
     
     if glow:
          # Glow for English
@@ -630,3 +630,4 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+
