@@ -98,6 +98,13 @@ def update_job_status(job_id, percent, status, eta=None):
 def get_job(job_id):
     with JOBS_LOCK: return JOBS.get(job_id)
 
+def cleanup_job(job_id):
+    with JOBS_LOCK:
+        job = JOBS.pop(job_id, None)
+    if job and os.path.exists(job['workspace']):
+        try: shutil.rmtree(job['workspace'])
+        except: pass
+
 class ScopedQuranLogger(ProgressBarLogger):
     def __init__(self, job_id): super().__init__(); self.job_id = job_id; self.start_time = None
     def bars_callback(self, bar, attr, value, old_value=None):
@@ -139,20 +146,15 @@ def download_audio(reciter_id, surah, ayah, idx, workspace_dir):
         with open(out, 'wb') as f:
             for chunk in r.iter_content(8192): f.write(chunk)
         snd = AudioSegment.from_file(out)
-        
-        if len(snd) < 100: 
-            final_snd = snd
+        if len(snd) < 100: final_snd = snd
         else:
             start = detect_silence(snd, snd.dBFS-20) 
             end = detect_silence(snd.reverse(), snd.dBFS-20)
             if start + end < len(snd):
                 trimmed = snd[max(0, start-30):len(snd)-max(0, end-30)]
-            else:
-                trimmed = snd 
-            
+            else: trimmed = snd 
             padding = AudioSegment.silent(duration=50) 
             final_snd = padding + trimmed.fade_in(20).fade_out(20)
-            
         final_snd.export(out, format='mp3')
     except Exception as e: 
         print(f"Audio DL Error: {e}")
@@ -230,7 +232,7 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False, g
     draw_final = ImageDraw.Draw(final_image)
     current_y = 20
     
-    shadow_opacity = 100 
+    shadow_opacity = 120 
     stroke_w = 1 
 
     for i, line in enumerate(lines):
@@ -240,14 +242,12 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False, g
         
         # ✅ رسم التوهج بناءً على إعدادات المستخدم
         if glow:
-            # Outer faint glow
-            faint_color = glow_color + (30,) # Add Alpha
-            strong_color = glow_color + (70,) # Add Alpha
-            
-            # Draw outer glow using user radius * 2
-            draw_final.text((start_x, current_y), line, font=font, fill=faint_color, stroke_width=glow_radius*2, stroke_fill=faint_color)
-            # Draw inner glow using user radius
-            draw_final.text((start_x, current_y), line, font=font, fill=strong_color, stroke_width=glow_radius, stroke_fill=strong_color)
+            faint_color = glow_color + (40,) 
+            strong_color = glow_color + (90,) 
+            # Outer
+            draw_final.text((start_x, current_y), line, font=font, fill=faint_color, stroke_width=int(glow_radius*2), stroke_fill=faint_color)
+            # Inner
+            draw_final.text((start_x, current_y), line, font=font, fill=strong_color, stroke_width=int(glow_radius), stroke_fill=strong_color)
 
         draw_final.text((start_x + 2, current_y + 2), line, font=font, fill=(0,0,0, shadow_opacity))
         draw_final.text((start_x, current_y), line, font=font, fill='white', stroke_width=stroke_w, stroke_fill='black')
@@ -255,9 +255,6 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False, g
         
     return ImageClip(np.array(final_image)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
-# ==========================================
-# 🎨 دالة رسم النص الإنجليزي (محدثة لدعم التخصيص)
-# ==========================================
 def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, glow_color=(255, 215, 0), glow_radius=4):
     final_fs = int(30 * scale_factor)
     box_w = int(target_w * 0.85)
@@ -273,17 +270,13 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, 
     draw = ImageDraw.Draw(img)
     
     stroke_w = 1 
-    
     if glow:
-         # Glow for English
          glow_rgba = glow_color + (80,)
-         draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill=glow_rgba, align='center', anchor="mm", stroke_width=glow_radius, stroke_fill=glow_rgba)
+         draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill=glow_rgba, align='center', anchor="mm", stroke_width=int(glow_radius), stroke_fill=glow_rgba)
 
     draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill='#FFD700', align='center', anchor="mm", stroke_width=stroke_w, stroke_fill='black')
-    
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
-# ... (fetch_video_pool remains same) ...
 def fetch_video_pool(user_key, custom_query, count=1):
     pool = []
     if not user_key or len(user_key) < 10: return pool
@@ -313,9 +306,6 @@ def fetch_video_pool(user_key, custom_query, count=1):
     except Exception as e: print(f"Pool Fetch Error: {e}")
     return pool
 
-# ==========================================
-# 🎬 Main Processor (محدث لاستقبال إعدادات التوهج)
-# ==========================================
 def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, glow_color_rgb, glow_size):
     job = get_job(job_id)
     if not job: return
@@ -353,6 +343,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         pool_size = min(len(ayah_data), 5) if dynamic_bg else 1
         video_pool = fetch_video_pool(user_pexels_key, bg_query, count=pool_size)
         
+        # ✅ FIX for Zero-Size Array Error: Strictly check if pool is empty
         if not video_pool:
             bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35), duration=full_dur)
         elif dynamic_bg:
@@ -367,7 +358,12 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                     bg_clips_list.append(sub)
                 except Exception as e:
                     bg_clips_list.append(ColorClip((target_w, target_h), color=(20, 20, 20), duration=required_dur))
-            bg_clip = concatenate_videoclips(bg_clips_list, method="compose") if bg_clips_list else ColorClip((target_w, target_h), color=(15, 20, 35), duration=full_dur)
+            
+            # 🛡️ Safety: If list ends up empty, use fallback
+            if bg_clips_list:
+                bg_clip = concatenate_videoclips(bg_clips_list, method="compose")
+            else:
+                bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35), duration=full_dur)
         else:
             try:
                 bg = VideoFileClip(video_pool[0]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=video_pool[0].w/2, y_center=video_pool[0].h/2)
@@ -388,7 +384,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             ar, en, dur = data['ar'], data['en'], data['dur']
             if get_job(job_id)['should_stop']: raise Exception("Stopped")
             
-            # Pass custom glow settings here
             ac = create_text_clip(ar, dur, target_w, scale_factor, glow=use_glow, glow_color=glow_color_rgb, glow_radius=glow_size).set_start(curr_t).set_position(('center', y_pos))
             gap = 30 * scale_factor 
             ec = create_english_clip(en, dur, target_w, scale_factor, glow=use_glow, glow_color=glow_color_rgb, glow_radius=glow_size).set_start(curr_t).set_position(('center', y_pos + ac.h + gap))
@@ -416,7 +411,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         except: pass
         gc.collect()
 
-# ... (Routes) ...
 @app.route('/')
 def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "API Running."
 
@@ -429,14 +423,11 @@ def gen():
     job_id = create_job()
     
     # ✅ استخراج إعدادات التوهج الجديدة
-    # الافتراضي: ذهبي (#FFD700) والحجم 4
     glow_hex = d.get('glowColor', '#FFD700')
     glow_size = int(d.get('glowSize', 4))
     
-    try:
-        glow_rgb = hex_to_rgb(glow_hex)
-    except:
-        glow_rgb = (255, 215, 0) # Fallback Gold
+    try: glow_rgb = hex_to_rgb(glow_hex)
+    except: glow_rgb = (255, 215, 0)
 
     threading.Thread(target=build_video_task, args=(job_id, d.get('pexelsKey'), d.get('reciter'), int(d.get('surah')), int(d.get('startAyah')), int(d.get('endAyah')), d.get('quality', '720'), d.get('bgQuery'), user_fps, d.get('dynamicBg', False), d.get('useGlow', False), d.get('useVignette', False), glow_rgb, glow_size), daemon=True).start()
     return jsonify({'ok': True, 'jobId': job_id})
