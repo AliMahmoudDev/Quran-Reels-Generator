@@ -98,6 +98,13 @@ def update_job_status(job_id, percent, status, eta=None):
 def get_job(job_id):
     with JOBS_LOCK: return JOBS.get(job_id)
 
+def cleanup_job(job_id):
+    with JOBS_LOCK:
+        job = JOBS.pop(job_id, None)
+    if job and os.path.exists(job['workspace']):
+        try: shutil.rmtree(job['workspace'])
+        except: pass
+
 class ScopedQuranLogger(ProgressBarLogger):
     def __init__(self, job_id): super().__init__(); self.job_id = job_id; self.start_time = None
     def bars_callback(self, bar, attr, value, old_value=None):
@@ -170,7 +177,7 @@ def wrap_text(text, per_line):
     words = text.split()
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
-# ✅ Vignette Mask (Corrected for deep edges & uint8 safety)
+# ✅ Vignette Mask (Stronger corners)
 def create_vignette_mask(w, h):
     Y, X = np.ogrid[:h, :w]
     center_y, center_x = h / 2, w / 2
@@ -182,35 +189,42 @@ def create_vignette_mask(w, h):
     mask_img[:, :, 3] = (mask * 255).astype(np.uint8)
     return ImageClip(mask_img, ismask=False)
 
-# ✅ Blur Effect (Fixed: Force uint8)
+# ✅ Blur Effect (Type Safe)
 def apply_blur_effect(clip):
     def blur_filter(get_frame, t):
         frame = get_frame(t)
+        # Ensure uint8 before Pillow
         img = Image.fromarray(frame.astype('uint8'))
         img_blurred = img.filter(ImageFilter.GaussianBlur(radius=5))
-        return np.array(img_blurred).astype(np.uint8) # 🛑 FIX IS HERE
+        return np.array(img_blurred).astype(np.uint8)
     return clip.fl(blur_filter)
 
-# ✅ Slow Zoom Effect (Fixed: Force uint8)
+# ✅ Slow Zoom Effect (Safe: max(0, t))
 def apply_slow_zoom(clip, zoom_ratio=0.04):
     def zoom_filter(get_frame, t):
+        # 🛑 FIX: Prevent negative time which causes scale < 1
+        safe_t = max(0, t)
+        
         frame = get_frame(t)
         h, w = frame.shape[:2]
-        scale = 1 + (zoom_ratio * (t / clip.duration))
+        scale = 1 + (zoom_ratio * (safe_t / clip.duration))
         new_w = int(w * scale)
         new_h = int(h * scale)
+        
         img = Image.fromarray(frame.astype('uint8'))
         img_resized = img.resize((new_w, new_h), Image.LANCZOS)
+        
         left = (new_w - w) // 2
         top = (new_h - h) // 2
         right = left + w
         bottom = top + h
+        
         img_cropped = img_resized.crop((left, top, right, bottom))
-        return np.array(img_cropped).astype(np.uint8) # 🛑 FIX IS HERE
+        return np.array(img_cropped).astype(np.uint8)
     return clip.fl(zoom_filter)
 
 # ==========================================
-# 🎨 Arabic Text (White + Soft Glow + Type Safety)
+# 🎨 Arabic Text
 # ==========================================
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     font_path = FONT_PATH_ARABIC
@@ -255,9 +269,11 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
         bbox = draw_final.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         start_x = (img_w - line_w) // 2
+        
         if glow:
             glow_color = (255, 255, 255, 30) 
             draw_final.text((start_x, current_y), line, font=font, fill=glow_color, stroke_width=6, stroke_fill=glow_color)
+
         draw_final.text((start_x + 2, current_y + 2), line, font=font, fill=(0,0,0, shadow_opacity))
         draw_final.text((start_x, current_y), line, font=font, fill='white', stroke_width=stroke_w, stroke_fill='black')
         current_y += line_heights[i]
@@ -265,7 +281,7 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     return ImageClip(np.array(final_image).astype(np.uint8)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
 # ==========================================
-# 🎨 English Text (Gold + Soft Glow + Type Safety)
+# 🎨 English Text
 # ==========================================
 def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
     final_fs = int(30 * scale_factor)
@@ -365,7 +381,8 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                     sub = raw_clip.fx(vfx.loop, duration=required_dur) if raw_clip.duration < required_dur else raw_clip.subclip(0, required_dur)
                     sub = sub.resize(height=target_h).crop(width=target_w, height=target_h, x_center=sub.w/2, y_center=sub.h/2).fadein(0.2).fadeout(0.2)
                     bg_clips_list.append(sub)
-                except: bg_clips_list.append(ColorClip((target_w, target_h), color=(20, 20, 20), duration=required_dur))
+                except Exception as e:
+                    bg_clips_list.append(ColorClip((target_w, target_h), color=(20, 20, 20), duration=required_dur))
             if bg_clips_list: bg_clip = concatenate_videoclips(bg_clips_list, method="compose")
             else: bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35), duration=full_dur)
         else:
@@ -376,10 +393,10 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 
         bg_clip = bg_clip.set_duration(full_dur)
         
-        # ✅ Apply Mandatory Slow Zoom (Type Safe)
+        # ✅ Apply Mandatory Slow Zoom (Safe)
         bg_clip = apply_slow_zoom(bg_clip, zoom_ratio=0.04)
         
-        # ✅ Apply Optional Blur (Type Safe)
+        # ✅ Apply Optional Blur (Safe)
         if use_blur:
             bg_clip = apply_blur_effect(bg_clip)
         
