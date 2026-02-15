@@ -114,6 +114,20 @@
         }
         .social-link:hover { background: var(--gradient-gold); color: #000; transform: translateY(-3px); }
         .social-link svg { fill: currentColor; }
+        
+        /* New Styles for Glow Controls */
+        .glow-settings {
+            display: none;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: -5px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-glow);
+        }
+        .glow-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .color-picker { width: 40px; height: 30px; border: none; background: transparent; cursor: pointer; }
+        .range-slider { flex: 1; margin-right: 10px; accent-color: var(--primary-gold); }
     </style>
 </head>
 <body>
@@ -201,7 +215,19 @@
                     <div style="display:flex; flex-direction:column;">
                         <span style="font-size:0.9rem; color: var(--primary-gold);">✨ توهج النص (Glow)</span>
                     </div>
-                    <label class="switch"><input type="checkbox" id="useGlow" checked><span class="slider"></span></label>
+                    <label class="switch"><input type="checkbox" id="useGlow" checked onchange="toggleGlowSettings()"><span class="slider"></span></label>
+                </div>
+                
+                <div id="glowSettings" class="glow-settings">
+                    <div class="glow-row">
+                        <span style="font-size:0.8rem; color:#ccc;">🎨 لون التوهج:</span>
+                        <input type="color" id="glowColor" class="color-picker" value="#FFD700">
+                    </div>
+                    <div class="glow-row">
+                        <span style="font-size:0.8rem; color:#ccc;">📏 حجم التوهج:</span>
+                        <input type="range" id="glowSize" class="range-slider" min="1" max="15" value="4">
+                        <span id="glowSizeVal" style="font-size:0.8rem; width:20px;">4</span>
+                    </div>
                 </div>
 
                 <div class="toggle-box" style="background: rgba(212, 175, 55, 0.1); border: 1px solid var(--border-glow);">
@@ -255,6 +281,7 @@
             const savedKey = localStorage.getItem('user_pexels_key');
             if(savedKey) document.getElementById('pexelsKey').value = savedKey;
             loadHistory();
+            toggleGlowSettings(); // Initialize state
             try {
                 const r = await fetch(`/api/config`);
                 const d = await r.json();
@@ -266,6 +293,17 @@
                 sSelect.onchange();
             } catch(e) {}
         };
+
+        // Glow Settings Logic
+        function toggleGlowSettings() {
+            const chk = document.getElementById('useGlow');
+            const settings = document.getElementById('glowSettings');
+            settings.style.display = chk.checked ? 'block' : 'none';
+        }
+        
+        document.getElementById('glowSize').oninput = function() {
+            document.getElementById('glowSizeVal').innerText = this.value;
+        }
 
         function validateAyah(id) {
             const el = document.getElementById(id);
@@ -349,9 +387,12 @@
             const selQuality = qSelect.value;
             const isDynamicBg = document.getElementById('dynamicBg').checked;
             
-            // ✅ قراءة حالة الخيارات الجديدة
             const useGlow = document.getElementById('useGlow').checked;
             const useVignette = document.getElementById('useVignette').checked;
+            
+            // ✅ قراءة القيم الجديدة
+            const glowColor = document.getElementById('glowColor').value;
+            const glowSize = document.getElementById('glowSize').value;
 
             try {
                 const res = await fetch(`/api/generate`, {
@@ -364,8 +405,10 @@
                         fps: selFps, 
                         bgQuery: document.getElementById('useSearch').checked ? document.getElementById('bgQuery').value : "",
                         dynamicBg: isDynamicBg,
-                        useGlow: useGlow,          // ✅ إرسال للسيرفر
-                        useVignette: useVignette   // ✅ إرسال للسيرفر
+                        useGlow: useGlow,
+                        useVignette: useVignette,
+                        glowColor: glowColor,  // ✅ إرسال اللون
+                        glowSize: glowSize     // ✅ إرسال الحجم
                     })
                 });
                 
