@@ -2,399 +2,152 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>صانع الريلز القرآني | Quran Reels</title>
-    
-    <link rel="icon" href="https://ibb.co/zWy3WBhD"> 
-    
-    <meta property="og:title" content="صانع الريلز القرآني 🚀">
-    <meta property="og:description" content="أنشئ فيديوهات قرانية احترافية في ثوانٍ. صدقة جارية ومجانية.">
-    <meta property="og:image" content="https://ibb.co/zWy3WBhD">
-    <meta name="theme-color" content="#0a0a0e">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صانع الريلز القرآني 🚀</title>
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
-    
     <style>
-        :root {
-            --primary-gold: #d4af37;
-            --bg-dark: #0a0a0e;
-            --bg-glass: rgba(20, 20, 25, 0.95);
-            --border-glow: rgba(212, 175, 55, 0.3);
-            --gradient-gold: linear-gradient(135deg, #aa8a2e 0%, #d4af37 50%, #f9e5a0 100%);
-            --danger-red: #ff4757;
-            --success-green: #2ecc71;
-            --random-purple: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
-        body {
-            font-family: 'Cairo', sans-serif;
-            background-color: var(--bg-dark);
-            color: #fff;
-            min-height: 100dvh;
-            display: flex; justify-content: center; align-items: flex-start;
-            padding: 10px;
-            background-image: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.1) 0%, transparent 60%);
-        }
-
-        .container { width: 100%; max-width: 500px; padding-bottom: 50px; }
-        
-        .logo-img {
-            width: 80px; height: 80px; border-radius: 50%;
-            border: 2px solid var(--primary-gold); margin-bottom: 10px;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
-        }
-
-        .card {
-            background: var(--bg-glass); backdrop-filter: blur(10px);
-            border-radius: 16px; border: 1px solid var(--border-glow);
-            padding: 20px 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        
-        .timer-badge {
-            background: rgba(255, 255, 255, 0.1); padding: 5px 10px;
-            border-radius: 20px; font-size: 0.9rem; color: var(--primary-gold);
-            font-family: monospace; display: inline-flex; align-items: center; gap: 5px; margin-top: 5px;
-        }
-
-        .history-section { margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
-        .history-title { font-size: 1rem; color: #888; margin-bottom: 10px; text-align: center; }
-        .history-item {
-            background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px;
-            margin-bottom: 8px; display: flex; justify-content: space-between;
-            align-items: center; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.05);
-        }
-        .hist-info { display: flex; flex-direction: column; }
-        .hist-meta { font-size: 0.65rem; color: #aaa; margin-top: 2px; }
-        .hist-date { font-size: 0.6rem; color: #666; margin-top: 2px; }
-        .hist-btn {
-            background: var(--primary-gold); color: #000; text-decoration: none;
-            padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 0.8rem;
-        }
-
+        :root { --gold: #d4af37; --bg: #0a0a0e; --glass: rgba(20, 20, 25, 0.95); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Cairo', sans-serif; background: var(--bg); color: #fff; padding: 15px; }
+        .card { max-width: 500px; margin: auto; background: var(--glass); border-radius: 16px; border: 1px solid rgba(212,175,55,0.3); padding: 20px; box-shadow: 0 10px 30px #000; }
         .header { text-align: center; margin-bottom: 20px; }
-        .title { font-family: 'Amiri', serif; font-size: 1.8rem; background: var(--gradient-gold); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .logo-img { width: 70px; border-radius: 50%; border: 2px solid var(--gold); margin-bottom: 10px; }
+        .title { font-family: 'Amiri', serif; font-size: 1.7rem; color: var(--gold); }
         .form-group { margin-bottom: 15px; }
-        .label { display: block; margin-bottom: 6px; color: var(--primary-gold); font-size: 0.9rem; font-weight: bold; }
-        .input-box, select { width: 100%; height: 50px; padding: 0 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-family: 'Cairo'; font-size: 16px; outline: none; }
-        .num-row { display: flex; gap: 10px; margin-bottom: 15px; }
-        .num-group { flex: 1; min-width: 0; }
-        .num-ctrl { display: flex; height: 50px; width: 100%; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; }
-        .num-btn { width: 35px; background: rgba(255,255,255,0.05); border: none; color: var(--primary-gold); font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .num-val { flex: 1; background: transparent; border: none; color: #fff; text-align: center; font-weight: bold; font-size: 1.1rem; min-width: 0; outline: none; }
-        .btn-main { width: 100%; height: 55px; margin-top: 10px; background: var(--gradient-gold); border: none; border-radius: 12px; color: #000; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .btn-stop { width: 100%; height: 55px; margin-top: 10px; background: var(--danger-red); border: none; border-radius: 12px; color: #fff; font-weight: 800; font-size: 1.1rem; display: none; align-items: center; justify-content: center; gap: 10px; }
+        .label { display: block; margin-bottom: 5px; color: var(--gold); font-size: 0.9rem; }
+        .input-box { width: 100%; height: 45px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; padding: 0 10px; outline: none; }
+        .num-row { display: flex; gap: 10px; }
+        .toggle-box { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+        .switch { position: relative; width: 44px; height: 22px; }
+        .switch input { opacity: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #333; transition: .4s; border-radius: 22px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background: var(--gold); }
+        input:checked + .slider:before { transform: translateX(22px); }
+        .btn-main { width: 100%; height: 50px; background: linear-gradient(135deg, #aa8a2e, #d4af37); border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .prog-area { display: none; margin-top: 20px; text-align: center; }
-        .bar-track { height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin: 10px 0; }
-        .bar-fill { height: 100%; width: 0; background: var(--primary-gold); transition: 0.3s; }
-        .result-area { display: none; margin-top: 20px; text-align: center; }
-        video { width: 100%; border-radius: 12px; border: 1px solid var(--primary-gold); background: #000; max-height: 70vh; }
-        .dl-link { display: flex; align-items: center; justify-content: center; margin-top: 15px; padding: 15px; background: var(--success-green); color: #fff; text-decoration: none; border-radius: 12px; font-weight: 800; }
-        
-        .toggle-box { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 10px; }
-        .switch { position: relative; width: 50px; height: 26px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.1); border-radius: 34px; transition: .3s; }
-        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s; }
-        input:checked + .slider { background: var(--primary-gold); }
-        input:checked + .slider:before { transform: translateX(24px); }
-        .btn-rand { width: 100%; height: 45px; margin-bottom: 20px; background: var(--random-purple); border: none; border-radius: 12px; color: #fff; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
-
-        .footer-contact {
-            margin-top: 30px; padding-top: 20px; text-align: center;
-            border-top: 1px solid var(--border-glow); display: flex; flex-direction: column; align-items: center; gap: 15px;
-        }
-        .contact-links { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-        .social-link {
-            display: inline-flex; align-items: center; gap: 8px; color: var(--primary-gold);
-            text-decoration: none; font-weight: 600; transition: 0.3s;
-            background: rgba(212, 175, 55, 0.05); padding: 8px 16px; border-radius: 50px;
-            border: 1px solid var(--border-glow); font-size: 0.9rem;
-        }
-        .social-link:hover { background: var(--gradient-gold); color: #000; transform: translateY(-3px); }
-        .social-link svg { fill: currentColor; }
+        .bar { height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin: 10px 0; }
+        .fill { width: 0; height: 100%; background: var(--gold); transition: 0.3s; }
+        .history-item { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #222; }
+        .hist-btn { color: var(--gold); text-decoration: none; font-size: 0.8rem; font-weight: bold; }
     </style>
 </head>
 <body>
+    <div class="card">
+        <div class="header">
+            <img src="https://i.ibb.co/zWy3WBhD/logo.jpg" class="logo-img">
+            <h1 class="title">صانع الريلز القرآني</h1>
+        </div>
 
-    <div class="container">
-        <div class="card">
-            <div class="header">
-                <img src="https://ibb.co/zWy3WBhD" alt="Logo" class="logo-img" onerror="this.style.display='none'">
-                <h1 class="title">صانع الريلز القرآني</h1>
-                <p style="color:#888; font-size:0.8rem;">نسخة التوربو 🚀</p>
-            </div>
+        <div style="background:rgba(212,175,55,0.05); padding:10px; border:1px dashed var(--gold); border-radius:8px; margin-bottom:15px;">
+            <label class="label">🔑 Pexels API Key</label>
+            <input type="text" id="pKey" class="input-box" placeholder="الصق المفتاح هنا">
+            <a href="https://www.pexels.com/api/new/" target="_blank" style="color:#4ade80; font-size:0.8rem; display:block; margin-top:5px;">👉 احصل على مفتاح مجاني من هنا</a>
+        </div>
 
-            <button type="button" class="btn-rand" onclick="smartRandomize()">🎲 اختيار عشوائي ذكي</button>
+        <div class="form-group"><label class="label">القارئ</label><select id="rSel" class="input-box"></select></div>
+        <div class="form-group"><label class="label">السورة</label><select id="sSel" class="input-box"></select></div>
+        
+        <div class="num-row">
+            <div class="form-group" style="flex:1"><label class="label">من آية</label><input type="number" id="sAyah" class="input-box" value="1"></div>
+            <div class="form-group" style="flex:1"><label class="label">إلى آية</label><input type="number" id="eAyah" class="input-box" value="3"></div>
+        </div>
 
-            <div style="background: rgba(212, 175, 55, 0.05); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed var(--primary-gold);">
-                <label class="label">🔑 مفتاح Pexels (للخلفيات)</label>
-                <input type="text" id="pexelsKey" class="input-box" placeholder="الصق الـ API Key هنا">
-                <div style="text-align:center; margin-top:10px;">
-                    <a href="https://www.pexels.com/api/" target="_blank" style="color: #4ade80; text-decoration: underline; font-weight: bold; font-size: 0.95rem;">
-                        👉 اضغط هنا للحصول على مفتاح مجاني
-                    </a>
-                </div>
-            </div>
-            <form id="vForm">
-                <div class="form-group">
-                    <label class="label">القارئ</label>
-                    <select id="rSelect" class="input-box"></select>
-                </div>
-                <div class="form-group">
-                    <label class="label">السورة</label>
-                    <select id="sSelect" class="input-box"></select>
-                </div>
-                <div class="num-row">
-                    <div class="num-group">
-                        <label class="label">من آية</label>
-                        <div class="num-ctrl">
-                            <button type="button" class="num-btn" onclick="adj('startAyah',-1)">−</button>
-                            <input type="number" id="startAyah" class="num-val" value="1" onchange="validateAyah('startAyah')">
-                            <button type="button" class="num-btn" onclick="adj('startAyah',1)">+</button>
-                        </div>
-                    </div>
-                    <div class="num-group">
-                        <label class="label">إلى آية</label>
-                        <div class="num-ctrl">
-                            <button type="button" class="num-btn" onclick="adj('endAyah',-1)">−</button>
-                            <input type="number" id="endAyah" class="num-val" value="5" onchange="validateAyah('endAyah')">
-                            <button type="button" class="num-btn" onclick="adj('endAyah',1)">+</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="label">سلاسة الفيديو (FPS)</label>
-                    <select id="fpsSelect" class="input-box">
-                        <option value="15">🚀 15 FPS (سريع جداً)</option>
-                        <option value="20" selected>⚖️ 20 FPS (متوازن - ينصح به)</option>
-                        <option value="24">🎬 24 FPS (سينمائي)</option>
-                        <option value="30">💎 30 FPS (الأكثر سلاسة)</option>
-                    </select>
-                </div>
+        <div class="toggle-box">
+            <span>🌈 تنوع الخلفيات (فيديو لكل آية)</span>
+            <label class="switch"><input type="checkbox" id="dynamicBg"><span class="slider"></span></label>
+        </div>
 
-                <div class="form-group">
-                    <label class="label">جودة الفيديو</label>
-                    <select id="qSelect" class="input-box">
-                        <option value="720">⚡ 720p HD (الأسرع)</option>
-                        <option value="1080">🌟 1080p FHD</option>
-                    </select>
-                </div>
-                <div class="toggle-box">
-                    <span style="font-size:0.9rem;">🔍 بحث مخصص (خلفية)</span>
-                    <label class="switch"><input type="checkbox" id="useSearch" onchange="toggleSearch()"><span class="slider"></span></label>
-                </div>
-                <input type="text" id="bgQuery" class="input-box" placeholder="اكتب: بحر، سماء..." style="display:none; margin-bottom:15px;">
+        <div class="num-row">
+            <select id="fps" class="input-box" style="flex:1"><option value="20">20 FPS (ينصح به)</option><option value="24">24 FPS</option><option value="15">15 FPS</option></select>
+            <select id="qual" class="input-box" style="flex:1"><option value="720">720p</option><option value="1080">1080p</option></select>
+        </div>
 
-                <button type="submit" id="btn" class="btn-main">✨ إنشاء الفيديو</button>
-                <button type="button" id="stopBtn" class="btn-stop" onclick="stopProcess()">🛑 إيقاف</button>
-            </form>
+        <button onclick="start()" id="btn" class="btn-main">✨ إنشاء الفيديو</button>
 
-            <div class="prog-area" id="progArea">
-                <div class="status-txt" id="statusTxt">جاري الاتصال...</div>
-                <div class="timer-badge" id="timerBadge" style="display:none;">
-                    ⏳ متبقي: <span id="etaTxt">--:--</span>
-                </div>
-                <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
-            </div>
+        <div id="prog" class="prog-area">
+            <div id="status">جاري الاتصال...</div>
+            <div class="bar"><div id="fill" class="fill"></div></div>
+            <div id="timer" style="font-size:0.8rem; color:var(--gold);"></div>
+        </div>
 
-            <div class="result-area" id="resArea">
-                <div style="color: #4ade80; font-weight: bold; font-size: 1.2rem; margin-bottom: 10px;">✅ تم الانتهاء!</div>
-                <video id="player" controls playsinline loop></video>
-                <a id="dlLink" href="#" class="dl-link" download>⬇️ تحميل الفيديو</a>
-            </div>
+        <div id="res" style="display:none; margin-top:20px; text-align:center;">
+            <video id="player" controls style="width:100%; border-radius:8px;"></video>
+            <a id="dl" class="btn-main" style="display:block; text-decoration:none; line-height:50px; margin-top:10px;">⬇️ تحميل الفيديو</a>
+        </div>
 
-            <div class="history-section" id="histSection" style="display:none;">
-                <div class="history-title">📜 سجل العمليات (آخر 5)</div>
-                <div id="histList"></div>
-                <button onclick="clearHistory()" style="width:100%; padding:5px; background:none; border:none; color:#666; font-size:0.8rem; cursor:pointer; margin-top:5px;">🗑️ مسح السجل</button>
-            </div>
+        <div id="hist" style="margin-top:20px; border-top:1px solid #222; padding-top:10px;">
+            <div style="font-size:0.9rem; color:#666; margin-bottom:5px;">📜 السجل (آخر ساعة)</div>
+            <div id="histList"></div>
+        </div>
 
-            <div class="footer-contact">
-                <p style="color: #888; font-size: 0.85rem;">للتطوير أو الإبلاغ عن أخطاء، يسعدنا تواصلك</p>
-                <div class="contact-links">
-                    <a href="https://t.me/QuranReelsGen" target="_blank" class="social-link">
-                        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.35-.97.52-1.35.51-.42-.01-1.22-.24-1.82-.43-.74-.24-1.33-.37-1.28-.77.03-.21.32-.42.88-.63 3.42-1.49 5.71-2.48 6.85-2.97 3.27-1.4 3.95-1.64 4.39-1.65.1 0 .32.02.46.14.12.1.15.24.16.33.01.06.02.19.01.28z"/></svg>
-                        قناة التحديثات
-                    </a>
-                    <a href="https://github.com/AliMahmoudDev/Quran-Reels-Generator" target="_blank" class="social-link">
-                        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.041-1.416-4.041-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-                        GitHub Repo
-                    </a>
-                </div>
-            </div>
+        <div style="text-align:center; margin-top:20px; font-size:0.8rem;">
+            <a href="https://t.me/QuranReelsGen" target="_blank" style="color:var(--gold); margin:0 10px;">قناة التحديثات</a> | 
+            <a href="https://github.com/AliMahmoudDev" target="_blank" style="color:var(--gold); margin:0 10px;">GitHub</a>
         </div>
     </div>
 
     <script>
-        let COUNTS = {};
-        let currentJobId = null;
-
+        let currentId = null;
         window.onload = async () => {
-            const savedKey = localStorage.getItem('user_pexels_key');
-            if(savedKey) document.getElementById('pexelsKey').value = savedKey;
-            loadHistory();
-            try {
-                const r = await fetch(`/api/config`);
-                const d = await r.json();
-                COUNTS = d.verseCounts;
-                rSelect.innerHTML = ''; sSelect.innerHTML = '';
-                for(const [n, id] of Object.entries(d.reciters)) rSelect.add(new Option(n, id));
-                d.surahs.forEach((n, i) => sSelect.add(new Option(`${i+1}. ${n}`, i+1)));
-                sSelect.onchange = () => { validateAyah('startAyah'); validateAyah('endAyah'); };
-                sSelect.onchange();
-            } catch(e) {}
+            document.getElementById('pKey').value = localStorage.getItem('pk') || '';
+            const r = await fetch('/api/config');
+            const d = await r.json();
+            for(let [n,v] of Object.entries(d.reciters)) rSel.add(new Option(n,v));
+            d.surahs.forEach((s,i)=>sSel.add(new Option(s, i+1)));
         };
 
-        function validateAyah(id) {
-            const el = document.getElementById(id);
-            const max = COUNTS[sSelect.value] || 286;
-            let val = parseInt(el.value);
-            if (isNaN(val) || val < 1) val = 1; if (val > max) val = max;
-            el.value = val;
-        }
-        function adj(id, v) { document.getElementById(id).value = parseInt(document.getElementById(id).value) + v; validateAyah(id); }
-        function smartRandomize() { 
-            if(rSelect.length) rSelect.selectedIndex = Math.floor(Math.random() * rSelect.length);
-            if(sSelect.length) {
-                sSelect.selectedIndex = Math.floor(Math.random() * sSelect.length);
-                const max = COUNTS[sSelect.value] || 286;
-                const start = Math.floor(Math.random() * Math.max(1, max - 5)) + 1;
-                document.getElementById('startAyah').value = start;
-                document.getElementById('endAyah').value = Math.min(start + 4, max);
-            }
-        }
-        function toggleSearch() { 
-            const chk = document.getElementById('useSearch');
-            document.getElementById('bgQuery').style.display = chk.checked ? 'block' : 'none';
-        }
-        async function stopProcess() {
-            if(currentJobId && confirm("إيقاف؟")) await fetch('/api/cancel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({jobId:currentJobId})});
-        }
-
-        // ✅ Enhanced History
-        function saveToHistory(surahTxt, ayahs, url, reciter, fps, quality) {
-            let hist = JSON.parse(localStorage.getItem('quran_hist') || '[]');
-            const newItem = {
-                id: Date.now(),
-                title: `${surahTxt} (${ayahs})`,
-                details: `${reciter} • ${quality}p • ${fps}fps`,
-                date: new Date().toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'}),
-                url: url
-            };
-            hist.unshift(newItem); 
-            if(hist.length > 5) hist.pop();
-            localStorage.setItem('quran_hist', JSON.stringify(hist));
-            loadHistory();
-        }
-
-        function loadHistory() {
-            const hist = JSON.parse(localStorage.getItem('quran_hist') || '[]');
-            const list = document.getElementById('histList');
-            const sec = document.getElementById('histSection');
-            list.innerHTML = '';
-            if(hist.length === 0) { sec.style.display = 'none'; return; }
-            sec.style.display = 'block';
+        async function start() {
+            const pk = document.getElementById('pKey').value;
+            if(!pk) return alert("API Key مطلوب");
+            localStorage.setItem('pk', pk);
             
-            hist.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'history-item';
-                div.innerHTML = `
-                    <div class="hist-info">
-                        <strong>${item.title}</strong>
-                        <div class="hist-meta">${item.details || ''}</div>
-                        <span class="hist-date">${item.date}</span>
-                    </div>
-                    <a href="${item.url}" class="hist-btn" download>تحميل</a>
-                `;
-                list.appendChild(div);
+            btn.style.display = 'none';
+            prog.style.display = 'block';
+            res.style.display = 'none';
+
+            const resStart = await fetch('/api/generate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    pexelsKey: pk, reciter: rSel.value, surah: sSel.value,
+                    startAyah: sAyah.value, endAyah: eAyah.value,
+                    quality: qual.value, fps: fps.value,
+                    dynamicBg: document.getElementById('dynamicBg').checked
+                })
             });
+            const dStart = await resStart.json();
+            currentId = dStart.jobId;
+
+            let poller = setInterval(async () => {
+                const rp = await fetch(`/api/progress?jobId=${currentId}`);
+                const dp = await rp.json();
+                fill.style.width = dp.percent + "%";
+                status.innerText = dp.status;
+                timer.innerText = "الوقت المتبقي تقريباً: " + dp.eta;
+
+                if(dp.is_complete) {
+                    clearInterval(poller);
+                    const dlRes = await fetch(`/api/download?jobId=${currentId}`);
+                    const blob = await dlRes.blob();
+                    const url = URL.createObjectURL(blob);
+                    player.src = url;
+                    dl.href = url;
+                    dl.download = `Quran_${currentId.slice(0,4)}.mp4`;
+                    prog.style.display = 'none';
+                    res.style.display = 'block';
+                    btn.style.display = 'block';
+                    addHist(sSel.options[sSel.selectedIndex].text, url);
+                }
+            }, 1500);
         }
-        function clearHistory() { localStorage.removeItem('quran_hist'); loadHistory(); }
 
-        document.getElementById('vForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const pKey = document.getElementById('pexelsKey').value.trim();
-            if(!pKey) { alert("⚠️ مفتاح Pexels مطلوب!"); return; }
-            localStorage.setItem('user_pexels_key', pKey);
-
-            document.getElementById('btn').style.display = 'none';
-            document.getElementById('stopBtn').style.display = 'flex';
-            document.getElementById('progArea').style.display = 'block';
-            document.getElementById('resArea').style.display = 'none';
-            document.getElementById('timerBadge').style.display = 'none'; 
-            
-            const selReciter = rSelect.options[rSelect.selectedIndex].text;
-            const selFps = document.getElementById('fpsSelect').value;
-            const selQuality = qSelect.value;
-
-            try {
-                const res = await fetch(`/api/generate`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        pexelsKey: pKey, reciter: rSelect.value, surah: sSelect.value,
-                        startAyah: startAyah.value, endAyah: endAyah.value,
-                        quality: qSelect.value,
-                        fps: selFps, 
-                        bgQuery: document.getElementById('useSearch').checked ? document.getElementById('bgQuery').value : ""
-                    })
-                });
-                
-                const dStart = await res.json();
-                if(dStart.error) throw new Error(dStart.error);
-                
-                currentJobId = dStart.jobId;
-
-                let poll = setInterval(async () => {
-                    try {
-                        const r = await fetch(`/api/progress?jobId=${currentJobId}`);
-                        const d = await r.json();
-                        if(d.error) throw new Error(d.error);
-
-                        document.getElementById('barFill').style.width = d.percent + "%";
-                        document.getElementById('statusTxt').innerText = d.status;
-                        
-                        if(d.percent > 0 && d.percent < 100) {
-                            document.getElementById('timerBadge').style.display = 'inline-flex';
-                            document.getElementById('etaTxt').innerText = d.eta || "--:--";
-                        }
-
-                        if(d.is_complete) {
-                            clearInterval(poll);
-                            const vidRes = await fetch(`/api/download?jobId=${currentJobId}`);
-                            if(!vidRes.ok) throw new Error("Download failed");
-                            
-                            const blob = await vidRes.blob();
-                            const url = URL.createObjectURL(blob);
-                            
-                            document.getElementById('player').src = url;
-                            const dlLink = document.getElementById('dlLink');
-                            dlLink.href = url;
-                            const fName = `Quran_${sSelect.value}_${startAyah.value}.mp4`;
-                            dlLink.setAttribute('download', fName);
-                            
-                            const sName = sSelect.options[sSelect.selectedIndex].text.split('. ')[1];
-                            
-                            saveToHistory(sName, `${startAyah.value}-${endAyah.value}`, url, selReciter, selFps, selQuality);
-
-                            document.getElementById('progArea').style.display = 'none';
-                            document.getElementById('resArea').style.display = 'block';
-                            document.getElementById('stopBtn').style.display = 'none';
-                            document.getElementById('btn').style.display = 'flex';
-                        }
-                    } catch(err) {
-                        clearInterval(poll);
-                        alert(err.message);
-                        document.getElementById('stopBtn').style.display = 'none';
-                        document.getElementById('btn').style.display = 'flex';
-                    }
-                }, 1000);
-            } catch(e) { alert(e.message); document.getElementById('stopBtn').style.display = 'none'; document.getElementById('btn').style.display = 'flex'; }
-        };
+        function addHist(name, url) {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML = `<span>${name}</span><a href="${url}" class="hist-btn" download>تحميل</a>`;
+            histList.prepend(div);
+        }
     </script>
 </body>
 </html>
-
