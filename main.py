@@ -1,3 +1,4 @@
+import re
 import sys
 import io
 import os
@@ -181,10 +182,19 @@ def get_text(surah, ayah):
     try:
         r = requests.get(f'https://api.alquran.cloud/v1/ayah/{surah}:{ayah}/quran-simple')
         t = r.json()['data']['text']
-        if surah != 1 and ayah == 1: 
-            t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
+        
+        # المنطق الجديد لمسح البسملة (ما عدا الفاتحة والتوبة)
+        if surah != 1 and surah != 9 and ayah == 1:
+            # نمط يبحث عن البسملة في بداية النص ويمسحها مهما كان تشكيلها
+            basmala_pattern = r'^بِسْمِ [^ ]+ [^ ]+ [^ ]+' 
+            t = re.sub(basmala_pattern, '', t).strip()
+            
+            # تأكيد إضافي لو الـ API بعت البسملة ككلمة واحدة مشهورة
+            t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
+            
         return t
-    except: return "Text Error"
+    except: 
+        return "Text Error"
 
 def get_en_text(surah, ayah):
     try:
@@ -511,3 +521,4 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+
