@@ -235,17 +235,28 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     final_image = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw_final = ImageDraw.Draw(final_image)
     current_y = 20
+    
+    # ✅ IMPROVEMENT: Added Stroke (Outline) + Shadow for Arabic
+    shadow_offset = 2
+    stroke_w = 3  # سمك الحدود السوداء
+
     for i, line in enumerate(lines):
         bbox = draw_final.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         start_x = (img_w - line_w) // 2
-        draw_final.text((start_x+2, current_y+2), line, font=font, fill=(0,0,0,120))
-        draw_final.text((start_x, current_y), line, font=font, fill='white')
+        
+        # 1. Drop Shadow
+        draw_final.text((start_x + shadow_offset, current_y + shadow_offset), line, font=font, fill=(0,0,0,180))
+        
+        # 2. Main Text with Black Stroke (Outline)
+        draw_final.text((start_x, current_y), line, font=font, fill='white', stroke_width=stroke_w, stroke_fill='black')
+        
         current_y += line_heights[i]
+        
     return ImageClip(np.array(final_image)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
 def create_english_clip(text, duration, target_w, scale_factor=1.0):
-    final_fs = int(28 * scale_factor)
+    final_fs = int(30 * scale_factor) # Slightly larger font
     box_w = int(target_w * 0.85)
     wrapped_text = wrap_text(text, 10)
     try: font = ImageFont.truetype(FONT_PATH_ENGLISH, final_fs)
@@ -257,7 +268,12 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0):
     img_h = int((bbox[3]-bbox[1]) + 20)
     img = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill='#FFD700', align='center', anchor="mm")
+    
+    # ✅ IMPROVEMENT: Added Stroke (Outline) for English
+    stroke_w = 2
+    
+    draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill='#FFD700', align='center', anchor="mm", stroke_width=stroke_w, stroke_fill='black')
+    
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
 # ==========================================
@@ -283,7 +299,6 @@ def fetch_video_pool(user_key, custom_query, count=1):
             q = random.choice(safe_topics) + safe_filter
 
         headers = {'Authorization': user_key}
-        # Request slightly more than count to handle failed validations
         r = requests.get(f"https://api.pexels.com/videos/search?query={q}&per_page={count+2}&orientation=portrait", headers=headers, timeout=15)
         
         if r.status_code == 200:
@@ -291,12 +306,10 @@ def fetch_video_pool(user_key, custom_query, count=1):
             random.shuffle(vids)
             
             for vid in vids:
-                if len(pool) >= count: break # Found enough videos
+                if len(pool) >= count: break 
                 
-                # Pick best quality ~1080p
                 f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), None)
                 if not f: 
-                    # Fallback to any file
                     if vid['video_files']: f = vid['video_files'][0]
                 
                 if f:
@@ -329,7 +342,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         max_ayah = VERSE_COUNTS.get(surah, 286)
         last = min(end if end else start+9, max_ayah)
         
-        ayah_data = [] # List of tuples: (ar_txt, en_txt, duration)
+        ayah_data = [] 
         full_audio_seg = AudioSegment.empty()
         
         # 1. Download Audio & Prepare Text
@@ -351,11 +364,10 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         final_audio_clip = AudioFileClip(final_audio_path)
         full_dur = final_audio_clip.duration
 
-        # 3. Background Logic (Dynamic vs Static)
+        # 3. Background Logic
         update_job_status(job_id, 30, 'Preparing Backgrounds...')
         
         if dynamic_bg:
-            # === DYNAMIC MODE: One Video Per Ayah ===
             num_ayahs = len(ayah_data)
             pool_size = min(num_ayahs, 5) 
             video_pool = fetch_video_pool(user_pexels_key, bg_query, count=pool_size)
@@ -378,6 +390,10 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                         
                         sub = sub.resize(height=target_h)
                         sub = sub.crop(width=target_w, height=target_h, x_center=sub.w/2, y_center=sub.h/2)
+                        
+                        # Apply fade to prevent hard cuts
+                        sub = sub.fadein(0.2).fadeout(0.2)
+                        
                         bg_clips_list.append(sub)
                     except Exception as e:
                         fallback = ColorClip((target_w, target_h), color=(20, 20, 20), duration=required_dur)
@@ -386,7 +402,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 bg_clip = concatenate_videoclips(bg_clips_list, method="compose")
 
         else:
-            # === STATIC MODE: Single Video Looped ===
             video_pool = fetch_video_pool(user_pexels_key, bg_query, count=1)
             
             if not video_pool:
@@ -401,13 +416,11 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 except:
                     bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35), duration=full_dur)
 
-        # Ensure duration matches exactly
         if bg_clip.duration > full_dur:
             bg_clip = bg_clip.subclip(0, full_dur)
         else:
             bg_clip = bg_clip.set_duration(full_dur)
 
-        # Darken Background
         dark_layer = ColorClip((target_w, target_h), color=(0,0,0), duration=full_dur).set_opacity(0.6)
         
         # 4. Text Overlay
@@ -497,7 +510,6 @@ def gen():
 
     job_id = create_job()
     
-    # ✅ Read dynamicBg from user request
     user_dynamic_bg = d.get('dynamicBg', False)
 
     threading.Thread(target=build_video_task, args=(
@@ -553,15 +565,11 @@ def cancel_process():
 @app.route('/api/config')
 def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 'reciters': RECITERS_MAP})
 
-# ==========================================
-# 🧹 Automatic Garbage Collector
-# ==========================================
 def background_cleanup():
     while True:
         time.sleep(3600)
         print("🧹 Running automatic cleanup...")
         current_time = time.time()
-        
         with JOBS_LOCK:
             to_delete = []
             for jid, job in JOBS.items():
@@ -569,7 +577,6 @@ def background_cleanup():
                     to_delete.append(jid)
             for jid in to_delete:
                 del JOBS[jid]
-
         try:
             if os.path.exists(BASE_TEMP_DIR):
                 for folder in os.listdir(BASE_TEMP_DIR):
