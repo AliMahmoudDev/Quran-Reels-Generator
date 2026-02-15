@@ -6,7 +6,7 @@
     <title>مولد الريلز القرآني السريع 🚀</title>
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        /* ... (نفس الـ CSS القديم) ... */
+        /* ... (نفس الـ CSS السابق) ... */
         :root {
             --primary-gold: #d4af37;
             --bg-dark: #0a0a0e;
@@ -37,7 +37,6 @@
             padding: 20px 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
         
-        /* CSS إضافي للتاريخ والتايمر */
         .timer-badge {
             background: rgba(255, 255, 255, 0.1);
             padding: 5px 10px;
@@ -80,7 +79,6 @@
             font-size: 0.8rem;
         }
 
-        /* ... (باقي الـ CSS القديم للأزرار والمدخلات) ... */
         .header { text-align: center; margin-bottom: 20px; }
         .title { font-family: 'Amiri', serif; font-size: 1.8rem; background: var(--gradient-gold); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .form-group { margin-bottom: 15px; }
@@ -154,6 +152,17 @@
                         </div>
                     </div>
                 </div>
+                
+                <div class="form-group">
+                    <label class="label">سلاسة الفيديو (FPS)</label>
+                    <select id="fpsSelect" class="input-box">
+                        <option value="15">🚀 15 FPS (سريع جداً)</option>
+                        <option value="20" selected>⚖️ 20 FPS (متوازن - ينصح به)</option>
+                        <option value="24">🎬 24 FPS (سينمائي - بطيء قليلاً)</option>
+                        <option value="30">💎 30 FPS (الأكثر سلاسة - الأبطأ)</option>
+                    </select>
+                </div>
+
                 <div class="form-group">
                     <label class="label">جودة الفيديو</label>
                     <select id="qSelect" class="input-box">
@@ -186,7 +195,7 @@
             </div>
 
             <div class="history-section" id="histSection" style="display:none;">
-                <div class="history-title">📜 سجل العمليات (آخر 5)</div>
+                <div class="history-title">📜 سجل العمليات (آخر 5) - متاح لمدة ساعة</div>
                 <div id="histList"></div>
                 <button onclick="clearHistory()" style="width:100%; padding:5px; background:none; border:none; color:#666; font-size:0.8rem; cursor:pointer; margin-top:5px;">🗑️ مسح السجل</button>
             </div>
@@ -200,7 +209,7 @@
         window.onload = async () => {
             const savedKey = localStorage.getItem('user_pexels_key');
             if(savedKey) document.getElementById('pexelsKey').value = savedKey;
-            loadHistory(); // 🆕 تحميل السجل
+            loadHistory();
             try {
                 const r = await fetch(`/api/config`);
                 const d = await r.json();
@@ -213,7 +222,6 @@
             } catch(e) {}
         };
 
-        // ... (نفس دوال validateAyah, adj, smartRandomize, toggleSearch القديمة) ...
         function validateAyah(id) {
             const el = document.getElementById(id);
             const max = COUNTS[sSelect.value] || 286;
@@ -240,17 +248,16 @@
             if(currentJobId && confirm("إيقاف؟")) await fetch('/api/cancel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({jobId:currentJobId})});
         }
 
-        // --- 🆕 إدارة السجل ---
         function saveToHistory(surahTxt, ayahs, url) {
             let hist = JSON.parse(localStorage.getItem('quran_hist') || '[]');
             const newItem = {
                 id: Date.now(),
                 title: `${surahTxt} (${ayahs})`,
                 date: new Date().toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'}),
-                url: url // ملاحظة: الرابط مؤقت (Blob أو سيرفر)
+                url: url
             };
-            hist.unshift(newItem); // إضافة في الأول
-            if(hist.length > 5) hist.pop(); // الاحتفاظ بآخر 5 فقط
+            hist.unshift(newItem); 
+            if(hist.length > 5) hist.pop();
             localStorage.setItem('quran_hist', JSON.stringify(hist));
             loadHistory();
         }
@@ -278,7 +285,6 @@
         }
         function clearHistory() { localStorage.removeItem('quran_hist'); loadHistory(); }
 
-        // --- المعالجة ---
         document.getElementById('vForm').onsubmit = async (e) => {
             e.preventDefault();
             const pKey = document.getElementById('pexelsKey').value.trim();
@@ -289,9 +295,10 @@
             document.getElementById('stopBtn').style.display = 'flex';
             document.getElementById('progArea').style.display = 'block';
             document.getElementById('resArea').style.display = 'none';
-            document.getElementById('timerBadge').style.display = 'none'; // إخفاء مبدئي
+            document.getElementById('timerBadge').style.display = 'none'; 
             
             try {
+                // ✅ إرسال قيمة الـ FPS المختارة
                 const res = await fetch(`/api/generate`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -299,6 +306,7 @@
                         pexelsKey: pKey, reciter: rSelect.value, surah: sSelect.value,
                         startAyah: startAyah.value, endAyah: endAyah.value,
                         quality: qSelect.value,
+                        fps: document.getElementById('fpsSelect').value, // ✅ NEW
                         bgQuery: document.getElementById('useSearch').checked ? document.getElementById('bgQuery').value : ""
                     })
                 });
@@ -315,7 +323,6 @@
                         document.getElementById('barFill').style.width = d.percent + "%";
                         document.getElementById('statusTxt').innerText = d.status;
                         
-                        // 🆕 تحديث العداد
                         if(d.percent > 0 && d.percent < 100) {
                             document.getElementById('timerBadge').style.display = 'inline-flex';
                             document.getElementById('etaTxt').innerText = d.eta || "--:--";
@@ -323,17 +330,20 @@
 
                         if(d.is_complete) {
                             clearInterval(poll);
-                            // تحميل الفيديو كـ Blob لحفظه
+                            // Blob Download Logic to ensure file integrity
                             const vidRes = await fetch(`/api/download?jobId=${currentJobId}`);
+                            if(!vidRes.ok) throw new Error("Download failed");
+                            
                             const blob = await vidRes.blob();
                             const url = URL.createObjectURL(blob);
                             
                             document.getElementById('player').src = url;
-                            document.getElementById('dlLink').href = url;
+                            const dlLink = document.getElementById('dlLink');
+                            dlLink.href = url;
+                            // ✅ Fix Filename Extension
                             const fName = `Quran_${sSelect.value}_${startAyah.value}.mp4`;
-                            document.getElementById('dlLink').download = fName;
+                            dlLink.setAttribute('download', fName);
                             
-                            // 🆕 حفظ في السجل
                             const sName = sSelect.options[sSelect.selectedIndex].text.split('. ')[1];
                             saveToHistory(sName, `${startAyah.value}-${endAyah.value}`, url);
 
