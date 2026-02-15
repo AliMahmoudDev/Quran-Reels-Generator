@@ -84,8 +84,21 @@ def create_job():
     job_id = str(uuid.uuid4())
     job_dir = os.path.join(BASE_TEMP_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
+    
     with JOBS_LOCK:
-        JOBS[job_id] = {'id': job_id, 'percent': 0, 'status': 'جاري التحضير...', 'eta': '--:--', 'is_running': True, 'is_complete': False, 'output_path': None, 'error': None, 'should_stop': False, 'created_at': time.time(), 'workspace': job_dir}
+        JOBS[job_id] = {
+            'id': job_id,
+            'percent': 0,
+            'status': 'جاري التحضير...',
+            'eta': '--:--',
+            'is_running': True,
+            'is_complete': False,
+            'output_path': None,
+            'error': None,
+            'should_stop': False,
+            'created_at': time.time(),
+            'workspace': job_dir
+        }
     return job_id
 
 def update_job_status(job_id, percent, status, eta=None):
@@ -96,20 +109,31 @@ def update_job_status(job_id, percent, status, eta=None):
             if eta: JOBS[job_id]['eta'] = eta
 
 def get_job(job_id):
-    with JOBS_LOCK: return JOBS.get(job_id)
+    with JOBS_LOCK:
+        return JOBS.get(job_id)
 
 def cleanup_job(job_id):
     with JOBS_LOCK:
         job = JOBS.pop(job_id, None)
+    
     if job and os.path.exists(job['workspace']):
-        try: shutil.rmtree(job['workspace'])
-        except: pass
+        try:
+            shutil.rmtree(job['workspace'])
+            print(f"cleaned up workspace: {job_id}")
+        except Exception as e:
+            print(f"Error cleaning up {job_id}: {e}")
 
 class ScopedQuranLogger(ProgressBarLogger):
-    def __init__(self, job_id): super().__init__(); self.job_id = job_id; self.start_time = None
+    def __init__(self, job_id):
+        super().__init__()
+        self.job_id = job_id
+        self.start_time = None
+
     def bars_callback(self, bar, attr, value, old_value=None):
         job = get_job(self.job_id)
-        if not job or job['should_stop']: raise Exception("Stopped by user")
+        if not job or job['should_stop']:
+            raise Exception("Stopped by user")
+
         if bar == 't':
             total = self.bars[bar]['total']
             if total > 0:
@@ -118,7 +142,8 @@ class ScopedQuranLogger(ProgressBarLogger):
                 elapsed = time.time() - self.start_time
                 rem_str = "00:00"
                 if elapsed > 0 and value > 0:
-                    remaining = (total - value) / (value / elapsed)
+                    rate = value / elapsed
+                    remaining = (total - value) / rate
                     rem_str = str(datetime.timedelta(seconds=int(remaining)))[2:] if remaining > 0 else "00:00"
                 update_job_status(self.job_id, percent, f"جاري التصدير... {percent}%", eta=rem_str)
 
@@ -141,15 +166,19 @@ def download_audio(reciter_id, surah, ayah, idx, workspace_dir):
         with open(out, 'wb') as f:
             for chunk in r.iter_content(8192): f.write(chunk)
         snd = AudioSegment.from_file(out)
-        if len(snd) < 100: final_snd = snd
+        
+        if len(snd) < 100: 
+            final_snd = snd
         else:
             start = detect_silence(snd, snd.dBFS-20) 
             end = detect_silence(snd.reverse(), snd.dBFS-20)
             if start + end < len(snd):
                 trimmed = snd[max(0, start-30):len(snd)-max(0, end-30)]
-            else: trimmed = snd 
+            else:
+                trimmed = snd
             padding = AudioSegment.silent(duration=50) 
             final_snd = padding + trimmed.fade_in(20).fade_out(20)
+            
         final_snd.export(out, format='mp3')
     except Exception as e: 
         print(f"Audio DL Error: {e}")
@@ -165,7 +194,8 @@ def get_text(surah, ayah):
             t = re.sub(basmala_pattern, '', t).strip()
             t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
         return t
-    except: return "Text Error"
+    except: 
+        return "Text Error"
 
 def get_en_text(surah, ayah):
     try:
@@ -177,7 +207,7 @@ def wrap_text(text, per_line):
     words = text.split()
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
-# ✅ Vignette Mask (Stronger corners)
+# ✅ Vignette Mask (Corrected for deep edges & uint8 safety)
 def create_vignette_mask(w, h):
     Y, X = np.ogrid[:h, :w]
     center_y, center_x = h / 2, w / 2
@@ -198,30 +228,6 @@ def apply_blur_effect(clip):
         img_blurred = img.filter(ImageFilter.GaussianBlur(radius=5))
         return np.array(img_blurred).astype(np.uint8)
     return clip.fl(blur_filter)
-
-# ✅ Slow Zoom Effect (Safe: max(0, t))
-def apply_slow_zoom(clip, zoom_ratio=0.04):
-    def zoom_filter(get_frame, t):
-        # 🛑 FIX: Prevent negative time which causes scale < 1
-        safe_t = max(0, t)
-        
-        frame = get_frame(t)
-        h, w = frame.shape[:2]
-        scale = 1 + (zoom_ratio * (safe_t / clip.duration))
-        new_w = int(w * scale)
-        new_h = int(h * scale)
-        
-        img = Image.fromarray(frame.astype('uint8'))
-        img_resized = img.resize((new_w, new_h), Image.LANCZOS)
-        
-        left = (new_w - w) // 2
-        top = (new_h - h) // 2
-        right = left + w
-        bottom = top + h
-        
-        img_cropped = img_resized.crop((left, top, right, bottom))
-        return np.array(img_cropped).astype(np.uint8)
-    return clip.fl(zoom_filter)
 
 # ==========================================
 # 🎨 Arabic Text
@@ -392,9 +398,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             except: bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35), duration=full_dur)
 
         bg_clip = bg_clip.set_duration(full_dur)
-        
-        # ✅ Apply Mandatory Slow Zoom (Safe)
-        bg_clip = apply_slow_zoom(bg_clip, zoom_ratio=0.04)
         
         # ✅ Apply Optional Blur (Safe)
         if use_blur:
