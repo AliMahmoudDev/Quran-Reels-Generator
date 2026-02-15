@@ -265,9 +265,9 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
         # ✅ GLOW EFFECT LOGIC (If enabled)
         if glow:
             # Outer faint glow
-            draw_final.text((start_x, current_y), line, font=font, fill=(255, 215, 0, 30), stroke_width=8, stroke_fill=(255, 215, 0, 30))
+            draw_final.text((start_x, current_y), line, font=font, fill=(255, 255, 255, 30), stroke_width=4, stroke_fill=(255, 255, 255, 30))
             # Inner stronger glow
-            draw_final.text((start_x, current_y), line, font=font, fill=(255, 215, 0, 70), stroke_width=4, stroke_fill=(255, 215, 0, 70))
+            draw_final.text((start_x, current_y), line, font=font, fill=(255, 255, 255, 70), stroke_width=2, stroke_fill=(255, 255, 255, 70))
 
         # Drop Shadow
         draw_final.text((start_x + shadow_offset, current_y + shadow_offset), line, font=font, fill=(0,0,0,180))
@@ -297,7 +297,7 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
     
     if glow:
          # Glow for English
-         draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill=(255, 215, 0, 80), align='center', anchor="mm", stroke_width=8, stroke_fill=(255, 215, 0, 80))
+         draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill=(255, 215, 0, 60), align='center', anchor="mm", stroke_width=4, stroke_fill=(255, 215, 0, 60))
 
     draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill='#FFD700', align='center', anchor="mm", stroke_width=stroke_w, stroke_fill='black')
     
@@ -631,3 +631,4 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+
