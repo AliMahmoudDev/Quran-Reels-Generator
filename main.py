@@ -18,6 +18,7 @@ from flask_cors import CORS
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import PIL.Image
+# Fix for newer Pillow versions
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
 
@@ -48,7 +49,7 @@ BUNDLE_DIR = EXEC_DIR
 FFMPEG_EXE = "ffmpeg"
 os.environ["FFMPEG_BINARY"] = FFMPEG_EXE
 
-# ImageMagick Fix for Hugging Face
+# ImageMagick Fix for Hugging Face & Linux
 try:
     change_settings({"IMAGEMAGICK_BINARY": os.getenv("IMAGEMAGICK_BINARY", "convert")})
 except:
@@ -69,7 +70,7 @@ BASE_TEMP_DIR = os.path.join(EXEC_DIR, "temp_workspaces")
 os.makedirs(BASE_TEMP_DIR, exist_ok=True)
 os.makedirs(VISION_DIR, exist_ok=True)
 
-# Data Constants
+# Data Constants (Full List Recommended)
 VERSE_COUNTS = {1: 7, 2: 286, 3: 200, 4: 176, 5: 120, 6: 165, 7: 206, 8: 75, 9: 129, 10: 109, 11: 123, 12: 111, 13: 43, 14: 52, 15: 99, 16: 128, 17: 111, 18: 110, 19: 98, 20: 135, 21: 112, 22: 78, 23: 118, 24: 64, 25: 77, 26: 227, 27: 93, 28: 88, 29: 69, 30: 60, 31: 34, 32: 30, 33: 73, 34: 54, 35: 45, 36: 83, 37: 182, 38: 88, 39: 75, 40: 85, 41: 54, 42: 53, 43: 89, 44: 59, 45: 37, 46: 35, 47: 38, 48: 29, 49: 18, 50: 45, 51: 60, 52: 49, 53: 62, 54: 55, 55: 78, 56: 96, 57: 29, 58: 22, 59: 24, 60: 13, 61: 14, 62: 11, 63: 11, 64: 18, 65: 12, 66: 12, 67: 30, 68: 52, 69: 52, 70: 44, 71: 28, 72: 28, 73: 20, 74: 56, 75: 40, 76: 31, 77: 50, 78: 40, 79: 46, 80: 42, 81: 29, 82: 19, 83: 36, 84: 25, 85: 22, 86: 17, 87: 19, 88: 26, 89: 30, 90: 20, 91: 15, 92: 21, 93: 11, 94: 8, 95: 8, 96: 19, 97: 5, 98: 8, 99: 8, 100: 11, 101: 11, 102: 8, 103: 3, 104: 9, 105: 5, 106: 4, 107: 7, 108: 3, 109: 6, 110: 3, 111: 5, 112: 4, 113: 5, 114: 6}
 SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه', 'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم', 'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر', 'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق', 'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة', 'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج', 'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد', 'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس']
 RECITERS_MAP = {'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 'الشيخ عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 'الشيخ ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 'الشيخ محمد صديق المنشاوي (مجود)': 'Minshawy_Mujawwad_64kbps', 'الشيخ سعود الشريم': 'Saood_ash-Shuraym_64kbps', 'الشيخ مشاري العفاسي': 'Alafasy_64kbps', 'الشيخ محمود خليل الحصري': 'Husary_64kbps', 'الشيخ أبو بكر الشاطري': 'Abu_Bakr_Ash-Shaatree_128kbps', 'ناصر القطامي':'Nasser_Alqatami_128kbps', 'هاني الرافعي':'Hani_Rifai_192kbps', 'علي جابر' :'Ali_Jaber_64kbps'}
@@ -78,7 +79,7 @@ app = Flask(__name__, static_folder=EXEC_DIR)
 CORS(app)
 
 # ==========================================
-# 🧠 Job Management
+# 🧠 Job Management (State & Concurrency)
 # ==========================================
 JOBS = {}
 JOBS_LOCK = threading.Lock()
@@ -93,6 +94,7 @@ def create_job():
             'id': job_id,
             'percent': 0,
             'status': 'جاري التحضير...',
+            'eta': '--:--', # ⏳ Time Remaining
             'is_running': True,
             'is_complete': False,
             'output_path': None,
@@ -103,11 +105,12 @@ def create_job():
         }
     return job_id
 
-def update_job_status(job_id, percent, status):
+def update_job_status(job_id, percent, status, eta=None):
     with JOBS_LOCK:
         if job_id in JOBS:
             JOBS[job_id]['percent'] = percent
             JOBS[job_id]['status'] = status
+            if eta: JOBS[job_id]['eta'] = eta
 
 def get_job(job_id):
     with JOBS_LOCK:
@@ -120,12 +123,12 @@ def cleanup_job(job_id):
     if job and os.path.exists(job['workspace']):
         try:
             shutil.rmtree(job['workspace'])
-            print(f"Cleaned up workspace: {job_id}")
+            print(f"cleaned up workspace: {job_id}")
         except Exception as e:
             print(f"Error cleaning up {job_id}: {e}")
 
 # ==========================================
-# 📊 Scoped Logger
+# 📊 Scoped Logger (Supports ETA)
 # ==========================================
 class ScopedQuranLogger(ProgressBarLogger):
     def __init__(self, job_id):
@@ -143,6 +146,8 @@ class ScopedQuranLogger(ProgressBarLogger):
             if total > 0:
                 percent = int((value / total) * 100)
                 if self.start_time is None: self.start_time = time.time()
+                
+                # ⏳ ETA Calculation
                 elapsed = time.time() - self.start_time
                 rem_str = "00:00"
                 if elapsed > 0 and value > 0:
@@ -150,7 +155,7 @@ class ScopedQuranLogger(ProgressBarLogger):
                     remaining = (total - value) / rate
                     rem_str = str(datetime.timedelta(seconds=int(remaining)))[2:] if remaining > 0 else "00:00"
                 
-                update_job_status(self.job_id, percent, f"جاري التصدير... {percent}% (متبقي {rem_str})")
+                update_job_status(self.job_id, percent, f"جاري التصدير... {percent}%", eta=rem_str)
 
 # ==========================================
 # 🛠️ Helper Functions
@@ -364,20 +369,34 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             layers.extend([ac, ec])
             curr_t += dur
 
-        # 5. Render
+        # 5. Render (OPTIMIZED FOR SPEED)
         final = CompositeVideoClip(layers).set_audio(final_audio_clip)
         output_filename = f"Quran_{surah}_{start}-{last}_{job_id[:8]}.mp4"
         output_full_path = os.path.join(workspace, output_filename)
-        update_job_status(job_id, 50, 'Rendering Video (Heavy Process)...')
+        update_job_status(job_id, 50, 'Rendering Video (Turbo Mode)...')
         
         my_logger = ScopedQuranLogger(job_id)
-        final.write_videofile(output_full_path, fps=24, codec='libx264', audio_bitrate='96k', preset='superfast', threads=2, logger=my_logger, ffmpeg_params=['-movflags', '+faststart', '-pix_fmt', 'yuv420p'])
+        # 🚀 TURBO MODE SETTINGS:
+        # preset='ultrafast': Fastest encoding
+        # audio_bitrate='64k': Slightly lower audio size (faster muxing)
+        # threads=2: Safe balance for free servers
+        final.write_videofile(
+            output_full_path, 
+            fps=24, 
+            codec='libx264', 
+            audio_bitrate='64k', 
+            preset='ultrafast', 
+            threads=2, 
+            logger=my_logger, 
+            ffmpeg_params=['-movflags', '+faststart', '-pix_fmt', 'yuv420p', '-crf', '28']
+        )
         
         with JOBS_LOCK:
             JOBS[job_id]['output_path'] = output_full_path
             JOBS[job_id]['is_complete'] = True
             JOBS[job_id]['is_running'] = False
             JOBS[job_id]['percent'] = 100
+            JOBS[job_id]['eta'] = "00:00"
             JOBS[job_id]['status'] = "Done! Ready for download."
 
     except Exception as e:
@@ -400,7 +419,11 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 # 🌐 API Routes
 # ==========================================
 @app.route('/')
-def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "UI Missing"
+def ui(): 
+    # Fallback message if UI.html is missing
+    if not os.path.exists(UI_PATH):
+        return "Quran Video Generator API is Running. (Note: Files are auto-deleted after 1 hour)."
+    return send_file(UI_PATH)
 
 @app.route('/api/generate', methods=['POST'])
 def gen():
@@ -420,7 +443,15 @@ def prog():
     if not job_id: return jsonify({'error': 'No Job ID provided'}), 400
     job = get_job(job_id)
     if not job: return jsonify({'error': 'Job not found'}), 404
-    return jsonify({'percent': job['percent'], 'status': job['status'], 'is_complete': job['is_complete'], 'is_running': job['is_running'], 'output_path': job['output_path'], 'error': job['error']})
+    return jsonify({
+        'percent': job['percent'], 
+        'status': job['status'], 
+        'eta': job.get('eta', '--:--'),
+        'is_complete': job['is_complete'], 
+        'is_running': job['is_running'], 
+        'output_path': job['output_path'], 
+        'error': job['error']
+    })
 
 @app.route('/api/download')
 def download_result():
@@ -450,42 +481,39 @@ def cancel_process():
 def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 'reciters': RECITERS_MAP})
 
 # ==========================================
-# 🧹 عامل النظافة التلقائي (Garbage Collector)
+# 🧹 Automatic Garbage Collector (1 Hour Rule)
 # ==========================================
 def background_cleanup():
     while True:
-        time.sleep(3600)  # يشتغل كل ساعة
+        time.sleep(3600)  # Check every 1 hour
         print("🧹 Running automatic cleanup...")
         current_time = time.time()
         
-        # 1. تنظيف الذاكرة (JOBS dict)
+        # 1. Clean Memory
         with JOBS_LOCK:
             to_delete = []
             for jid, job in JOBS.items():
-                # لو المهمة بقالها أكتر من ساعة (سواء خلصت أو لسه)
-                if current_time - job['created_at'] > 3600:
+                if current_time - job['created_at'] > 3600: # 1 Hour limit
                     to_delete.append(jid)
-            
             for jid in to_delete:
                 del JOBS[jid]
 
-        # 2. تنظيف الهارد (المجلدات القديمة)
+        # 2. Clean Disk (Stale folders)
         try:
             if os.path.exists(BASE_TEMP_DIR):
                 for folder in os.listdir(BASE_TEMP_DIR):
                     folder_path = os.path.join(BASE_TEMP_DIR, folder)
-                    # لو المجلد بقاله أكتر من ساعة
                     if os.path.isdir(folder_path):
+                        # If folder is older than 1 hour
                         if current_time - os.path.getctime(folder_path) > 3600:
                             shutil.rmtree(folder_path, ignore_errors=True)
-                            print(f"🗑️ Auto-deleted old folder: {folder}")
+                            print(f"🗑️ Auto-deleted old workspace: {folder}")
         except Exception as e:
             print(f"Cleanup Error: {e}")
 
-# تشغيل عامل النظافة في خيط منفصل
+# Start Cleaner
 threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
-
