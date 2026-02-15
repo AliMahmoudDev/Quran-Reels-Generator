@@ -48,7 +48,10 @@ BUNDLE_DIR = EXEC_DIR
 FFMPEG_EXE = "ffmpeg" # Ensure this is in your PATH or specify full path
 os.environ["FFMPEG_BINARY"] = FFMPEG_EXE
 IM_MAGICK_EXE = "/usr/bin/convert" # Ensure this is correct for your server
-change_settings({"IMAGEMAGICK_BINARY": IM_MAGICK_EXE})
+try:
+    change_settings({"IMAGEMAGICK_BINARY": os.getenv("IMAGEMAGICK_BINARY", "convert")})
+except:
+    pass
 AudioSegment.converter = FFMPEG_EXE
 AudioSegment.ffmpeg = FFMPEG_EXE
 
@@ -215,29 +218,55 @@ def wrap_text(text, per_line):
 #  just ensure they don't use global variables. They looked fine in your original code.)
 
 def pick_bg(user_key, custom_query=None):
-    # (Same as original, but ensure we don't log to global variable)
-    if not user_key: return None
+    """
+    تحاول جلب خلفية فيديو. إذا فشلت أو كان المفتاح خطأ، تعود بـ None
+    """
+    if not user_key or len(user_key) < 10: 
+        print("Invalid or missing Pexels Key")
+        return None
+
     try:
         rand_page = random.randint(1, 10)
         safe_filter = " no people"
-        q = (custom_query + safe_filter) if custom_query else (random.choice(['nature', 'clouds', 'mosque']) + safe_filter)
-        
+        # اختيار كلمة بحث
+        if custom_query and len(custom_query) > 2:
+            try:
+                trans_q = GoogleTranslator(source='auto', target='en').translate(custom_query.strip())
+                q = trans_q + safe_filter
+            except:
+                q = "nature landscape" + safe_filter
+        else:
+            safe_topics = ['nature landscape', 'mosque architecture', 'sky clouds', 'galaxy stars', 'ocean waves']
+            q = random.choice(safe_topics) + safe_filter
+            
         headers = {'Authorization': user_key}
-        r = requests.get(f"https://api.pexels.com/videos/search?query={q}&per_page=15&page={rand_page}&orientation=portrait", headers=headers, timeout=15)
-        if r.status_code == 401: return None
+        # Timeout مهم جداً عشان ميعلقش
+        r = requests.get(f"https://api.pexels.com/videos/search?query={q}&per_page=5&page={rand_page}&orientation=portrait", headers=headers, timeout=10)
+        
+        if r.status_code != 200:
+            print(f"Pexels Error: {r.status_code}")
+            return None
+            
         vids = r.json().get('videos', [])
         if not vids: return None
-        vid = random.choice(vids)
-        f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), vid['video_files'][0])
         
-        # We download the background to the COMMON Vision dir (caching is fine here)
-        # OR download to workspace if you want total isolation. Let's keep common cache for speed.
+        vid = random.choice(vids)
+        # نختار أقل جودة مقبولة عشان التحميل يكون سريع
+        f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), None)
+        if not f: f = vid['video_files'][0]
+
         path = os.path.join(VISION_DIR, f"bg_{vid['id']}.mp4")
+        
+        # تحميل الفيديو
         if not os.path.exists(path):
-            with requests.get(f['link'], stream=True) as rv:
-                with open(path, 'wb') as f: shutil.copyfileobj(rv.raw, f)
+            with requests.get(f['link'], stream=True, timeout=20) as rv:
+                with open(path, 'wb') as f_out:
+                    shutil.copyfileobj(rv.raw, f_out)
+                    
         return path
-    except: return None
+    except Exception as e:
+        print(f"Background Error: {e}")
+        return None
 
 # ==========================================
 # 🎬 Main Processor
@@ -294,31 +323,60 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         final_audio_clip = AudioFileClip(final_audio_path)
         full_dur = final_audio_clip.duration
 
-        # 3. Background
+def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query):
+    job = get_job(job_id)
+    if not job: return
+
+    workspace = job['workspace']
+    final = None
+    final_audio_clip = None
+    bg = None
+    
+    try:
+        # ... (نفس كود تحميل الصوت القديم بدون تغيير لحد السطر 275 تقريباً) ...
+        # ... بعد ما تجهز items و full_audio_seg ...
+
+        # 2. Audio Processing
+        final_audio_path = os.path.join(workspace, "combined.mp3")
+        full_audio_seg.export(final_audio_path, format="mp3")
+        final_audio_clip = AudioFileClip(final_audio_path)
+        full_dur = final_audio_clip.duration
+
+        # 3. Background Setup (FIXED)
         update_job_status(job_id, 40, 'Preparing Background...')
+        
         bg_path = pick_bg(user_pexels_key, bg_query)
-        if not bg_path: raise ValueError("Could not fetch background")
         
-        bg = VideoFileClip(bg_path)
-        # Resize Logic
-        if bg.w/bg.h > target_w/target_h: bg = bg.resize(height=target_h)
-        else: bg = bg.resize(width=target_w)
-        bg = bg.crop(width=target_w, height=target_h, x_center=bg.w/2, y_center=bg.h/2)
-        bg = bg.fx(vfx.loop, duration=full_dur).subclip(0, full_dur)
+        target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
         
-        layers = [bg, ColorClip(bg.size, color=(0,0,0), duration=full_dur).set_opacity(0.6)]
-        
+        if bg_path and os.path.exists(bg_path):
+            # الحالة الأولى: نجحنا في جلب فيديو
+            bg = VideoFileClip(bg_path)
+            if bg.w/bg.h > target_w/target_h: 
+                bg = bg.resize(height=target_h)
+            else: 
+                bg = bg.resize(width=target_w)
+            bg = bg.crop(width=target_w, height=target_h, x_center=bg.w/2, y_center=bg.h/2)
+            bg = bg.fx(vfx.loop, duration=full_dur).subclip(0, full_dur)
+            # طبقة تعتيم للفيديو
+            layers = [bg, ColorClip(bg.size, color=(0,0,0), duration=full_dur).set_opacity(0.6)]
+        else:
+            # الحالة الثانية (Fallback): فشل الفيديو، نستخدم خلفية لونية
+            print("Using Fallback Background")
+            update_job_status(job_id, 45, 'Using Default Background...')
+            # خلفية لون كحلي غامق فخم
+            bg_color = ColorClip((target_w, target_h), color=(15, 20, 35), duration=full_dur)
+            layers = [bg_color]
+
         # 4. Text Overlay
         curr_t = 0.0
+        scale_factor = 1.0 if quality == '1080' else 0.67
         y_pos = target_h * 0.40 
         
-        # Import local functions to avoid scope issues if they weren't defined above
-        # (Assuming create_text_clip/create_english_clip are available globally in script)
-
         for ar, en, dur in items:
             if get_job(job_id)['should_stop']: raise Exception("Stopped")
             
-            # Note: Ensure create_text_clip is thread-safe (it is, as long as it doesn't write to globals)
+            # التأكد من أن الدوال create_text_clip موجودة وتعمل
             ac = create_text_clip(ar, dur, target_w, scale_factor).set_start(curr_t).set_position(('center', y_pos))
             gap = 30 * scale_factor 
             ec = create_english_clip(en, dur, target_w, scale_factor).set_start(curr_t).set_position(('center', y_pos + ac.h + gap))
@@ -329,22 +387,21 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         # 5. Rendering
         final = CompositeVideoClip(layers).set_audio(final_audio_clip)
         
-        # Unique Filename
         output_filename = f"Quran_{surah}_{start}-{last}_{job_id[:8]}.mp4"
         output_full_path = os.path.join(workspace, output_filename)
         
-        update_job_status(job_id, 50, 'Rendering Video...')
+        update_job_status(job_id, 50, 'Rendering Video (Heavy Process)...')
         
-        # Use Scoped Logger
         my_logger = ScopedQuranLogger(job_id)
         
+        # تقليل الـ threads لـ 2 عشان الـ CPU ميعلقش
         final.write_videofile(
             output_full_path, 
             fps=24, 
             codec='libx264', 
             audio_bitrate='96k', 
-            preset='ultrafast', 
-            threads=4, 
+            preset='superfast', # أسرع preset
+            threads=2, # تقليل الضغط
             logger=my_logger, 
             ffmpeg_params=['-movflags', '+faststart', '-pix_fmt', 'yuv420p']
         )
@@ -457,3 +514,4 @@ if __name__ == "__main__":
     # Optional: Background thread to clean up very old stale jobs (e.g., > 1 hour)
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+
