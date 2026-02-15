@@ -66,7 +66,7 @@ BASE_TEMP_DIR = os.path.join(EXEC_DIR, "temp_workspaces")
 os.makedirs(BASE_TEMP_DIR, exist_ok=True)
 os.makedirs(VISION_DIR, exist_ok=True)
 
-# Data Constants (Verse Counts, Surah Names, Reciters) - Same as before
+# Data Constants
 VERSE_COUNTS = {1: 7, 2: 286, 3: 200, 4: 176, 5: 120, 6: 165, 7: 206, 8: 75, 9: 129, 10: 109, 11: 123, 12: 111, 13: 43, 14: 52, 15: 99, 16: 128, 17: 111, 18: 110, 19: 98, 20: 135, 21: 112, 22: 78, 23: 118, 24: 64, 25: 77, 26: 227, 27: 93, 28: 88, 29: 69, 30: 60, 31: 34, 32: 30, 33: 73, 34: 54, 35: 45, 36: 83, 37: 182, 38: 88, 39: 75, 40: 85, 41: 54, 42: 53, 43: 89, 44: 59, 45: 37, 46: 35, 47: 38, 48: 29, 49: 18, 50: 45, 51: 60, 52: 49, 53: 62, 54: 55, 55: 78, 56: 96, 57: 29, 58: 22, 59: 24, 60: 13, 61: 14, 62: 11, 63: 11, 64: 18, 65: 12, 66: 12, 67: 30, 68: 52, 69: 52, 70: 44, 71: 28, 72: 28, 73: 20, 74: 56, 75: 40, 76: 31, 77: 50, 78: 40, 79: 46, 80: 42, 81: 29, 82: 19, 83: 36, 84: 25, 85: 22, 86: 17, 87: 19, 88: 26, 89: 30, 90: 20, 91: 15, 92: 21, 93: 11, 94: 8, 95: 8, 96: 19, 97: 5, 98: 8, 99: 8, 100: 11, 101: 11, 102: 8, 103: 3, 104: 9, 105: 5, 106: 4, 107: 7, 108: 3, 109: 6, 110: 3, 111: 5, 112: 4, 113: 5, 114: 6}
 SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه', 'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم', 'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر', 'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق', 'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة', 'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج', 'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد', 'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس']
 RECITERS_MAP = {'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 'الشيخ عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 'الشيخ ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 'الشيخ محمد صديق المنشاوي (مجود)': 'Minshawy_Mujawwad_64kbps', 'الشيخ سعود الشريم': 'Saood_ash-Shuraym_64kbps', 'الشيخ مشاري العفاسي': 'Alafasy_64kbps', 'الشيخ محمود خليل الحصري': 'Husary_64kbps', 'الشيخ أبو بكر الشاطري': 'Abu_Bakr_Ash-Shaatree_128kbps', 'ناصر القطامي':'Nasser_Alqatami_128kbps', 'هاني الرافعي':'Hani_Rifai_192kbps', 'علي جابر' :'Ali_Jaber_64kbps'}
@@ -263,9 +263,9 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0):
 # ==========================================
 # 🌌 Advanced Background Logic
 # ==========================================
-def fetch_video_pool(user_key, custom_query, count=3):
+def fetch_video_pool(user_key, custom_query, count=1):
     """
-    Downloads a pool of videos (default 3-5) to cycle through.
+    Downloads a pool of videos to cycle through.
     """
     pool = []
     if not user_key or len(user_key) < 10: return pool
@@ -283,14 +283,16 @@ def fetch_video_pool(user_key, custom_query, count=3):
             q = random.choice(safe_topics) + safe_filter
 
         headers = {'Authorization': user_key}
-        # Request more videos to have a pool
+        # Request slightly more than count to handle failed validations
         r = requests.get(f"https://api.pexels.com/videos/search?query={q}&per_page={count+2}&orientation=portrait", headers=headers, timeout=15)
         
         if r.status_code == 200:
             vids = r.json().get('videos', [])
-            random.shuffle(vids) # Shuffle to get variety
+            random.shuffle(vids)
             
-            for vid in vids[:count]:
+            for vid in vids:
+                if len(pool) >= count: break # Found enough videos
+                
                 # Pick best quality ~1080p
                 f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), None)
                 if not f: 
@@ -311,7 +313,7 @@ def fetch_video_pool(user_key, custom_query, count=3):
 # ==========================================
 # 🎬 Main Processor
 # ==========================================
-def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg=False):
+def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg):
     job = get_job(job_id)
     if not job: return
 
@@ -349,70 +351,60 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         final_audio_clip = AudioFileClip(final_audio_path)
         full_dur = final_audio_clip.duration
 
-        # 3. Dynamic Background Processing (The New Logic!)
+        # 3. Background Logic (Dynamic vs Static)
         update_job_status(job_id, 30, 'Preparing Backgrounds...')
         
-        # Decide how many videos needed. If many ayahs, we recycle a pool of ~5 videos.
-        num_ayahs = len(ayah_data)
-        pool_size = min(num_ayahs, 5) 
-        
-        video_pool = fetch_video_pool(user_pexels_key, bg_query, count=pool_size)
-        
-        # Fallback if no internet or key error
-        if not video_pool:
-            print("⚠️ No videos found, using color fallback.")
-            bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35), duration=full_dur)
-        else:
-            # Build the sequence of background clips
-            bg_clips_list = []
+        if dynamic_bg:
+            # === DYNAMIC MODE: One Video Per Ayah ===
+            num_ayahs = len(ayah_data)
+            pool_size = min(num_ayahs, 5) 
+            video_pool = fetch_video_pool(user_pexels_key, bg_query, count=pool_size)
             
-            for i, data in enumerate(ayah_data):
-                required_dur = data['dur']
+            if not video_pool:
+                bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35), duration=full_dur)
+            else:
+                bg_clips_list = []
+                for i, data in enumerate(ayah_data):
+                    required_dur = data['dur']
+                    vid_path = video_pool[i % len(video_pool)]
+                    try:
+                        raw_clip = VideoFileClip(vid_path)
+                        if raw_clip.duration < required_dur:
+                            sub = raw_clip.fx(vfx.loop, duration=required_dur)
+                        else:
+                            max_start = raw_clip.duration - required_dur
+                            start_t = random.uniform(0, max(0, max_start))
+                            sub = raw_clip.subclip(start_t, start_t + required_dur)
+                        
+                        sub = sub.resize(height=target_h)
+                        sub = sub.crop(width=target_w, height=target_h, x_center=sub.w/2, y_center=sub.h/2)
+                        bg_clips_list.append(sub)
+                    except Exception as e:
+                        fallback = ColorClip((target_w, target_h), color=(20, 20, 20), duration=required_dur)
+                        bg_clips_list.append(fallback)
                 
-                # Pick a video from the pool (cycle through them: 0, 1, 2, 0, 1...)
-                vid_path = video_pool[i % len(video_pool)]
-                
-                try:
-                    # Load the clip
-                    raw_clip = VideoFileClip(vid_path)
-                    
-                    # If clip is shorter than ayah, loop it. If longer, subclip random part or start.
-                    # To keep it simple and safe: Loop then subclip.
-                    if raw_clip.duration < required_dur:
-                        sub = raw_clip.fx(vfx.loop, duration=required_dur)
-                    else:
-                        # Random start point to add variety even if using same video
-                        max_start = raw_clip.duration - required_dur
-                        start_t = random.uniform(0, max(0, max_start))
-                        sub = raw_clip.subclip(start_t, start_t + required_dur)
-                    
-                    # Resize/Crop to Portrait
-                    sub = sub.resize(height=target_h)
-                    sub = sub.crop(width=target_w, height=target_h, x_center=sub.w/2, y_center=sub.h/2)
-                    
-                    # Add fade transition to the clip itself? 
-                    # Ideally, concatenate_videoclips handles simple cuts. 
-                    # To make it "smooth", we can add a small crossfade effect manually or just rely on the sync.
-                    # Since user wants "Sync", hard cut at end of Ayah is actually better for rhythm, 
-                    # but let's add a tiny fadein/out to avoid "clicks"
-                    sub = sub.fadein(0.2).fadeout(0.2)
-                    
-                    bg_clips_list.append(sub)
-                    
-                except Exception as e:
-                    print(f"Error processing BG for Ayah {i}: {e}")
-                    # Fallback for this specific segment
-                    fallback = ColorClip((target_w, target_h), color=(20, 20, 20), duration=required_dur)
-                    bg_clips_list.append(fallback)
-            
-            # Combine all backgrounds
-            bg_clip = concatenate_videoclips(bg_clips_list, method="compose")
+                bg_clip = concatenate_videoclips(bg_clips_list, method="compose")
 
-        # Ensure background matches exact total audio duration (fix floating point errors)
+        else:
+            # === STATIC MODE: Single Video Looped ===
+            video_pool = fetch_video_pool(user_pexels_key, bg_query, count=1)
+            
+            if not video_pool:
+                bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35), duration=full_dur)
+            else:
+                bg_path = video_pool[0]
+                try:
+                    bg = VideoFileClip(bg_path)
+                    bg = bg.resize(height=target_h)
+                    bg = bg.crop(width=target_w, height=target_h, x_center=bg.w/2, y_center=bg.h/2)
+                    bg_clip = bg.fx(vfx.loop, duration=full_dur).subclip(0, full_dur)
+                except:
+                    bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35), duration=full_dur)
+
+        # Ensure duration matches exactly
         if bg_clip.duration > full_dur:
             bg_clip = bg_clip.subclip(0, full_dur)
         else:
-            # Padding if slightly short
             bg_clip = bg_clip.set_duration(full_dur)
 
         # Darken Background
@@ -425,7 +417,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         
         for data in ayah_data:
             ar, en, dur = data['ar'], data['en'], data['dur']
-            
             if get_job(job_id)['should_stop']: raise Exception("Stopped")
             
             ac = create_text_clip(ar, dur, target_w, scale_factor).set_start(curr_t).set_position(('center', y_pos))
@@ -436,11 +427,9 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             curr_t += dur
 
         # 5. Rendering
-        # Combine [Dynamic BG, Dark Overlay, Text Layers...]
         final_layers = [bg_clip, dark_layer] + text_layers
         final = CompositeVideoClip(final_layers).set_audio(final_audio_clip)
         
-        # Fade Out at the very end of the whole video
         final = final.fadeout(0.5).audio_fadeout(0.5)
 
         output_filename = f"Quran_{surah}_{start}-{last}_{job_id[:8]}.mp4"
@@ -508,12 +497,14 @@ def gen():
 
     job_id = create_job()
     
-    # We pass the new logic flow
+    # ✅ Read dynamicBg from user request
+    user_dynamic_bg = d.get('dynamicBg', False)
+
     threading.Thread(target=build_video_task, args=(
         job_id, d.get('pexelsKey'), d.get('reciter'), int(d.get('surah')), 
         int(d.get('startAyah')), int(d.get('endAyah')) if d.get('endAyah') else None, 
         d.get('quality', '720'), d.get('bgQuery'), user_fps,
-        True # Always Dynamic Mode as per user request
+        user_dynamic_bg
     ), daemon=True).start()
     return jsonify({'ok': True, 'jobId': job_id})
 
