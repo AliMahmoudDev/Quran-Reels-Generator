@@ -200,23 +200,15 @@ def wrap_text(text, per_line):
     words = text.split()
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
-# ✅ New Feature: Vignette Generator
+# ✅ Vignette Generator
 def create_vignette_mask(w, h):
     """Creates a radial gradient mask for cinematic look (Dark corners, clear center)."""
     Y, X = np.ogrid[:h, :w]
-    # Center coordinates
     center_y, center_x = h / 2, w / 2
-    # Distance from center
     dist_from_center = np.sqrt((X - center_x)**2 + (Y - center_y)**2)
-    # Normalize
     max_dist = np.sqrt((w/2)**2 + (h/2)**2)
     mask = dist_from_center / max_dist
-    
-    # Intesify the effect (0 = transparent, 1 = opaque black)
-    # The curve ^3 makes the center clearer and edges darker faster
     mask = np.clip(mask * 1.5, 0, 1) ** 3 
-    
-    # Convert to image (H, W, 1) -> RGBA
     mask_img = np.zeros((h, w, 4), dtype=np.uint8)
     mask_img[:, :, 3] = (mask * 255).astype(np.uint8) # Alpha channel
     return ImageClip(mask_img, ismask=False)
@@ -257,25 +249,19 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     draw_final = ImageDraw.Draw(final_image)
     current_y = 20
     
+    # ✅ FIX: Light Shadow & Subtle Outline
     shadow_offset = 2
-    stroke_w = 3
+    stroke_w = 1 # ⚡ Reduced from 3 to 1 (Very light outline)
 
     for i, line in enumerate(lines):
         bbox = draw_final.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         start_x = (img_w - line_w) // 2
         
-        # ✅ GLOW EFFECT LOGIC (If enabled)
-        if glow:
-            # Outer faint glow
-            draw_final.text((start_x, current_y), line, font=font, fill=(255, 215, 0, 50), stroke_width=15, stroke_fill=(255, 215, 0, 50))
-            # Inner stronger glow
-            draw_final.text((start_x, current_y), line, font=font, fill=(255, 215, 0, 100), stroke_width=8, stroke_fill=(255, 215, 0, 100))
-
-        # Drop Shadow
-        draw_final.text((start_x + shadow_offset, current_y + shadow_offset), line, font=font, fill=(0,0,0,180))
+        # 1. Subtle Drop Shadow (Reduced Opacity to 100)
+        draw_final.text((start_x + shadow_offset, current_y + shadow_offset), line, font=font, fill=(0,0,0,100))
         
-        # Main Text with Black Stroke
+        # 2. Main Text with Very Thin Stroke
         draw_final.text((start_x, current_y), line, font=font, fill='white', stroke_width=stroke_w, stroke_fill='black')
         
         current_y += line_heights[i]
@@ -296,12 +282,9 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
     img = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
-    stroke_w = 2
+    # ✅ FIX: Thin Stroke for English too
+    stroke_w = 1 
     
-    if glow:
-         # Glow for English
-         draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill=(255, 215, 0, 80), align='center', anchor="mm", stroke_width=8, stroke_fill=(255, 215, 0, 80))
-
     draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill='#FFD700', align='center', anchor="mm", stroke_width=stroke_w, stroke_fill='black')
     
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
@@ -444,15 +427,12 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         else:
             bg_clip = bg_clip.set_duration(full_dur)
 
-        # 4. OVERLAY: Vignette or Dark Layer
+        # 4. OVERLAY
         if use_vignette:
-            # Cinematic Vignette (Dark Edges)
             mask_clip = create_vignette_mask(target_w, target_h).set_duration(full_dur)
-            # We add a base dark layer underneath to ensure even center isn't too bright
             base_dark = ColorClip((target_w, target_h), color=(0,0,0), duration=full_dur).set_opacity(0.3)
             overlay_layers = [base_dark, mask_clip]
         else:
-            # Standard Flat Dark Layer
             dark_layer = ColorClip((target_w, target_h), color=(0,0,0), duration=full_dur).set_opacity(0.6)
             overlay_layers = [dark_layer]
         
@@ -465,7 +445,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             ar, en, dur = data['ar'], data['en'], data['dur']
             if get_job(job_id)['should_stop']: raise Exception("Stopped")
             
-            # Pass use_glow to helper functions
+            # Note: Glow param ignored now (cleaned up)
             ac = create_text_clip(ar, dur, target_w, scale_factor, glow=use_glow).set_start(curr_t).set_position(('center', y_pos))
             gap = 30 * scale_factor 
             ec = create_english_clip(en, dur, target_w, scale_factor, glow=use_glow).set_start(curr_t).set_position(('center', y_pos + ac.h + gap))
@@ -545,7 +525,6 @@ def gen():
     job_id = create_job()
     
     user_dynamic_bg = d.get('dynamicBg', False)
-    # ✅ Read new options
     user_glow = d.get('useGlow', False)
     user_vignette = d.get('useVignette', False)
 
