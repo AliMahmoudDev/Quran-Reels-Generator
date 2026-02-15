@@ -468,7 +468,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             
             # Pass use_glow to helper functions
             ac = create_text_clip(ar, dur, target_w, scale_factor, glow=use_glow).set_start(curr_t).set_position(('center', y_pos))
-            gap = 30 * scale_factor 
+            gap = 10 * scale_factor 
             ec = create_english_clip(en, dur, target_w, scale_factor, glow=use_glow).set_start(curr_t).set_position(('center', y_pos + ac.h + gap))
             
             text_layers.extend([ac, ec])
@@ -631,6 +631,7 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+
 
 
 
