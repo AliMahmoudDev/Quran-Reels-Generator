@@ -45,13 +45,15 @@ EXEC_DIR = app_dir()
 BUNDLE_DIR = EXEC_DIR 
 
 # FFMPEG Setup
-FFMPEG_EXE = "ffmpeg" # Ensure this is in your PATH or specify full path
+FFMPEG_EXE = "ffmpeg"
 os.environ["FFMPEG_BINARY"] = FFMPEG_EXE
-IM_MAGICK_EXE = "/usr/bin/convert" # Ensure this is correct for your server
+
+# ImageMagick Fix for Hugging Face
 try:
     change_settings({"IMAGEMAGICK_BINARY": os.getenv("IMAGEMAGICK_BINARY", "convert")})
 except:
     pass
+
 AudioSegment.converter = FFMPEG_EXE
 AudioSegment.ffmpeg = FFMPEG_EXE
 
@@ -62,25 +64,22 @@ FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
 VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
 
-# Master Temp Directory (We will create sub-folders inside this)
+# Master Temp Directory
 BASE_TEMP_DIR = os.path.join(EXEC_DIR, "temp_workspaces")
 os.makedirs(BASE_TEMP_DIR, exist_ok=True)
 os.makedirs(VISION_DIR, exist_ok=True)
 
 # Data Constants
-VERSE_COUNTS = {1: 7, 2: 286, 3: 200, 108: 3, 112: 4, 113: 5, 114: 6} # (Truncated for brevity, keep your full list)
-SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'الكوثر', 'الإخلاص', 'الفلق', 'الناس'] # (Truncated, keep full list)
-RECITERS_MAP = {'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 'الشيخ مشاري العفاسي': 'Alafasy_64kbps'} # (Truncated)
+VERSE_COUNTS = {1: 7, 2: 286, 3: 200, 4: 176, 5: 120, 6: 165, 7: 206, 8: 75, 9: 129, 10: 109, 11: 123, 12: 111, 13: 43, 14: 52, 15: 99, 16: 128, 17: 111, 18: 110, 19: 98, 20: 135, 21: 112, 22: 78, 23: 118, 24: 64, 25: 77, 26: 227, 27: 93, 28: 88, 29: 69, 30: 60, 31: 34, 32: 30, 33: 73, 34: 54, 35: 45, 36: 83, 37: 182, 38: 88, 39: 75, 40: 85, 41: 54, 42: 53, 43: 89, 44: 59, 45: 37, 46: 35, 47: 38, 48: 29, 49: 18, 50: 45, 51: 60, 52: 49, 53: 62, 54: 55, 55: 78, 56: 96, 57: 29, 58: 22, 59: 24, 60: 13, 61: 14, 62: 11, 63: 11, 64: 18, 65: 12, 66: 12, 67: 30, 68: 52, 69: 52, 70: 44, 71: 28, 72: 28, 73: 20, 74: 56, 75: 40, 76: 31, 77: 50, 78: 40, 79: 46, 80: 42, 81: 29, 82: 19, 83: 36, 84: 25, 85: 22, 86: 17, 87: 19, 88: 26, 89: 30, 90: 20, 91: 15, 92: 21, 93: 11, 94: 8, 95: 8, 96: 19, 97: 5, 98: 8, 99: 8, 100: 11, 101: 11, 102: 8, 103: 3, 104: 9, 105: 5, 106: 4, 107: 7, 108: 3, 109: 6, 110: 3, 111: 5, 112: 4, 113: 5, 114: 6}
+SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه', 'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم', 'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر', 'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق', 'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة', 'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج', 'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد', 'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس']
+RECITERS_MAP = {'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 'الشيخ عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 'الشيخ ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 'الشيخ محمد صديق المنشاوي (مجود)': 'Minshawy_Mujawwad_64kbps', 'الشيخ سعود الشريم': 'Saood_ash-Shuraym_64kbps', 'الشيخ مشاري العفاسي': 'Alafasy_64kbps', 'الشيخ محمود خليل الحصري': 'Husary_64kbps', 'الشيخ أبو بكر الشاطري': 'Abu_Bakr_Ash-Shaatree_128kbps', 'ناصر القطامي':'Nasser_Alqatami_128kbps', 'هاني الرافعي':'Hani_Rifai_192kbps', 'علي جابر' :'Ali_Jaber_64kbps'}
 
 app = Flask(__name__, static_folder=EXEC_DIR)
 CORS(app)
 
 # ==========================================
-# 🧠 Job Management (The Solution to Concurrency)
+# 🧠 Job Management
 # ==========================================
-
-# Global Dictionary to hold state for concurrent users
-# Structure: { 'uuid_string': { 'percent': 0, 'status': '...', 'path': '...', ... } }
 JOBS = {}
 JOBS_LOCK = threading.Lock()
 
@@ -100,7 +99,7 @@ def create_job():
             'error': None,
             'should_stop': False,
             'created_at': time.time(),
-            'workspace': job_dir  # Every user gets their own folder
+            'workspace': job_dir
         }
     return job_id
 
@@ -115,14 +114,13 @@ def get_job(job_id):
         return JOBS.get(job_id)
 
 def cleanup_job(job_id):
-    """Deletes temporary files and removes job from memory"""
     with JOBS_LOCK:
         job = JOBS.pop(job_id, None)
     
     if job and os.path.exists(job['workspace']):
         try:
             shutil.rmtree(job['workspace'])
-            print(f"cleaned up workspace: {job_id}")
+            print(f"Cleaned up workspace: {job_id}")
         except Exception as e:
             print(f"Error cleaning up {job_id}: {e}")
 
@@ -130,10 +128,6 @@ def cleanup_job(job_id):
 # 📊 Scoped Logger
 # ==========================================
 class ScopedQuranLogger(ProgressBarLogger):
-    """
-    Updates a SPECIFIC job_id in the global JOBS dict.
-    Thread-safe because it writes to a specific key.
-    """
     def __init__(self, job_id):
         super().__init__()
         self.job_id = job_id
@@ -149,8 +143,6 @@ class ScopedQuranLogger(ProgressBarLogger):
             if total > 0:
                 percent = int((value / total) * 100)
                 if self.start_time is None: self.start_time = time.time()
-                
-                # Calculate ETA
                 elapsed = time.time() - self.start_time
                 rem_str = "00:00"
                 if elapsed > 0 and value > 0:
@@ -161,27 +153,21 @@ class ScopedQuranLogger(ProgressBarLogger):
                 update_job_status(self.job_id, percent, f"جاري التصدير... {percent}% (متبقي {rem_str})")
 
 # ==========================================
-# 🛠️ Helper Functions ( Stateless )
+# 🛠️ Helper Functions
 # ==========================================
-
 def detect_silence(sound, thresh):
     t = 0
     while t < len(sound) and sound[t:t+10].dBFS < thresh: t += 10
     return t
 
 def download_audio(reciter_id, surah, ayah, idx, workspace_dir):
-    """Downloads audio to the specific job workspace"""
     url = f'https://everyayah.com/data/{reciter_id}/{surah:03d}{ayah:03d}.mp3'
-    # Unique path inside the job's folder
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
-    
     try:
         r = requests.get(url, stream=True, timeout=30)
         with open(out, 'wb') as f:
             for chunk in r.iter_content(8192): f.write(chunk)
-            
         snd = AudioSegment.from_file(out)
-        # Silence removal logic...
         start = detect_silence(snd, snd.dBFS-20) 
         end = detect_silence(snd.reverse(), snd.dBFS-20)
         trimmed = snd
@@ -195,7 +181,6 @@ def download_audio(reciter_id, surah, ayah, idx, workspace_dir):
     return out
 
 def get_text(surah, ayah):
-    # (Same as your original code)
     try:
         r = requests.get(f'https://api.alquran.cloud/v1/ayah/{surah}:{ayah}/quran-simple')
         t = r.json()['data']['text']
@@ -214,21 +199,73 @@ def wrap_text(text, per_line):
     words = text.split()
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
-# (Keep create_text_clip and create_english_clip exactly as they were, 
-#  just ensure they don't use global variables. They looked fine in your original code.)
+def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
+    font_path = FONT_PATH_ARABIC
+    words = arabic.split()
+    wc = len(words)
+    if wc > 60: base_fs, pl = 30, 12
+    elif wc > 40: base_fs, pl = 35, 10
+    elif wc > 25: base_fs, pl = 41, 9
+    elif wc > 15: base_fs, pl = 46, 8
+    else: base_fs, pl = 48, 7
+    final_fs = int(base_fs * scale_factor)
+    try: font = ImageFont.truetype(font_path, final_fs)
+    except: font = ImageFont.load_default()
+
+    wrapped_text = wrap_text(arabic, pl)
+    lines = wrapped_text.split('\n')
+    dummy_img = Image.new('RGBA', (target_w, 1000))
+    draw = ImageDraw.Draw(dummy_img)
+    max_line_w = 0
+    total_h = 0
+    line_heights = []
+    
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=font)
+        line_w = bbox[2] - bbox[0]
+        line_h = bbox[3] - bbox[1]
+        max_line_w = max(max_line_w, line_w)
+        line_heights.append(line_h + 20)
+        total_h += line_h + 20
+
+    box_w = int(target_w * 0.9)
+    img_w = max(box_w, int(max_line_w + 40))
+    img_h = int(total_h + 40)
+    final_image = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
+    draw_final = ImageDraw.Draw(final_image)
+    current_y = 20
+    for i, line in enumerate(lines):
+        bbox = draw_final.textbbox((0, 0), line, font=font)
+        line_w = bbox[2] - bbox[0]
+        start_x = (img_w - line_w) // 2
+        draw_final.text((start_x+2, current_y+2), line, font=font, fill=(0,0,0,120))
+        draw_final.text((start_x, current_y), line, font=font, fill='white')
+        current_y += line_heights[i]
+    return ImageClip(np.array(final_image)).set_duration(duration).fadein(0.25).fadeout(0.25)
+
+def create_english_clip(text, duration, target_w, scale_factor=1.0):
+    final_fs = int(28 * scale_factor)
+    box_w = int(target_w * 0.85)
+    wrapped_text = wrap_text(text, 10)
+    try: font = ImageFont.truetype(FONT_PATH_ENGLISH, final_fs)
+    except: font = ImageFont.load_default()
+    dummy_img = Image.new('RGB', (1, 1))
+    draw = ImageDraw.Draw(dummy_img)
+    bbox = draw.textbbox((0, 0), wrapped_text, font=font, align='center')
+    img_w = max(box_w, int((bbox[2]-bbox[0]) + 20))
+    img_h = int((bbox[3]-bbox[1]) + 20)
+    img = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill='#FFD700', align='center', anchor="mm")
+    return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
 def pick_bg(user_key, custom_query=None):
-    """
-    تحاول جلب خلفية فيديو. إذا فشلت أو كان المفتاح خطأ، تعود بـ None
-    """
     if not user_key or len(user_key) < 10: 
         print("Invalid or missing Pexels Key")
         return None
-
     try:
         rand_page = random.randint(1, 10)
         safe_filter = " no people"
-        # اختيار كلمة بحث
         if custom_query and len(custom_query) > 2:
             try:
                 trans_q = GoogleTranslator(source='auto', target='en').translate(custom_query.strip())
@@ -240,29 +277,18 @@ def pick_bg(user_key, custom_query=None):
             q = random.choice(safe_topics) + safe_filter
             
         headers = {'Authorization': user_key}
-        # Timeout مهم جداً عشان ميعلقش
         r = requests.get(f"https://api.pexels.com/videos/search?query={q}&per_page=5&page={rand_page}&orientation=portrait", headers=headers, timeout=10)
         
-        if r.status_code != 200:
-            print(f"Pexels Error: {r.status_code}")
-            return None
-            
+        if r.status_code != 200: return None
         vids = r.json().get('videos', [])
         if not vids: return None
         
         vid = random.choice(vids)
-        # نختار أقل جودة مقبولة عشان التحميل يكون سريع
-        f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), None)
-        if not f: f = vid['video_files'][0]
-
+        f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), vid['video_files'][0])
         path = os.path.join(VISION_DIR, f"bg_{vid['id']}.mp4")
-        
-        # تحميل الفيديو
         if not os.path.exists(path):
             with requests.get(f['link'], stream=True, timeout=20) as rv:
-                with open(path, 'wb') as f_out:
-                    shutil.copyfileobj(rv.raw, f_out)
-                    
+                with open(path, 'wb') as f_out: shutil.copyfileobj(rv.raw, f_out)
         return path
     except Exception as e:
         print(f"Background Error: {e}")
@@ -271,11 +297,7 @@ def pick_bg(user_key, custom_query=None):
 # ==========================================
 # 🎬 Main Processor
 # ==========================================
-
 def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query):
-    """
-    Main worker function. Everything is scoped to job_id and job['workspace'].
-    """
     job = get_job(job_id)
     if not job: return
 
@@ -286,125 +308,70 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
     
     try:
         update_job_status(job_id, 5, 'Downloading Audio & Text...')
-        
         target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
         scale_factor = 1.0 if quality == '1080' else 0.67
-        
-        # Determine Ayah Range
-        max_ayah = VERSE_COUNTS.get(surah, 286) # Default to max if unknown
+        max_ayah = VERSE_COUNTS.get(surah, 286)
         last = min(end if end else start+9, max_ayah)
         
         items = []
         full_audio_seg = AudioSegment.empty()
         
-        # 1. Prepare Content
+        # 1. Content
         for i, ayah in enumerate(range(start, last+1), 1):
             if get_job(job_id)['should_stop']: raise Exception("Stopped")
-            
             update_job_status(job_id, 10 + int((i / (last-start+1)) * 20), f'Processing Ayah {ayah}...')
             
-            # Download to specific workspace
             ap = download_audio(reciter_id, surah, ayah, i, workspace)
-            
             ar_txt = f"{get_text(surah, ayah)} ({ayah})"
             en_txt = get_en_text(surah, ayah)
             
             seg = AudioSegment.from_file(ap)
             full_audio_seg = full_audio_seg.append(seg, crossfade=100) if len(full_audio_seg) > 0 else seg
-            
             clip_dur = seg.duration_seconds
-            
-            # Text Splitting Logic (Simplified)
             items.append((ar_txt, en_txt, clip_dur))
 
-        # 2. Audio Processing
+        # 2. Audio
         final_audio_path = os.path.join(workspace, "combined.mp3")
         full_audio_seg.export(final_audio_path, format="mp3")
         final_audio_clip = AudioFileClip(final_audio_path)
         full_dur = final_audio_clip.duration
 
-def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query):
-    job = get_job(job_id)
-    if not job: return
-
-    workspace = job['workspace']
-    final = None
-    final_audio_clip = None
-    bg = None
-    
-    try:
-        # ... (نفس كود تحميل الصوت القديم بدون تغيير لحد السطر 275 تقريباً) ...
-        # ... بعد ما تجهز items و full_audio_seg ...
-
-        # 2. Audio Processing
-        final_audio_path = os.path.join(workspace, "combined.mp3")
-        full_audio_seg.export(final_audio_path, format="mp3")
-        final_audio_clip = AudioFileClip(final_audio_path)
-        full_dur = final_audio_clip.duration
-
-        # 3. Background Setup (FIXED)
+        # 3. Background with Fallback
         update_job_status(job_id, 40, 'Preparing Background...')
-        
         bg_path = pick_bg(user_pexels_key, bg_query)
         
-        target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
-        
         if bg_path and os.path.exists(bg_path):
-            # الحالة الأولى: نجحنا في جلب فيديو
             bg = VideoFileClip(bg_path)
-            if bg.w/bg.h > target_w/target_h: 
-                bg = bg.resize(height=target_h)
-            else: 
-                bg = bg.resize(width=target_w)
+            if bg.w/bg.h > target_w/target_h: bg = bg.resize(height=target_h)
+            else: bg = bg.resize(width=target_w)
             bg = bg.crop(width=target_w, height=target_h, x_center=bg.w/2, y_center=bg.h/2)
             bg = bg.fx(vfx.loop, duration=full_dur).subclip(0, full_dur)
-            # طبقة تعتيم للفيديو
             layers = [bg, ColorClip(bg.size, color=(0,0,0), duration=full_dur).set_opacity(0.6)]
         else:
-            # الحالة الثانية (Fallback): فشل الفيديو، نستخدم خلفية لونية
             print("Using Fallback Background")
             update_job_status(job_id, 45, 'Using Default Background...')
-            # خلفية لون كحلي غامق فخم
             bg_color = ColorClip((target_w, target_h), color=(15, 20, 35), duration=full_dur)
             layers = [bg_color]
 
-        # 4. Text Overlay
+        # 4. Overlay
         curr_t = 0.0
-        scale_factor = 1.0 if quality == '1080' else 0.67
         y_pos = target_h * 0.40 
-        
         for ar, en, dur in items:
             if get_job(job_id)['should_stop']: raise Exception("Stopped")
-            
-            # التأكد من أن الدوال create_text_clip موجودة وتعمل
             ac = create_text_clip(ar, dur, target_w, scale_factor).set_start(curr_t).set_position(('center', y_pos))
             gap = 30 * scale_factor 
             ec = create_english_clip(en, dur, target_w, scale_factor).set_start(curr_t).set_position(('center', y_pos + ac.h + gap))
-            
             layers.extend([ac, ec])
             curr_t += dur
 
-        # 5. Rendering
+        # 5. Render
         final = CompositeVideoClip(layers).set_audio(final_audio_clip)
-        
         output_filename = f"Quran_{surah}_{start}-{last}_{job_id[:8]}.mp4"
         output_full_path = os.path.join(workspace, output_filename)
-        
         update_job_status(job_id, 50, 'Rendering Video (Heavy Process)...')
         
         my_logger = ScopedQuranLogger(job_id)
-        
-        # تقليل الـ threads لـ 2 عشان الـ CPU ميعلقش
-        final.write_videofile(
-            output_full_path, 
-            fps=24, 
-            codec='libx264', 
-            audio_bitrate='96k', 
-            preset='superfast', # أسرع preset
-            threads=2, # تقليل الضغط
-            logger=my_logger, 
-            ffmpeg_params=['-movflags', '+faststart', '-pix_fmt', 'yuv420p']
-        )
+        final.write_videofile(output_full_path, fps=24, codec='libx264', audio_bitrate='96k', preset='superfast', threads=2, logger=my_logger, ffmpeg_params=['-movflags', '+faststart', '-pix_fmt', 'yuv420p'])
         
         with JOBS_LOCK:
             JOBS[job_id]['output_path'] = output_full_path
@@ -421,7 +388,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             JOBS[job_id]['is_running'] = False
             JOBS[job_id]['status'] = "Error Occurred"
     finally:
-        # Resource Cleanup
         try:
             if final: final.close()
             if final_audio_clip: final_audio_clip.close()
@@ -433,7 +399,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 # ==========================================
 # 🌐 API Routes
 # ==========================================
-
 @app.route('/')
 def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "UI Missing"
 
@@ -441,59 +406,33 @@ def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "UI Missing"
 def gen():
     d = request.json
     if not d.get('pexelsKey'): return jsonify({'error': 'Key Missing'}), 400
-
-    # Create a unique job
     job_id = create_job()
-
-    # Start thread with job_id
     threading.Thread(target=build_video_task, args=(
-        job_id,
-        d.get('pexelsKey'), 
-        d.get('reciter'), 
-        int(d.get('surah')), 
-        int(d.get('startAyah')), 
-        int(d.get('endAyah')) if d.get('endAyah') else None, 
-        d.get('quality', '720'), 
-        d.get('bgQuery')
+        job_id, d.get('pexelsKey'), d.get('reciter'), int(d.get('surah')), 
+        int(d.get('startAyah')), int(d.get('endAyah')) if d.get('endAyah') else None, 
+        d.get('quality', '720'), d.get('bgQuery')
     ), daemon=True).start()
-
-    # Return the Job ID to the frontend
     return jsonify({'ok': True, 'jobId': job_id})
 
 @app.route('/api/progress')
 def prog():
     job_id = request.args.get('jobId')
     if not job_id: return jsonify({'error': 'No Job ID provided'}), 400
-    
     job = get_job(job_id)
     if not job: return jsonify({'error': 'Job not found'}), 404
-    
-    # Return safe subset of data
-    return jsonify({
-        'percent': job['percent'],
-        'status': job['status'],
-        'is_complete': job['is_complete'],
-        'error': job['error']
-    })
+    return jsonify({'percent': job['percent'], 'status': job['status'], 'is_complete': job['is_complete'], 'is_running': job['is_running'], 'output_path': job['output_path'], 'error': job['error']})
 
 @app.route('/api/download')
 def download_result():
     job_id = request.args.get('jobId')
     job = get_job(job_id)
-    
     if not job or not job['output_path'] or not os.path.exists(job['output_path']):
         return jsonify({'error': 'File not ready or expired'}), 404
-
-    # Cleanup Trigger: When the request finishes sending the file, delete the temp folder
     @after_this_request
     def remove_file(response):
-        try:
-            # We delay slightly or just delete the folder
-            cleanup_job(job_id)
-        except Exception as e:
-            print(f"Cleanup error: {e}")
+        try: cleanup_job(job_id)
+        except Exception as e: print(f"Cleanup error: {e}")
         return response
-
     return send_file(job['output_path'], as_attachment=True)
 
 @app.route('/api/cancel', methods=['POST'])
@@ -511,7 +450,5 @@ def cancel_process():
 def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 'reciters': RECITERS_MAP})
 
 if __name__ == "__main__":
-    # Optional: Background thread to clean up very old stale jobs (e.g., > 1 hour)
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
-
