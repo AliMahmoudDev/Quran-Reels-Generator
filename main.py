@@ -12,8 +12,16 @@ import traceback
 import gc
 import random
 import requests
+import json
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
+
+# ✅ استيراد مكتبات إصلاح العربي (ضروري تكون نزلتهم)
+try:
+    import arabic_reshaper
+    from bidi.algorithm import get_display
+except ImportError:
+    print("⚠️ تحذير: مكتبات العربي مش موجودة. سطبها بالأمر: pip install arabic-reshaper python-bidi")
 
 # Media Processing Imports
 import numpy as np
@@ -69,7 +77,32 @@ os.makedirs(VISION_DIR, exist_ok=True)
 # Data Constants
 VERSE_COUNTS = {1: 7, 2: 286, 3: 200, 4: 176, 5: 120, 6: 165, 7: 206, 8: 75, 9: 129, 10: 109, 11: 123, 12: 111, 13: 43, 14: 52, 15: 99, 16: 128, 17: 111, 18: 110, 19: 98, 20: 135, 21: 112, 22: 78, 23: 118, 24: 64, 25: 77, 26: 227, 27: 93, 28: 88, 29: 69, 30: 60, 31: 34, 32: 30, 33: 73, 34: 54, 35: 45, 36: 83, 37: 182, 38: 88, 39: 75, 40: 85, 41: 54, 42: 53, 43: 89, 44: 59, 45: 37, 46: 35, 47: 38, 48: 29, 49: 18, 50: 45, 51: 60, 52: 49, 53: 62, 54: 55, 55: 78, 56: 96, 57: 29, 58: 22, 59: 24, 60: 13, 61: 14, 62: 11, 63: 11, 64: 18, 65: 12, 66: 12, 67: 30, 68: 52, 69: 52, 70: 44, 71: 28, 72: 28, 73: 20, 74: 56, 75: 40, 76: 31, 77: 50, 78: 40, 79: 46, 80: 42, 81: 29, 82: 19, 83: 36, 84: 25, 85: 22, 86: 17, 87: 19, 88: 26, 89: 30, 90: 20, 91: 15, 92: 21, 93: 11, 94: 8, 95: 8, 96: 19, 97: 5, 98: 8, 99: 8, 100: 11, 101: 11, 102: 8, 103: 3, 104: 9, 105: 5, 106: 4, 107: 7, 108: 3, 109: 6, 110: 3, 111: 5, 112: 4, 113: 5, 114: 6}
 SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه', 'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم', 'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر', 'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق', 'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة', 'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج', 'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد', 'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس']
-RECITERS_MAP = {'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 'الشيخ عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 'الشيخ ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 'الشيخ محمد صديق المنشاوي (مجود)': 'Minshawy_Mujawwad_64kbps', 'الشيخ سعود الشريم': 'Saood_ash-Shuraym_64kbps', 'الشيخ مشاري العفاسي': 'Alafasy_64kbps', 'الشيخ محمود خليل الحصري': 'Husary_64kbps', 'الشيخ أبو بكر الشاطري': 'Abu_Bakr_Ash-Shaatree_128kbps', 'ناصر القطامي':'Nasser_Alqatami_128kbps', 'هاني الرافعي':'Hani_Rifai_192kbps', 'علي جابر' :'Ali_Jaber_64kbps'}
+
+# ----------------------------------------------------
+# 🚀 القراء الجدد (MP3Quran V3) - System
+# ----------------------------------------------------
+NEW_RECITERS_CONFIG = {
+    'رعد الكردي': (221, "https://server6.mp3quran.net/kurdi/"),
+    'هزاع البلوشي': (231, "https://server11.mp3quran.net/hazza/"),
+}
+
+OLD_RECITERS_MAP = {
+    'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 
+    'الشيخ عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 
+    'الشيخ ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 
+    'الشيخ محمد صديق المنشاوي (مجود)': 'Minshawy_Mujawwad_64kbps', 
+    'الشيخ سعود الشريم': 'Saood_ash-Shuraym_64kbps', 
+    'الشيخ مشاري العفاسي': 'Alafasy_64kbps', 
+    'الشيخ محمود خليل الحصري': 'Husary_64kbps', 
+    'الشيخ أبو بكر الشاطري': 'Abu_Bakr_Ash-Shaatree_128kbps', 
+    'ناصر القطامي':'Nasser_Alqatami_128kbps', 
+    'هاني الرافعي':'Hani_Rifai_192kbps', 
+    'علي جابر' :'Ali_Jaber_64kbps'
+}
+
+# دمج القوائم
+NEW_KEYS_MAP = {k: k for k in NEW_RECITERS_CONFIG.keys()}
+RECITERS_MAP = {**NEW_KEYS_MAP, **OLD_RECITERS_MAP}
 
 app = Flask(__name__, static_folder=EXEC_DIR)
 CORS(app)
@@ -158,8 +191,74 @@ def detect_silence(sound, thresh):
     while t < len(sound) and sound[t:t+10].dBFS < thresh: t += 10
     return t
 
-def download_audio(reciter_id, surah, ayah, idx, workspace_dir):
-    url = f'https://everyayah.com/data/{reciter_id}/{surah:03d}{ayah:03d}.mp3'
+# --- New Function for MP3Quran Processing ---
+def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir):
+    if reciter_name not in NEW_RECITERS_CONFIG:
+        raise ValueError(f"Reciter {reciter_name} configuration not found.")
+
+    reciter_id, server_url = NEW_RECITERS_CONFIG[reciter_name]
+    
+    cache_dir = os.path.join(EXEC_DIR, "cache_mp3quran", str(reciter_id))
+    os.makedirs(cache_dir, exist_ok=True)
+    
+    full_mp3_path = os.path.join(cache_dir, f"{surah:03d}.mp3")
+    timings_path = os.path.join(cache_dir, f"{surah:03d}.json")
+
+    if not os.path.exists(full_mp3_path) or not os.path.exists(timings_path):
+        print(f"📥 Downloading Surah {surah} for {reciter_name}...")
+        
+        # A. Download Audio
+        audio_url = f"{server_url}{surah:03d}.mp3"
+        try:
+            with requests.get(audio_url, stream=True, timeout=60) as r:
+                r.raise_for_status()
+                with open(full_mp3_path, 'wb') as f: shutil.copyfileobj(r.raw, f)
+        except Exception as e:
+            raise ValueError(f"Failed to download audio from {audio_url}: {e}")
+
+        # B. Download Timings
+        timing_url = f"https://mp3quran.net/api/v3/ayat_timing?surah={surah}&read={reciter_id}"
+        try:
+            r_time = requests.get(timing_url, timeout=15)
+            r_time.raise_for_status()
+            timings_data = r_time.json()
+            
+            timings_dict = {}
+            for item in timings_data:
+                timings_dict[item['ayah']] = {'start': item['start_time'], 'end': item['end_time']}
+            
+            with open(timings_path, 'w') as f: json.dump(timings_dict, f)
+        except Exception as e:
+             raise ValueError(f"Failed to fetch timings from {timing_url}: {e}")
+
+    with open(timings_path, 'r') as f:
+        # JSON keys are strings, convert to int
+        timings = {int(k): v for k, v in json.load(f).items()}
+
+    if ayah not in timings:
+        # Fallback handling for missing ayah timing
+        raise ValueError(f"Timing for Ayah {ayah} not found in Surah {surah}.")
+
+    start_ms = timings[ayah]['start']
+    end_ms = timings[ayah]['end']
+    
+    try:
+        full_audio = AudioSegment.from_file(full_mp3_path)
+        segment = full_audio[max(0, start_ms):end_ms]
+        segment = segment.fade_in(50).fade_out(50)
+        out_file = os.path.join(workspace_dir, f'part{idx}.mp3')
+        segment.export(out_file, format="mp3")
+        return out_file
+    except Exception as e:
+        raise ValueError(f"Error processing audio slice: {e}")
+
+def download_audio(reciter_key, surah, ayah, idx, workspace_dir):
+    # Check if this is a NEW reciter
+    if reciter_key in NEW_RECITERS_CONFIG:
+        return process_mp3quran_audio(reciter_key, surah, ayah, idx, workspace_dir)
+
+    # --- Fallback to OLD Logic (EveryAyah) ---
+    url = f'https://everyayah.com/data/{reciter_key}/{surah:03d}{ayah:03d}.mp3'
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
     try:
         r = requests.get(url, stream=True, timeout=30)
@@ -200,23 +299,27 @@ def wrap_text(text, per_line):
     words = text.split()
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
-# ✅ New Feature: Vignette Generator
+# ✅ دالة إنشاء الـ Vignette (موجودة في كودك القديم)
 def create_vignette_mask(w, h):
-    """Creates a radial gradient mask for cinematic look (Dark corners, clear center)."""
     Y, X = np.ogrid[:h, :w]
     center_y, center_x = h / 2, w / 2
     dist_from_center = np.sqrt((X - center_x)**2 + (Y - center_y)**2)
     max_dist = np.sqrt((w/2)**2 + (h/2)**2)
     mask = dist_from_center / max_dist
-    
-    # Intesify the effect (0 = transparent, 1 = opaque black)
-    # The curve ^3 makes the center clearer and edges darker faster
     mask = np.clip(mask * 1.16, 0, 1) ** 3 
-    
-    # Convert to image (H, W, 1) -> RGBA
     mask_img = np.zeros((h, w, 4), dtype=np.uint8)
-    mask_img[:, :, 3] = (mask * 255).astype(np.uint8) # Alpha channel
+    mask_img[:, :, 3] = (mask * 255).astype(np.uint8) 
     return ImageClip(mask_img, ismask=False)
+
+# ✅ دالة إصلاح النص العربي (الجديدة لحل مشكلة التقطيع)
+def fix_arabic_text(text):
+    if not text: return ""
+    try:
+        reshaped_text = arabic_reshaper.reshape(text)
+        bidi_text = get_display(reshaped_text)
+        return bidi_text
+    except:
+        return text # لو المكتبة مش موجودة رجع النص زي ما هو
 
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     font_path = FONT_PATH_ARABIC
@@ -233,13 +336,18 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
 
     wrapped_text = wrap_text(arabic, pl)
     lines = wrapped_text.split('\n')
+    
+    # 🔥 هنا الحل: إصلاح كل سطر لوحده
+    reshaped_lines = [fix_arabic_text(line) for line in lines]
+
     dummy_img = Image.new('RGBA', (target_w, 1000))
     draw = ImageDraw.Draw(dummy_img)
     max_line_w = 0
     total_h = 0
     line_heights = []
     
-    for line in lines:
+    # نحسب الأبعاد بناءً على النص المصلح
+    for line in reshaped_lines:
         bbox = draw.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         line_h = bbox[3] - bbox[1]
@@ -257,22 +365,17 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     shadow_offset = 1
     stroke_w = 2
 
-    for i, line in enumerate(lines):
+    # نرسم النص المصلح
+    for i, line in enumerate(reshaped_lines):
         bbox = draw_final.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         start_x = (img_w - line_w) // 2
         
-        # ✅ GLOW EFFECT LOGIC (If enabled)
         if glow:
-            # Outer faint glow
             draw_final.text((start_x, current_y), line, font=font, fill=(255, 255, 255, 40), stroke_width=5, stroke_fill=(255, 255, 255, 40))
-            # Inner stronger glow
             draw_final.text((start_x, current_y), line, font=font, fill=(255, 255, 255, 80), stroke_width=3, stroke_fill=(255, 255, 255, 80))
 
-        # Drop Shadow
         draw_final.text((start_x + shadow_offset, current_y + shadow_offset), line, font=font, fill=(0,0,0,180))
-        
-        # Main Text with Black Stroke
         draw_final.text((start_x, current_y), line, font=font, fill='white', stroke_width=stroke_w, stroke_fill='black')
         
         current_y += line_heights[i]
@@ -296,7 +399,6 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
     stroke_w = 1
     
     if glow:
-         # Glow for English
          draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill=(255, 215, 0, 50), align='center', anchor="mm", stroke_width=2, stroke_fill=(255, 215, 0, 50))
 
     draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill='#FFD700', align='center', anchor="mm", stroke_width=stroke_w, stroke_fill='black')
@@ -420,7 +522,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                         fallback = ColorClip((target_w, target_h), color=(20, 20, 20), duration=required_dur)
                         bg_clips_list.append(fallback)
                 
-                # 🛑 FIX: Prevent 'zero-size array' error if list is empty
                 if bg_clips_list:
                     bg_clip = concatenate_videoclips(bg_clips_list, method="compose")
                 else:
@@ -447,13 +548,10 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 
         # 4. OVERLAY: Vignette or Dark Layer
         if use_vignette:
-            # Cinematic Vignette (Dark Edges)
             mask_clip = create_vignette_mask(target_w, target_h).set_duration(full_dur)
-            # We add a base dark layer underneath to ensure even center isn't too bright
             base_dark = ColorClip((target_w, target_h), color=(0,0,0), duration=full_dur).set_opacity(0.2)
             overlay_layers = [base_dark, mask_clip]
         else:
-            # Standard Flat Dark Layer
             dark_layer = ColorClip((target_w, target_h), color=(0,0,0), duration=full_dur).set_opacity(0.6)
             overlay_layers = [dark_layer]
         
@@ -631,10 +729,3 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
-
-
-
-
-
-
-
