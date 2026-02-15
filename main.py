@@ -74,9 +74,12 @@ RECITERS_MAP = {'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 'الشي
 app = Flask(__name__, static_folder=EXEC_DIR)
 CORS(app)
 
-# ... (Job Management code remains same) ...
+# ==========================================
+# 🧠 Job Management
+# ==========================================
 JOBS = {}
 JOBS_LOCK = threading.Lock()
+
 def create_job():
     job_id = str(uuid.uuid4())
     job_dir = os.path.join(BASE_TEMP_DIR, job_id)
@@ -84,12 +87,14 @@ def create_job():
     with JOBS_LOCK:
         JOBS[job_id] = {'id': job_id, 'percent': 0, 'status': 'جاري التحضير...', 'eta': '--:--', 'is_running': True, 'is_complete': False, 'output_path': None, 'error': None, 'should_stop': False, 'created_at': time.time(), 'workspace': job_dir}
     return job_id
+
 def update_job_status(job_id, percent, status, eta=None):
     with JOBS_LOCK:
         if job_id in JOBS:
             JOBS[job_id]['percent'] = percent
             JOBS[job_id]['status'] = status
             if eta: JOBS[job_id]['eta'] = eta
+
 def get_job(job_id):
     with JOBS_LOCK: return JOBS.get(job_id)
 
@@ -110,11 +115,16 @@ class ScopedQuranLogger(ProgressBarLogger):
                     rem_str = str(datetime.timedelta(seconds=int(remaining)))[2:] if remaining > 0 else "00:00"
                 update_job_status(self.job_id, percent, f"جاري التصدير... {percent}%", eta=rem_str)
 
-# ... (Helper Functions) ...
+# ==========================================
+# 🛠️ Helper Functions
+# ==========================================
 def detect_silence(sound, thresh):
-    t = 0
-    while t < len(sound) and sound[t:t+10].dBFS < thresh: t += 10
-    return t
+    try:
+        if len(sound) == 0: return 0
+        t = 0
+        while t < len(sound) and sound[t:t+10].dBFS < thresh: t += 10
+        return t
+    except: return 0
 
 def download_audio(reciter_id, surah, ayah, idx, workspace_dir):
     url = f'https://everyayah.com/data/{reciter_id}/{surah:03d}{ayah:03d}.mp3'
@@ -124,14 +134,26 @@ def download_audio(reciter_id, surah, ayah, idx, workspace_dir):
         with open(out, 'wb') as f:
             for chunk in r.iter_content(8192): f.write(chunk)
         snd = AudioSegment.from_file(out)
-        start = detect_silence(snd, snd.dBFS-20) 
-        end = detect_silence(snd.reverse(), snd.dBFS-20)
-        trimmed = snd
-        if start + end < len(snd): trimmed = snd[max(0, start-30):len(snd)-max(0, end-30)]
-        padding = AudioSegment.silent(duration=50) 
-        final_snd = padding + trimmed.fade_in(20).fade_out(20)
+        
+        # 🛡️ Safety: If audio is too silent or short, keep it as is
+        if len(snd) < 100: 
+            final_snd = snd
+        else:
+            start = detect_silence(snd, snd.dBFS-20) 
+            end = detect_silence(snd.reverse(), snd.dBFS-20)
+            if start + end < len(snd):
+                trimmed = snd[max(0, start-30):len(snd)-max(0, end-30)]
+            else:
+                trimmed = snd # Fallback if silence detection removes everything
+            
+            padding = AudioSegment.silent(duration=50) 
+            final_snd = padding + trimmed.fade_in(20).fade_out(20)
+            
         final_snd.export(out, format='mp3')
-    except Exception as e: raise ValueError(f"Download Error: {e}")
+    except Exception as e: 
+        print(f"Audio DL Error: {e}")
+        # Create silent audio fallback
+        AudioSegment.silent(duration=1000).export(out, format='mp3')
     return out
 
 def get_text(surah, ayah):
@@ -155,6 +177,7 @@ def wrap_text(text, per_line):
     words = text.split()
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
+# ✅ Vignette Generator
 def create_vignette_mask(w, h):
     Y, X = np.ogrid[:h, :w]
     center_y, center_x = h / 2, w / 2
@@ -167,7 +190,7 @@ def create_vignette_mask(w, h):
     return ImageClip(mask_img, ismask=False)
 
 # ==========================================
-# 🎨 دالة رسم النص العربي (التعديل هنا)
+# 🎨 تصميم النص العربي (نظيف وبدون أصفر)
 # ==========================================
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     font_path = FONT_PATH_ARABIC
@@ -205,36 +228,21 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     draw_final = ImageDraw.Draw(final_image)
     current_y = 20
     
-    # 👇👇👇 التحكم في الظل والتوهج من هنا 👇👇👇
+    # 👇 إعدادات "نظيفة" حسب طلبك 👇
+    shadow_opacity = 80   # أسود خفيف جداً
+    stroke_width = 1      # برواز رفيع جداً (يا دوب باين)
     
-    # 1. قوة الظل الأسود (Shadow)
-    # غير الرقم 100 لـ 50 لو عايزه أخف، أو 180 لو عايزه أتقل (المدى من 0 لـ 255)
-    shadow_opacity = 100 
+    # 🚫 ألغيت التوهج الأصفر تماماً هنا
     
-    # 2. سمك الحدود السوداء (Stroke)
-    # 1 = رفيع جداً (يا دوب باين)، 2 = متوسط، 3 = تقيل
-    stroke_width = 1
-    
-    # 3. لون التوهج (Glow Color)
-    # الأرقام: (أحمر, أخضر, أزرق, شفافية)
-    # الذهبي الفاتح: (255, 215, 0, 80)
-    # الأبيض المشع: (255, 255, 255, 80)
-    glow_color = (255, 215, 0, 80) 
-
     for i, line in enumerate(lines):
         bbox = draw_final.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         start_x = (img_w - line_w) // 2
         
-        # ✅ رسم التوهج (Glow) - يظهر فقط لو الزرار مفعل
-        if glow:
-            draw_final.text((start_x, current_y), line, font=font, fill=glow_color, stroke_width=15, stroke_fill=glow_color)
-            draw_final.text((start_x, current_y), line, font=font, fill=glow_color, stroke_width=8, stroke_fill=glow_color)
-
-        # ✅ رسم الظل (Shadow)
+        # 1. ظل خفيف
         draw_final.text((start_x + 2, current_y + 2), line, font=font, fill=(0,0,0, shadow_opacity))
         
-        # ✅ رسم النص الأصلي بحدود رفيعة
+        # 2. النص الأبيض بحدود رفيعة
         draw_final.text((start_x, current_y), line, font=font, fill='white', stroke_width=stroke_width, stroke_fill='black')
         
         current_y += line_heights[i]
@@ -242,7 +250,7 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     return ImageClip(np.array(final_image)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
 # ==========================================
-# 🎨 دالة رسم النص الإنجليزي (التعديل هنا)
+# 🎨 تصميم النص الإنجليزي
 # ==========================================
 def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
     final_fs = int(30 * scale_factor)
@@ -258,19 +266,16 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
     img = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
-    # 👇 إعدادات الإنجليزي
     stroke_w = 1 
-    glow_color_en = (255, 215, 0, 60) # ذهبي أخف شوية
-
-    if glow:
-         draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill=glow_color_en, align='center', anchor="mm", stroke_width=8, stroke_fill=glow_color_en)
+    # 🚫 ألغيت التوهج هنا أيضاً
 
     draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill='#FFD700', align='center', anchor="mm", stroke_width=stroke_w, stroke_fill='black')
     
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
-# ... (Rest of the file fetch_video_pool and build_video_task remains similar) ...
-
+# ==========================================
+# 🌌 Advanced Background Logic
+# ==========================================
 def fetch_video_pool(user_key, custom_query, count=1):
     pool = []
     if not user_key or len(user_key) < 10: return pool
@@ -300,32 +305,51 @@ def fetch_video_pool(user_key, custom_query, count=1):
     except Exception as e: print(f"Pool Fetch Error: {e}")
     return pool
 
+# ==========================================
+# 🎬 Main Processor (Updated with Fixes)
+# ==========================================
 def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette):
     job = get_job(job_id)
     if not job: return
     workspace = job['workspace']
     final = None; final_audio_clip = None; bg_clip = None
+    
     try:
         update_job_status(job_id, 5, 'Downloading Assets...')
         target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
         scale_factor = 1.0 if quality == '1080' else 0.67
         max_ayah = VERSE_COUNTS.get(surah, 286)
         last = min(end if end else start+9, max_ayah)
+        
+        # 🛡️ Fix 1: Validate range
+        if start > last: raise ValueError("Invalid ayah range")
+
         ayah_data = []; full_audio_seg = AudioSegment.empty()
         
         for i, ayah in enumerate(range(start, last+1), 1):
             if get_job(job_id)['should_stop']: raise Exception("Stopped")
             update_job_status(job_id, 5 + int((i / (last-start+1)) * 20), f'Processing Ayah {ayah}...')
+            
+            # Download audio safely
             ap = download_audio(reciter_id, surah, ayah, i, workspace)
             ar_txt = f"{get_text(surah, ayah)} ({ayah})"; en_txt = get_en_text(surah, ayah)
+            
             seg = AudioSegment.from_file(ap)
             full_audio_seg = full_audio_seg.append(seg, crossfade=100) if len(full_audio_seg) > 0 else seg
             ayah_data.append({'ar': ar_txt, 'en': en_txt, 'dur': seg.duration_seconds})
+
+        # 🛡️ Fix 2: Ensure audio is not empty
+        if len(full_audio_seg) < 100:
+             print("Audio too short, adding silence")
+             full_audio_seg = full_audio_seg + AudioSegment.silent(duration=1000)
 
         final_audio_path = os.path.join(workspace, "combined.mp3")
         full_audio_seg.export(final_audio_path, format="mp3")
         final_audio_clip = AudioFileClip(final_audio_path)
         full_dur = final_audio_clip.duration
+        
+        # 🛡️ Fix 3: Ensure duration is valid
+        if full_dur <= 0: full_dur = 1.0
 
         update_job_status(job_id, 30, 'Preparing Backgrounds...')
         pool_size = min(len(ayah_data), 5) if dynamic_bg else 1
@@ -337,14 +361,23 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             bg_clips_list = []
             for i, data in enumerate(ayah_data):
                 required_dur = data['dur']
+                if required_dur <= 0: required_dur = 2.0 # Safety
+                
                 vid_path = video_pool[i % len(video_pool)]
                 try:
                     raw_clip = VideoFileClip(vid_path)
-                    sub = raw_clip.fx(vfx.loop, duration=required_dur) if raw_clip.duration < required_dur else raw_clip.subclip(0, required_dur) # simple subclip
+                    sub = raw_clip.fx(vfx.loop, duration=required_dur) if raw_clip.duration < required_dur else raw_clip.subclip(0, required_dur)
                     sub = sub.resize(height=target_h).crop(width=target_w, height=target_h, x_center=sub.w/2, y_center=sub.h/2).fadein(0.2).fadeout(0.2)
                     bg_clips_list.append(sub)
-                except: bg_clips_list.append(ColorClip((target_w, target_h), color=(20, 20, 20), duration=required_dur))
-            bg_clip = concatenate_videoclips(bg_clips_list, method="compose")
+                except Exception as e:
+                    print(f"BG Error: {e}")
+                    bg_clips_list.append(ColorClip((target_w, target_h), color=(20, 20, 20), duration=required_dur))
+            
+            # 🛡️ Fix 4: Safeguard concatenation
+            if not bg_clips_list:
+                 bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35), duration=full_dur)
+            else:
+                 bg_clip = concatenate_videoclips(bg_clips_list, method="compose")
         else:
             try:
                 bg = VideoFileClip(video_pool[0]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=video_pool[0].w/2, y_center=video_pool[0].h/2)
@@ -365,6 +398,8 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         for data in ayah_data:
             ar, en, dur = data['ar'], data['en'], data['dur']
             if get_job(job_id)['should_stop']: raise Exception("Stopped")
+            
+            # Pass use_glow, but we disabled the code inside the function
             ac = create_text_clip(ar, dur, target_w, scale_factor, glow=use_glow).set_start(curr_t).set_position(('center', y_pos))
             gap = 30 * scale_factor 
             ec = create_english_clip(en, dur, target_w, scale_factor, glow=use_glow).set_start(curr_t).set_position(('center', y_pos + ac.h + gap))
