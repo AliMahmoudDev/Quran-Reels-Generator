@@ -200,7 +200,28 @@ def wrap_text(text, per_line):
     words = text.split()
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
-def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
+# ✅ New Feature: Vignette Generator
+def create_vignette_mask(w, h):
+    """Creates a radial gradient mask for cinematic look (Dark corners, clear center)."""
+    Y, X = np.ogrid[:h, :w]
+    # Center coordinates
+    center_y, center_x = h / 2, w / 2
+    # Distance from center
+    dist_from_center = np.sqrt((X - center_x)**2 + (Y - center_y)**2)
+    # Normalize
+    max_dist = np.sqrt((w/2)**2 + (h/2)**2)
+    mask = dist_from_center / max_dist
+    
+    # Intesify the effect (0 = transparent, 1 = opaque black)
+    # The curve ^3 makes the center clearer and edges darker faster
+    mask = np.clip(mask * 1.5, 0, 1) ** 3 
+    
+    # Convert to image (H, W, 1) -> RGBA
+    mask_img = np.zeros((h, w, 4), dtype=np.uint8)
+    mask_img[:, :, 3] = (mask * 255).astype(np.uint8) # Alpha channel
+    return ImageClip(mask_img, ismask=False)
+
+def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     font_path = FONT_PATH_ARABIC
     words = arabic.split()
     wc = len(words)
@@ -236,27 +257,33 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0):
     draw_final = ImageDraw.Draw(final_image)
     current_y = 20
     
-    # ✅ IMPROVEMENT: Added Stroke (Outline) + Shadow for Arabic
     shadow_offset = 2
-    stroke_w = 3  # سمك الحدود السوداء
+    stroke_w = 3
 
     for i, line in enumerate(lines):
         bbox = draw_final.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         start_x = (img_w - line_w) // 2
         
-        # 1. Drop Shadow
+        # ✅ GLOW EFFECT LOGIC (If enabled)
+        if glow:
+            # Outer faint glow
+            draw_final.text((start_x, current_y), line, font=font, fill=(255, 215, 0, 50), stroke_width=15, stroke_fill=(255, 215, 0, 50))
+            # Inner stronger glow
+            draw_final.text((start_x, current_y), line, font=font, fill=(255, 215, 0, 100), stroke_width=8, stroke_fill=(255, 215, 0, 100))
+
+        # Drop Shadow
         draw_final.text((start_x + shadow_offset, current_y + shadow_offset), line, font=font, fill=(0,0,0,180))
         
-        # 2. Main Text with Black Stroke (Outline)
+        # Main Text with Black Stroke
         draw_final.text((start_x, current_y), line, font=font, fill='white', stroke_width=stroke_w, stroke_fill='black')
         
         current_y += line_heights[i]
         
     return ImageClip(np.array(final_image)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
-def create_english_clip(text, duration, target_w, scale_factor=1.0):
-    final_fs = int(30 * scale_factor) # Slightly larger font
+def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
+    final_fs = int(30 * scale_factor)
     box_w = int(target_w * 0.85)
     wrapped_text = wrap_text(text, 10)
     try: font = ImageFont.truetype(FONT_PATH_ENGLISH, final_fs)
@@ -269,9 +296,12 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0):
     img = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
-    # ✅ IMPROVEMENT: Added Stroke (Outline) for English
     stroke_w = 2
     
+    if glow:
+         # Glow for English
+         draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill=(255, 215, 0, 80), align='center', anchor="mm", stroke_width=8, stroke_fill=(255, 215, 0, 80))
+
     draw.text((img_w/2, img_h/2), wrapped_text, font=font, fill='#FFD700', align='center', anchor="mm", stroke_width=stroke_w, stroke_fill='black')
     
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
@@ -280,9 +310,6 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0):
 # 🌌 Advanced Background Logic
 # ==========================================
 def fetch_video_pool(user_key, custom_query, count=1):
-    """
-    Downloads a pool of videos to cycle through.
-    """
     pool = []
     if not user_key or len(user_key) < 10: return pool
     
@@ -326,7 +353,7 @@ def fetch_video_pool(user_key, custom_query, count=1):
 # ==========================================
 # 🎬 Main Processor
 # ==========================================
-def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg):
+def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette):
     job = get_job(job_id)
     if not job: return
 
@@ -390,10 +417,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                         
                         sub = sub.resize(height=target_h)
                         sub = sub.crop(width=target_w, height=target_h, x_center=sub.w/2, y_center=sub.h/2)
-                        
-                        # Apply fade to prevent hard cuts
                         sub = sub.fadein(0.2).fadeout(0.2)
-                        
                         bg_clips_list.append(sub)
                     except Exception as e:
                         fallback = ColorClip((target_w, target_h), color=(20, 20, 20), duration=required_dur)
@@ -403,7 +427,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 
         else:
             video_pool = fetch_video_pool(user_pexels_key, bg_query, count=1)
-            
             if not video_pool:
                 bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35), duration=full_dur)
             else:
@@ -421,9 +444,19 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         else:
             bg_clip = bg_clip.set_duration(full_dur)
 
-        dark_layer = ColorClip((target_w, target_h), color=(0,0,0), duration=full_dur).set_opacity(0.6)
+        # 4. OVERLAY: Vignette or Dark Layer
+        if use_vignette:
+            # Cinematic Vignette (Dark Edges)
+            mask_clip = create_vignette_mask(target_w, target_h).set_duration(full_dur)
+            # We add a base dark layer underneath to ensure even center isn't too bright
+            base_dark = ColorClip((target_w, target_h), color=(0,0,0), duration=full_dur).set_opacity(0.3)
+            overlay_layers = [base_dark, mask_clip]
+        else:
+            # Standard Flat Dark Layer
+            dark_layer = ColorClip((target_w, target_h), color=(0,0,0), duration=full_dur).set_opacity(0.6)
+            overlay_layers = [dark_layer]
         
-        # 4. Text Overlay
+        # 5. Text Overlay
         text_layers = []
         curr_t = 0.0
         y_pos = target_h * 0.40 
@@ -432,15 +465,16 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             ar, en, dur = data['ar'], data['en'], data['dur']
             if get_job(job_id)['should_stop']: raise Exception("Stopped")
             
-            ac = create_text_clip(ar, dur, target_w, scale_factor).set_start(curr_t).set_position(('center', y_pos))
+            # Pass use_glow to helper functions
+            ac = create_text_clip(ar, dur, target_w, scale_factor, glow=use_glow).set_start(curr_t).set_position(('center', y_pos))
             gap = 30 * scale_factor 
-            ec = create_english_clip(en, dur, target_w, scale_factor).set_start(curr_t).set_position(('center', y_pos + ac.h + gap))
+            ec = create_english_clip(en, dur, target_w, scale_factor, glow=use_glow).set_start(curr_t).set_position(('center', y_pos + ac.h + gap))
             
             text_layers.extend([ac, ec])
             curr_t += dur
 
-        # 5. Rendering
-        final_layers = [bg_clip, dark_layer] + text_layers
+        # 6. Rendering
+        final_layers = [bg_clip] + overlay_layers + text_layers
         final = CompositeVideoClip(final_layers).set_audio(final_audio_clip)
         
         final = final.fadeout(0.5).audio_fadeout(0.5)
@@ -511,12 +545,15 @@ def gen():
     job_id = create_job()
     
     user_dynamic_bg = d.get('dynamicBg', False)
+    # ✅ Read new options
+    user_glow = d.get('useGlow', False)
+    user_vignette = d.get('useVignette', False)
 
     threading.Thread(target=build_video_task, args=(
         job_id, d.get('pexelsKey'), d.get('reciter'), int(d.get('surah')), 
         int(d.get('startAyah')), int(d.get('endAyah')) if d.get('endAyah') else None, 
         d.get('quality', '720'), d.get('bgQuery'), user_fps,
-        user_dynamic_bg
+        user_dynamic_bg, user_glow, user_vignette
     ), daemon=True).start()
     return jsonify({'ok': True, 'jobId': job_id})
 
