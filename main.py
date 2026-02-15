@@ -18,7 +18,6 @@ from flask_cors import CORS
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import PIL.Image
-# Fix for newer Pillow versions
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
 
@@ -359,18 +358,21 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 
         # 5. Rendering
         final = CompositeVideoClip(layers).set_audio(final_audio_clip)
+        
+        # ✅ NEW: Add Fade Out (Video & Audio) - 0.2s
+        final = final.fadeout(0.2).audio_fadeout(0.2)
+
         output_filename = f"Quran_{surah}_{start}-{last}_{job_id[:8]}.mp4"
         output_full_path = os.path.join(workspace, output_filename)
         
         update_job_status(job_id, 50, f'Rendering ({fps} FPS)...')
         my_logger = ScopedQuranLogger(job_id)
         
-        # CPU Threads Detection
         available_threads = os.cpu_count() or 2
         
         final.write_videofile(
             output_full_path, 
-            fps=fps,               # ✅ Using user selected FPS
+            fps=fps,
             codec='libx264', 
             audio_codec='aac',    
             audio_bitrate='64k',  
@@ -416,11 +418,9 @@ def ui():
 def gen():
     d = request.json
     if not d.get('pexelsKey'): return jsonify({'error': 'Key Missing'}), 400
-    
-    # ✅ Get FPS from Request (Default 20)
     try:
         user_fps = int(d.get('fps', 20))
-        if user_fps > 30: user_fps = 30 # Cap max FPS
+        if user_fps > 30: user_fps = 30 
         if user_fps < 10: user_fps = 10
     except:
         user_fps = 20
@@ -456,9 +456,6 @@ def download_result():
     if not job or not job['output_path'] or not os.path.exists(job['output_path']):
         return jsonify({'error': 'File not ready or expired'}), 404
     
-    # ✅ FIX: Removed immediate deletion (after_this_request) to prevent "Download Failed"
-    # The background_cleanup will handle it after 1 hour.
-    
     filename = os.path.basename(job['output_path'])
     return send_file(
         job['output_path'], 
@@ -482,7 +479,7 @@ def cancel_process():
 def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 'reciters': RECITERS_MAP})
 
 # ==========================================
-# 🧹 Automatic Garbage Collector (1 Hour Rule)
+# 🧹 Automatic Garbage Collector
 # ==========================================
 def background_cleanup():
     while True:
@@ -490,7 +487,6 @@ def background_cleanup():
         print("🧹 Running automatic cleanup...")
         current_time = time.time()
         
-        # 1. Clean Memory
         with JOBS_LOCK:
             to_delete = []
             for jid, job in JOBS.items():
@@ -499,7 +495,6 @@ def background_cleanup():
             for jid in to_delete:
                 del JOBS[jid]
 
-        # 2. Clean Disk
         try:
             if os.path.exists(BASE_TEMP_DIR):
                 for folder in os.listdir(BASE_TEMP_DIR):
