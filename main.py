@@ -15,26 +15,61 @@ import requests
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 
-# Media Processing Imports
+# ==========================================
+# 🔧 تصحيحات التوافق (FIXES) - يجب أن تكون في البداية
+# ==========================================
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+
+# حل مشكلة Numpy الإصدارات الحديثة مع MoviePy
+if not hasattr(np, 'float'):
+    np.float = float
+if not hasattr(np, 'int'):
+    np.int = int
+if not hasattr(np, 'bool'):
+    np.bool = bool
+if not hasattr(np, 'object'):
+    np.object = object
+
+# 2. Fix Pillow ANTIALIAS depreciation
 import PIL.Image
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
+
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
+if not hasattr(PIL.Image, 'Resampling'):
+    PIL.Image.Resampling = PIL.Image
 
-from moviepy.editor import ImageClip, VideoFileClip, AudioFileClip, CompositeVideoClip, ColorClip, concatenate_videoclips
-import moviepy.video.fx.all as vfx
-from moviepy.config import change_settings
+# 3. حل مشكلة توقف النظام في ويندوز/HuggingFace بسبب الترميز
+try:
+    if sys.stdout and hasattr(sys.stdout, 'buffer'):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    if sys.stderr and hasattr(sys.stderr, 'buffer'):
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+except Exception:
+    pass
+
+# ==========================================
+# 📦 استيراد المكتبات
+# ==========================================
+
+# MoviePy Imports - مع محاولة التعامل مع الأخطاء
+try:
+    from moviepy.editor import ImageClip, VideoFileClip, AudioFileClip, CompositeVideoClip, ColorClip, concatenate_videoclips
+    import moviepy.video.fx.all as vfx
+    from moviepy.config import change_settings
+except ImportError:
+    print("⚠️ Warning: MoviePy imports failed. Ensure moviepy==1.0.3 is installed.")
+    # Fallback attempt
+    from moviepy import *
+    import moviepy.video.fx.all as vfx
+
 from proglog import ProgressBarLogger
 from pydub import AudioSegment
 from deep_translator import GoogleTranslator
 
 # ==========================================
-# ⚙️ Configuration & Setup
+# ⚙️ الإعدادات (Configuration)
 # ==========================================
-
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 def app_dir():
     if getattr(sys, "frozen", False): return os.path.dirname(sys.executable)
@@ -54,19 +89,21 @@ except:
 AudioSegment.converter = FFMPEG_EXE
 AudioSegment.ffmpeg = FFMPEG_EXE
 
-# Asset Paths
+# مسارات الملفات
 FONT_DIR = os.path.join(EXEC_DIR, "fonts")
+os.makedirs(FONT_DIR, exist_ok=True) # إنشاء المجلد إذا لم يكن موجوداً
+
 FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Arabic.ttf") 
 FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
 VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
 
-# Master Temp Directory
+# مجلد العمل المؤقت
 BASE_TEMP_DIR = os.path.join(EXEC_DIR, "temp_workspaces")
 os.makedirs(BASE_TEMP_DIR, exist_ok=True)
 os.makedirs(VISION_DIR, exist_ok=True)
 
-# Data Constants
+# ثوابت البيانات
 VERSE_COUNTS = {1: 7, 2: 286, 3: 200, 4: 176, 5: 120, 6: 165, 7: 206, 8: 75, 9: 129, 10: 109, 11: 123, 12: 111, 13: 43, 14: 52, 15: 99, 16: 128, 17: 111, 18: 110, 19: 98, 20: 135, 21: 112, 22: 78, 23: 118, 24: 64, 25: 77, 26: 227, 27: 93, 28: 88, 29: 69, 30: 60, 31: 34, 32: 30, 33: 73, 34: 54, 35: 45, 36: 83, 37: 182, 38: 88, 39: 75, 40: 85, 41: 54, 42: 53, 43: 89, 44: 59, 45: 37, 46: 35, 47: 38, 48: 29, 49: 18, 50: 45, 51: 60, 52: 49, 53: 62, 54: 55, 55: 78, 56: 96, 57: 29, 58: 22, 59: 24, 60: 13, 61: 14, 62: 11, 63: 11, 64: 18, 65: 12, 66: 12, 67: 30, 68: 52, 69: 52, 70: 44, 71: 28, 72: 28, 73: 20, 74: 56, 75: 40, 76: 31, 77: 50, 78: 40, 79: 46, 80: 42, 81: 29, 82: 19, 83: 36, 84: 25, 85: 22, 86: 17, 87: 19, 88: 26, 89: 30, 90: 20, 91: 15, 92: 21, 93: 11, 94: 8, 95: 8, 96: 19, 97: 5, 98: 8, 99: 8, 100: 11, 101: 11, 102: 8, 103: 3, 104: 9, 105: 5, 106: 4, 107: 7, 108: 3, 109: 6, 110: 3, 111: 5, 112: 4, 113: 5, 114: 6}
 SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه', 'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم', 'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر', 'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق', 'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة', 'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج', 'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد', 'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس']
 RECITERS_MAP = {'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 'الشيخ عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 'الشيخ ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 'الشيخ محمد صديق المنشاوي (مجود)': 'Minshawy_Mujawwad_64kbps', 'الشيخ سعود الشريم': 'Saood_ash-Shuraym_64kbps', 'الشيخ مشاري العفاسي': 'Alafasy_64kbps', 'الشيخ محمود خليل الحصري': 'Husary_64kbps', 'الشيخ أبو بكر الشاطري': 'Abu_Bakr_Ash-Shaatree_128kbps', 'ناصر القطامي':'Nasser_Alqatami_128kbps', 'هاني الرافعي':'Hani_Rifai_192kbps', 'علي جابر' :'Ali_Jaber_64kbps'}
@@ -112,17 +149,6 @@ def get_job(job_id):
     with JOBS_LOCK:
         return JOBS.get(job_id)
 
-def cleanup_job(job_id):
-    with JOBS_LOCK:
-        job = JOBS.pop(job_id, None)
-    
-    if job and os.path.exists(job['workspace']):
-        try:
-            shutil.rmtree(job['workspace'])
-            print(f"cleaned up workspace: {job_id}")
-        except Exception as e:
-            print(f"Error cleaning up {job_id}: {e}")
-
 class ScopedQuranLogger(ProgressBarLogger):
     def __init__(self, job_id):
         super().__init__()
@@ -148,13 +174,20 @@ class ScopedQuranLogger(ProgressBarLogger):
                 update_job_status(self.job_id, percent, f"جاري التصدير... {percent}%", eta=rem_str)
 
 # ==========================================
-# 🛠️ Helper Functions
+# 🛠️ Helper Functions (مصححة)
 # ==========================================
 def detect_silence(sound, thresh):
     try:
         if len(sound) == 0: return 0
         t = 0
-        while t < len(sound) and sound[t:t+10].dBFS < thresh: t += 10
+        # تم تعديل الخطوة لتجنب البطء والأخطاء
+        while t < len(sound):
+            chunk = sound[t:t+20]
+            if len(chunk) == 0: break
+            if chunk.dBFS < thresh:
+                t += 20
+            else:
+                break
         return t
     except: return 0
 
@@ -165,10 +198,16 @@ def download_audio(reciter_id, surah, ayah, idx, workspace_dir):
         r = requests.get(url, stream=True, timeout=30)
         with open(out, 'wb') as f:
             for chunk in r.iter_content(8192): f.write(chunk)
+        
+        # ✅ تحقق من أن الملف ليس فارغاً لتجنب خطأ Zero-Size Array
+        if os.path.getsize(out) < 100:
+            raise Exception("Downloaded file is empty")
+
         snd = AudioSegment.from_file(out)
         
+        # ✅ تحقق من أن الصوت له مدة فعلية
         if len(snd) < 100: 
-            final_snd = snd
+            final_snd = snd if len(snd) > 0 else AudioSegment.silent(duration=1000)
         else:
             start = detect_silence(snd, snd.dBFS-20) 
             end = detect_silence(snd.reverse(), snd.dBFS-20)
@@ -182,24 +221,25 @@ def download_audio(reciter_id, surah, ayah, idx, workspace_dir):
         final_snd.export(out, format='mp3')
     except Exception as e: 
         print(f"Audio DL Error: {e}")
+        # إنشاء ملف صامت بديل لتجنب توقف البرنامج
         AudioSegment.silent(duration=1000).export(out, format='mp3')
     return out
 
 def get_text(surah, ayah):
     try:
-        r = requests.get(f'https://api.alquran.cloud/v1/ayah/{surah}:{ayah}/quran-simple')
+        r = requests.get(f'https://api.alquran.cloud/v1/ayah/{surah}:{ayah}/quran-simple', timeout=10)
         t = r.json()['data']['text']
         if surah != 1 and surah != 9 and ayah == 1:
             basmala_pattern = r'^بِسْمِ [^ ]+ [^ ]+ [^ ]+' 
             t = re.sub(basmala_pattern, '', t).strip()
-            t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
+            t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
         return t
     except: 
-        return "Text Error"
+        return "خطأ في النص"
 
 def get_en_text(surah, ayah):
     try:
-        r = requests.get(f'http://api.alquran.cloud/v1/ayah/{surah}:{ayah}/en.sahih')
+        r = requests.get(f'http://api.alquran.cloud/v1/ayah/{surah}:{ayah}/en.sahih', timeout=10)
         return r.json()['data']['text']
     except: return ""
 
@@ -207,24 +247,28 @@ def wrap_text(text, per_line):
     words = text.split()
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
-# ✅ Vignette Mask (Corrected for deep edges & uint8 safety)
+# ✅ Vignette Mask (آمنة ضد الأخطاء)
 def create_vignette_mask(w, h):
+    # التأكد من أن الأبعاد ليست صفراً
+    w, h = max(1, w), max(1, h)
     Y, X = np.ogrid[:h, :w]
     center_y, center_x = h / 2, w / 2
     dist_from_center = np.sqrt((X - center_x)**2 + (Y - center_y)**2)
     max_dist = np.sqrt((w/2)**2 + (h/2)**2)
+    if max_dist == 0: max_dist = 1 # تجنب القسمة على صفر
     mask = dist_from_center / max_dist
     mask = np.clip(mask * 1.5, 0, 1) ** 3 
     mask_img = np.zeros((h, w, 4), dtype=np.uint8)
     mask_img[:, :, 3] = (mask * 255).astype(np.uint8)
     return ImageClip(mask_img, ismask=False)
 
-# ✅ Blur Effect (Type Safe)
+# ✅ Blur Effect
 def apply_blur_effect(clip):
     def blur_filter(get_frame, t):
         frame = get_frame(t)
-        # Ensure uint8 before Pillow
-        img = Image.fromarray(frame.astype('uint8'))
+        if frame.dtype != np.uint8:
+            frame = (frame * 255).astype(np.uint8)
+        img = Image.fromarray(frame)
         img_blurred = img.filter(ImageFilter.GaussianBlur(radius=5))
         return np.array(img_blurred).astype(np.uint8)
     return clip.fl(blur_filter)
@@ -242,28 +286,40 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     elif wc > 15: base_fs, pl = 46, 8
     else: base_fs, pl = 48, 7
     final_fs = int(base_fs * scale_factor)
+    
     try: font = ImageFont.truetype(font_path, final_fs)
     except: font = ImageFont.load_default()
 
     wrapped_text = wrap_text(arabic, pl)
     lines = wrapped_text.split('\n')
-    dummy_img = Image.new('RGBA', (target_w, 1000))
-    draw = ImageDraw.Draw(dummy_img)
-    max_line_w = 0
-    total_h = 0
-    line_heights = []
     
-    for line in lines:
-        bbox = draw.textbbox((0, 0), line, font=font)
-        line_w = bbox[2] - bbox[0]
-        line_h = bbox[3] - bbox[1]
-        max_line_w = max(max_line_w, line_w)
-        line_heights.append(line_h + 20)
-        total_h += line_h + 20
+    # حساب أبعاد الصورة بدقة لتجنب الأبعاد الصفرية
+    try:
+        dummy_img = Image.new('RGBA', (target_w, 1000))
+        draw = ImageDraw.Draw(dummy_img)
+        max_line_w = 0
+        total_h = 0
+        line_heights = []
+        
+        for line in lines:
+            if hasattr(draw, 'textbbox'):
+                bbox = draw.textbbox((0, 0), line, font=font)
+                line_w = bbox[2] - bbox[0]
+                line_h = bbox[3] - bbox[1]
+            else:
+                line_w, line_h = draw.textsize(line, font=font)
+                
+            max_line_w = max(max_line_w, line_w)
+            line_heights.append(line_h + 20)
+            total_h += line_h + 20
+    except:
+        max_line_w, total_h = target_w, 100
+        line_heights = [30] * len(lines)
 
     box_w = int(target_w * 0.9)
     img_w = max(box_w, int(max_line_w + 40))
-    img_h = int(total_h + 40)
+    img_h = max(int(total_h + 40), 50) # ✅ ضمان أن الارتفاع لا يساوي صفر أبداً
+    
     final_image = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw_final = ImageDraw.Draw(final_image)
     current_y = 20
@@ -272,8 +328,12 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     stroke_w = 1 
 
     for i, line in enumerate(lines):
-        bbox = draw_final.textbbox((0, 0), line, font=font)
-        line_w = bbox[2] - bbox[0]
+        if hasattr(draw_final, 'textbbox'):
+            bbox = draw_final.textbbox((0, 0), line, font=font)
+            line_w = bbox[2] - bbox[0]
+        else:
+            line_w, _ = draw_final.textsize(line, font=font)
+
         start_x = (img_w - line_w) // 2
         
         if glow:
@@ -282,7 +342,9 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
 
         draw_final.text((start_x + 2, current_y + 2), line, font=font, fill=(0,0,0, shadow_opacity))
         draw_final.text((start_x, current_y), line, font=font, fill='white', stroke_width=stroke_w, stroke_fill='black')
-        current_y += line_heights[i]
+        
+        if i < len(line_heights):
+            current_y += line_heights[i]
         
     return ImageClip(np.array(final_image).astype(np.uint8)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
@@ -295,11 +357,18 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
     wrapped_text = wrap_text(text, 10)
     try: font = ImageFont.truetype(FONT_PATH_ENGLISH, final_fs)
     except: font = ImageFont.load_default()
+    
     dummy_img = Image.new('RGB', (1, 1))
     draw = ImageDraw.Draw(dummy_img)
-    bbox = draw.textbbox((0, 0), wrapped_text, font=font, align='center')
-    img_w = max(box_w, int((bbox[2]-bbox[0]) + 20))
-    img_h = int((bbox[3]-bbox[1]) + 20)
+    
+    if hasattr(draw, 'textbbox'):
+        bbox = draw.textbbox((0, 0), wrapped_text, font=font, align='center')
+        img_w = max(box_w, int((bbox[2]-bbox[0]) + 20))
+        img_h = int((bbox[3]-bbox[1]) + 20)
+    else:
+        img_w, img_h = box_w, 100
+
+    img_h = max(img_h, 40) # ✅ ضمان الارتفاع
     img = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
@@ -365,7 +434,9 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             full_audio_seg = full_audio_seg.append(seg, crossfade=100) if len(full_audio_seg) > 0 else seg
             ayah_data.append({'ar': ar_txt, 'en': en_txt, 'dur': seg.duration_seconds})
 
+        # ✅ ضمان أن الصوت المجمع ليس فارغاً
         if len(full_audio_seg) < 100: full_audio_seg = full_audio_seg + AudioSegment.silent(duration=1000)
+        
         final_audio_path = os.path.join(workspace, "combined.mp3")
         full_audio_seg.export(final_audio_path, format="mp3")
         final_audio_clip = AudioFileClip(final_audio_path)
@@ -399,7 +470,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 
         bg_clip = bg_clip.set_duration(full_dur)
         
-        # ✅ Apply Optional Blur (Safe)
         if use_blur:
             bg_clip = apply_blur_effect(bg_clip)
         
@@ -425,7 +495,17 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         output_full_path = os.path.join(workspace, output_filename)
         update_job_status(job_id, 50, f'Rendering ({fps} FPS)...')
         
-        final.write_videofile(output_full_path, fps=fps, codec='libx264', audio_codec='aac', audio_bitrate='128k', preset='ultrafast', threads=os.cpu_count() or 2, logger=ScopedQuranLogger(job_id), ffmpeg_params=['-movflags', '+faststart', '-pix_fmt', 'yuv420p', '-crf', '28'])
+        final.write_videofile(
+            output_full_path, 
+            fps=fps, 
+            codec='libx264', 
+            audio_codec='aac', 
+            audio_bitrate='128k', 
+            preset='ultrafast', 
+            threads=os.cpu_count() or 2, 
+            logger=ScopedQuranLogger(job_id), 
+            ffmpeg_params=['-movflags', '+faststart', '-pix_fmt', 'yuv420p', '-crf', '28']
+        )
         
         with JOBS_LOCK:
             JOBS[job_id].update({'output_path': output_full_path, 'is_complete': True, 'is_running': False, 'percent': 100, 'eta': "00:00", 'status': "Done! Ready for download."})
