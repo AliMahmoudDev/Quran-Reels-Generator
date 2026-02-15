@@ -449,6 +449,43 @@ def cancel_process():
 @app.route('/api/config')
 def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 'reciters': RECITERS_MAP})
 
+# ==========================================
+# 🧹 عامل النظافة التلقائي (Garbage Collector)
+# ==========================================
+def background_cleanup():
+    while True:
+        time.sleep(3600)  # يشتغل كل ساعة
+        print("🧹 Running automatic cleanup...")
+        current_time = time.time()
+        
+        # 1. تنظيف الذاكرة (JOBS dict)
+        with JOBS_LOCK:
+            to_delete = []
+            for jid, job in JOBS.items():
+                # لو المهمة بقالها أكتر من ساعة (سواء خلصت أو لسه)
+                if current_time - job['created_at'] > 3600:
+                    to_delete.append(jid)
+            
+            for jid in to_delete:
+                del JOBS[jid]
+
+        # 2. تنظيف الهارد (المجلدات القديمة)
+        try:
+            if os.path.exists(BASE_TEMP_DIR):
+                for folder in os.listdir(BASE_TEMP_DIR):
+                    folder_path = os.path.join(BASE_TEMP_DIR, folder)
+                    # لو المجلد بقاله أكتر من ساعة
+                    if os.path.isdir(folder_path):
+                        if current_time - os.path.getctime(folder_path) > 3600:
+                            shutil.rmtree(folder_path, ignore_errors=True)
+                            print(f"🗑️ Auto-deleted old folder: {folder}")
+        except Exception as e:
+            print(f"Cleanup Error: {e}")
+
+# تشغيل عامل النظافة في خيط منفصل
+threading.Thread(target=background_cleanup, daemon=True).start()
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+
