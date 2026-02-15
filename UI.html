@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>مولد الريلز القرآني</title>
+    <title>مولد الريلز القرآني السريع 🚀</title>
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
+        /* ... (نفس الـ CSS القديم) ... */
         :root {
             --primary-gold: #d4af37;
             --bg-dark: #0a0a0e;
@@ -30,140 +31,84 @@
         }
 
         .container { width: 100%; max-width: 500px; padding-bottom: 50px; }
-
         .card {
             background: var(--bg-glass); backdrop-filter: blur(10px);
             border-radius: 16px; border: 1px solid var(--border-glow);
             padding: 20px 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-
-        /* --- Header --- */
-        .header { text-align: center; margin-bottom: 20px; }
-        .title { 
-            font-family: 'Amiri', serif; font-size: 1.8rem; 
-            background: var(--gradient-gold); -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+        
+        /* CSS إضافي للتاريخ والتايمر */
+        .timer-badge {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: var(--primary-gold);
+            font-family: monospace;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
         }
 
-        /* --- Form Elements --- */
+        .history-section {
+            margin-top: 30px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 15px;
+        }
+        .history-title { font-size: 1rem; color: #888; margin-bottom: 10px; text-align: center; }
+        .history-item {
+            background: rgba(255,255,255,0.03);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .hist-info { display: flex; flex-direction: column; }
+        .hist-date { font-size: 0.7rem; color: #666; }
+        .hist-btn {
+            background: var(--primary-gold);
+            color: #000;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+
+        /* ... (باقي الـ CSS القديم للأزرار والمدخلات) ... */
+        .header { text-align: center; margin-bottom: 20px; }
+        .title { font-family: 'Amiri', serif; font-size: 1.8rem; background: var(--gradient-gold); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .form-group { margin-bottom: 15px; }
         .label { display: block; margin-bottom: 6px; color: var(--primary-gold); font-size: 0.9rem; font-weight: bold; }
-        
-        .input-box, select {
-            width: 100%; height: 50px; padding: 0 15px; 
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
-            border-radius: 10px; color: #fff; font-family: 'Cairo'; font-size: 16px; outline: none;
-        }
-
-        /* --- Number Inputs --- */
+        .input-box, select { width: 100%; height: 50px; padding: 0 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-family: 'Cairo'; font-size: 16px; outline: none; }
         .num-row { display: flex; gap: 10px; margin-bottom: 15px; }
         .num-group { flex: 1; min-width: 0; }
-        .num-ctrl { 
-            display: flex; height: 50px; width: 100%;
-            background: rgba(255,255,255,0.05); border-radius: 10px; 
-            border: 1px solid rgba(255,255,255,0.1); overflow: hidden;
-        }
-        .num-btn { 
-            width: 35px; background: rgba(255,255,255,0.05); border: none; 
-            color: var(--primary-gold); font-size: 1.2rem; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .num-btn:active { background: rgba(212, 175, 55, 0.2); }
-        .num-val { 
-            flex: 1; background: transparent; border: none; 
-            color: #fff; text-align: center; font-weight: bold; font-size: 1.1rem;
-            min-width: 0; outline: none;
-        }
-
-        /* --- Switches --- */
-        .toggle-box { 
-            display: flex; justify-content: space-between; align-items: center; 
-            padding: 12px; background: rgba(255,255,255,0.03); 
-            border-radius: 10px; margin-bottom: 10px; 
-        }
+        .num-ctrl { display: flex; height: 50px; width: 100%; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; }
+        .num-btn { width: 35px; background: rgba(255,255,255,0.05); border: none; color: var(--primary-gold); font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .num-val { flex: 1; background: transparent; border: none; color: #fff; text-align: center; font-weight: bold; font-size: 1.1rem; min-width: 0; outline: none; }
+        .btn-main { width: 100%; height: 55px; margin-top: 10px; background: var(--gradient-gold); border: none; border-radius: 12px; color: #000; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-stop { width: 100%; height: 55px; margin-top: 10px; background: var(--danger-red); border: none; border-radius: 12px; color: #fff; font-weight: 800; font-size: 1.1rem; display: none; align-items: center; justify-content: center; gap: 10px; }
+        .prog-area { display: none; margin-top: 20px; text-align: center; }
+        .bar-track { height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin: 10px 0; }
+        .bar-fill { height: 100%; width: 0; background: var(--primary-gold); transition: 0.3s; }
+        .result-area { display: none; margin-top: 20px; text-align: center; }
+        video { width: 100%; border-radius: 12px; border: 1px solid var(--primary-gold); background: #000; max-height: 70vh; }
+        .dl-link { display: flex; align-items: center; justify-content: center; margin-top: 15px; padding: 15px; background: var(--success-green); color: #fff; text-decoration: none; border-radius: 12px; font-weight: 800; }
+        
+        .toggle-box { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 10px; }
         .switch { position: relative; width: 50px; height: 26px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.1); border-radius: 34px; transition: .3s; }
         .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s; }
         input:checked + .slider { background: var(--primary-gold); }
         input:checked + .slider:before { transform: translateX(24px); }
+        .btn-rand { width: 100%; height: 45px; margin-bottom: 20px; background: var(--random-purple); border: none; border-radius: 12px; color: #fff; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
 
-        /* --- Buttons --- */
-        .btn-main {
-            width: 100%; height: 55px; margin-top: 10px;
-            background: var(--gradient-gold); border: none; border-radius: 12px;
-            color: #000; font-weight: 800; font-size: 1.1rem; 
-            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.2);
-            display: flex; align-items: center; justify-content: center; gap: 10px;
-            transition: 0.3s;
-        }
-        .btn-rand {
-            width: 100%; height: 45px; margin-bottom: 20px;
-            background: var(--random-purple); border: none; border-radius: 12px;
-            color: #fff; font-weight: bold; font-size: 1rem;
-            box-shadow: 0 5px 15px rgba(142, 68, 173, 0.3);
-            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
-        }
-        .btn-stop {
-            width: 100%; height: 55px; margin-top: 10px;
-            background: var(--danger-red); border: none; border-radius: 12px;
-            color: #fff; font-weight: 800; font-size: 1.1rem;
-            display: none; align-items: center; justify-content: center; gap: 10px;
-        }
-        .btn-main:active, .btn-rand:active { transform: scale(0.98); }
-
-        /* --- Progress & Results --- */
-        .api-section { background: rgba(212, 175, 55, 0.05); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed var(--primary-gold); }
-        .prog-area { display: none; margin-top: 20px; text-align: center; }
-        .bar-track { height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin: 10px 0; }
-        .bar-fill { height: 100%; width: 0; background: var(--primary-gold); transition: 0.3s; }
-        .result-area { display: none; margin-top: 20px; text-align: center; animation: fadeIn 0.5s; }
-        video { width: 100%; border-radius: 12px; border: 1px solid var(--primary-gold); background: #000; max-height: 70vh; }
-        .dl-link { 
-            display: flex; align-items: center; justify-content: center; 
-            margin-top: 15px; padding: 15px; 
-            background: var(--success-green); color: #fff; 
-            text-decoration: none; border-radius: 12px; font-weight: 800;
-        }
-
-        /* --- Footer Contact --- */
-        .footer-contact {
-            margin-top: 30px;
-            padding-top: 20px;
-            text-align: center;
-            border-top: 1px solid var(--border-glow);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-        }
-        .contact-links {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .social-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--primary-gold);
-            text-decoration: none;
-            font-weight: 600;
-            transition: 0.3s;
-            background: rgba(212, 175, 55, 0.05);
-            padding: 8px 16px;
-            border-radius: 50px;
-            border: 1px solid var(--border-glow);
-            font-size: 0.9rem;
-        }
-        .social-link:hover {
-            background: var(--gradient-gold);
-            color: #000;
-            transform: translateY(-3px);
-        }
-        .social-link svg { fill: currentColor; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -172,19 +117,14 @@
         <div class="card">
             <div class="header">
                 <h1 class="title">صانع الريلز القرآني</h1>
-                <p style="color:#888; font-size:0.8rem;">صدقة جارية (النسخة العامة)</p>
+                <p style="color:#888; font-size:0.8rem;">نسخة التوربو 🚀</p>
             </div>
 
-            <button type="button" class="btn-rand" onclick="smartRandomize()">
-                🎲 اختيار عشوائي ذكي
-            </button>
+            <button type="button" class="btn-rand" onclick="smartRandomize()">🎲 اختيار عشوائي ذكي</button>
 
-            <div class="api-section">
-                <label class="label">🔑 مفتاح Pexels (للخلفيات)</label>
+            <div style="background: rgba(212, 175, 55, 0.05); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed var(--primary-gold);">
+                <label class="label">🔑 مفتاح Pexels</label>
                 <input type="text" id="pexelsKey" class="input-box" placeholder="الصق الـ API Key هنا">
-                <div class="api-help" style="font-size:0.7rem; color:#aaa; margin-top:5px; text-align:center;">
-                    <a href="https://www.pexels.com/api/" target="_blank" style="color:var(--primary-gold);">اضغط هنا للحصول على مفتاح مجاني</a>
-                </div>
             </div>
 
             <form id="vForm">
@@ -192,12 +132,10 @@
                     <label class="label">القارئ</label>
                     <select id="rSelect" class="input-box"></select>
                 </div>
-
                 <div class="form-group">
                     <label class="label">السورة</label>
                     <select id="sSelect" class="input-box"></select>
                 </div>
-
                 <div class="num-row">
                     <div class="num-group">
                         <label class="label">من آية</label>
@@ -216,60 +154,53 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="form-group">
                     <label class="label">جودة الفيديو</label>
                     <select id="qSelect" class="input-box">
-                        <option value="720">⚡ 720p HD (سريع)</option>
-                        <option value="1080">🌟 1080p FHD (جودة عالية)</option>
+                        <option value="720">⚡ 720p HD (الأسرع)</option>
+                        <option value="1080">🌟 1080p FHD</option>
                     </select>
                 </div>
-
                 <div class="toggle-box">
                     <span style="font-size:0.9rem;">🔍 بحث مخصص (خلفية)</span>
                     <label class="switch"><input type="checkbox" id="useSearch" onchange="toggleSearch()"><span class="slider"></span></label>
                 </div>
-                <input type="text" id="bgQuery" class="input-box" placeholder="اكتب: بحر، سماء، نجوم..." style="display:none; margin-bottom:15px;">
+                <input type="text" id="bgQuery" class="input-box" placeholder="اكتب: بحر، سماء..." style="display:none; margin-bottom:15px;">
 
                 <button type="submit" id="btn" class="btn-main">✨ إنشاء الفيديو</button>
-                <button type="button" id="stopBtn" class="btn-stop" onclick="stopProcess()">🛑 إيقاف العملية</button>
+                <button type="button" id="stopBtn" class="btn-stop" onclick="stopProcess()">🛑 إيقاف</button>
             </form>
 
             <div class="prog-area" id="progArea">
                 <div class="status-txt" id="statusTxt">جاري الاتصال...</div>
+                <div class="timer-badge" id="timerBadge" style="display:none;">
+                    ⏳ متبقي: <span id="etaTxt">--:--</span>
+                </div>
                 <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
             </div>
 
             <div class="result-area" id="resArea">
-                <div style="color: #4ade80; font-weight: bold; font-size: 1.2rem; margin-bottom: 10px;">
-                    ✅ تم الانتهاء بنجاح!
-                </div>
+                <div style="color: #4ade80; font-weight: bold; font-size: 1.2rem; margin-bottom: 10px;">✅ تم الانتهاء!</div>
                 <video id="player" controls playsinline loop></video>
-                <a id="dlLink" href="#" class="dl-link" download="Quran_Reel.mp4">⬇️ تحميل الفيديو الآن</a>
+                <a id="dlLink" href="#" class="dl-link" download>⬇️ تحميل الفيديو</a>
             </div>
 
-            <div class="footer-contact">
-                <p style="color: #888; font-size: 0.85rem;">للتطوير أو الإبلاغ عن أخطاء، يسعدنا تواصلك</p>
-                <div class="contact-links">
-                    <a href="https://t.me/Ali1120097658864" target="_blank" class="social-link">
-                        Telegram
-                    </a>
-                    <a href="https://github.com/AliMahmoudDev/Quran-Reels-Generator" target="_blank" class="social-link">
-                        GitHub
-                    </a>
-                </div>
+            <div class="history-section" id="histSection" style="display:none;">
+                <div class="history-title">📜 سجل العمليات (آخر 5)</div>
+                <div id="histList"></div>
+                <button onclick="clearHistory()" style="width:100%; padding:5px; background:none; border:none; color:#666; font-size:0.8rem; cursor:pointer; margin-top:5px;">🗑️ مسح السجل</button>
             </div>
         </div>
     </div>
 
     <script>
         let COUNTS = {};
-        let currentJobId = null; // تخزين معرف الجلسة الحالية
+        let currentJobId = null;
 
         window.onload = async () => {
             const savedKey = localStorage.getItem('user_pexels_key');
             if(savedKey) document.getElementById('pexelsKey').value = savedKey;
-            
+            loadHistory(); // 🆕 تحميل السجل
             try {
                 const r = await fetch(`/api/config`);
                 const d = await r.json();
@@ -282,165 +213,143 @@
             } catch(e) {}
         };
 
+        // ... (نفس دوال validateAyah, adj, smartRandomize, toggleSearch القديمة) ...
         function validateAyah(id) {
             const el = document.getElementById(id);
             const max = COUNTS[sSelect.value] || 286;
             let val = parseInt(el.value);
-            if (isNaN(val) || val < 1) val = 1;
-            if (val > max) val = max;
+            if (isNaN(val) || val < 1) val = 1; if (val > max) val = max;
             el.value = val;
         }
-
-        function adj(id, v) {
-            const el = document.getElementById(id);
-            let val = parseInt(el.value) + v;
-            el.value = val;
-            validateAyah(id);
-        }
-
-        function smartRandomize() {
-            const rCount = rSelect.options.length;
-            if(rCount > 0) rSelect.selectedIndex = Math.floor(Math.random() * rCount);
-
-            const sCount = sSelect.options.length;
-            if(sCount > 0) {
-                const randSurahIdx = Math.floor(Math.random() * sCount);
-                sSelect.selectedIndex = randSurahIdx;
-                const surahVal = sSelect.value;
-                const maxAyah = COUNTS[surahVal] || 286;
-                const safeMax = Math.max(1, maxAyah - 5);
-                const randStart = Math.floor(Math.random() * safeMax) + 1;
-                const randLen = Math.floor(Math.random() * 5) + 3;
-                document.getElementById('startAyah').value = randStart;
-                document.getElementById('endAyah').value = Math.min(randStart + randLen, maxAyah);
+        function adj(id, v) { document.getElementById(id).value = parseInt(document.getElementById(id).value) + v; validateAyah(id); }
+        function smartRandomize() { 
+            if(rSelect.length) rSelect.selectedIndex = Math.floor(Math.random() * rSelect.length);
+            if(sSelect.length) {
+                sSelect.selectedIndex = Math.floor(Math.random() * sSelect.length);
+                const max = COUNTS[sSelect.value] || 286;
+                const start = Math.floor(Math.random() * Math.max(1, max - 5)) + 1;
+                document.getElementById('startAyah').value = start;
+                document.getElementById('endAyah').value = Math.min(start + 4, max);
             }
         }
-
-        function toggleSearch() {
-            const q = document.getElementById('bgQuery');
+        function toggleSearch() { 
             const chk = document.getElementById('useSearch');
-            q.style.display = chk.checked ? 'block' : 'none';
-            if(chk.checked) q.focus();
+            document.getElementById('bgQuery').style.display = chk.checked ? 'block' : 'none';
         }
-
         async function stopProcess() {
-            if(confirm("هل أنت متأكد من إيقاف العملية؟")) {
-                if (currentJobId) {
-                    await fetch('/api/cancel', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ jobId: currentJobId })
-                    });
-                }
-                document.getElementById('statusTxt').innerText = "جاري الإيقاف...";
-            }
+            if(currentJobId && confirm("إيقاف؟")) await fetch('/api/cancel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({jobId:currentJobId})});
         }
 
-        // --- المعالجة الجديدة ---
+        // --- 🆕 إدارة السجل ---
+        function saveToHistory(surahTxt, ayahs, url) {
+            let hist = JSON.parse(localStorage.getItem('quran_hist') || '[]');
+            const newItem = {
+                id: Date.now(),
+                title: `${surahTxt} (${ayahs})`,
+                date: new Date().toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'}),
+                url: url // ملاحظة: الرابط مؤقت (Blob أو سيرفر)
+            };
+            hist.unshift(newItem); // إضافة في الأول
+            if(hist.length > 5) hist.pop(); // الاحتفاظ بآخر 5 فقط
+            localStorage.setItem('quran_hist', JSON.stringify(hist));
+            loadHistory();
+        }
+
+        function loadHistory() {
+            const hist = JSON.parse(localStorage.getItem('quran_hist') || '[]');
+            const list = document.getElementById('histList');
+            const sec = document.getElementById('histSection');
+            list.innerHTML = '';
+            if(hist.length === 0) { sec.style.display = 'none'; return; }
+            sec.style.display = 'block';
+            
+            hist.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `
+                    <div class="hist-info">
+                        <strong>${item.title}</strong>
+                        <span class="hist-date">${item.date}</span>
+                    </div>
+                    <a href="${item.url}" class="hist-btn" download>تحميل</a>
+                `;
+                list.appendChild(div);
+            });
+        }
+        function clearHistory() { localStorage.removeItem('quran_hist'); loadHistory(); }
+
+        // --- المعالجة ---
         document.getElementById('vForm').onsubmit = async (e) => {
             e.preventDefault();
             const pKey = document.getElementById('pexelsKey').value.trim();
-            if(!pKey) { alert("⚠️ يجب وضع مفتاح Pexels أولاً!"); return; }
+            if(!pKey) { alert("⚠️ مفتاح Pexels مطلوب!"); return; }
             localStorage.setItem('user_pexels_key', pKey);
 
-            // UI Reset
-            const btn = document.getElementById('btn');
-            const stopBtn = document.getElementById('stopBtn');
-            const prog = document.getElementById('progArea');
-            const res = document.getElementById('resArea');
+            document.getElementById('btn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'flex';
+            document.getElementById('progArea').style.display = 'block';
+            document.getElementById('resArea').style.display = 'none';
+            document.getElementById('timerBadge').style.display = 'none'; // إخفاء مبدئي
             
-            btn.style.display = 'none';
-            stopBtn.style.display = 'flex';
-            prog.style.display = 'block';
-            res.style.display = 'none';
-            prog.scrollIntoView({behavior: "smooth"});
-
             try {
-                // 1. بدء المهمة والحصول على ID
-                const response = await fetch(`/api/generate`, {
+                const res = await fetch(`/api/generate`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        pexelsKey: pKey,
-                        reciter: rSelect.value, surah: sSelect.value,
+                        pexelsKey: pKey, reciter: rSelect.value, surah: sSelect.value,
                         startAyah: startAyah.value, endAyah: endAyah.value,
                         quality: qSelect.value,
                         bgQuery: document.getElementById('useSearch').checked ? document.getElementById('bgQuery').value : ""
                     })
                 });
+                const dStart = await res.json();
+                if(dStart.error) throw new Error(dStart.error);
+                currentJobId = dStart.jobId;
 
-                const startData = await response.json();
-                
-                if (startData.error) { throw new Error(startData.error); }
-                
-                // حفظ ID الجلسة
-                currentJobId = startData.jobId;
-
-                // 2. بدء مراقبة التقدم باستخدام ID
                 let poll = setInterval(async () => {
                     try {
                         const r = await fetch(`/api/progress?jobId=${currentJobId}`);
                         const d = await r.json();
+                        if(d.error) throw new Error(d.error);
 
-                        if (d.error) {
-                            clearInterval(poll);
-                            throw new Error(d.error);
-                        }
-
-                        // تحديث الواجهة
                         document.getElementById('barFill').style.width = d.percent + "%";
                         document.getElementById('statusTxt').innerText = d.status;
+                        
+                        // 🆕 تحديث العداد
+                        if(d.percent > 0 && d.percent < 100) {
+                            document.getElementById('timerBadge').style.display = 'inline-flex';
+                            document.getElementById('etaTxt').innerText = d.eta || "--:--";
+                        }
 
-                        // عند اكتمال الفيديو
-                        if (d.is_complete) {
+                        if(d.is_complete) {
                             clearInterval(poll);
-                            document.getElementById('statusTxt').innerText = "جاري جلب الفيديو...";
-                            
-                            // 3. تحميل الفيديو كـ Blob (لأن السيرفر سيحذفه فوراً)
-                            const videoRes = await fetch(`/api/download?jobId=${currentJobId}`);
-                            if (!videoRes.ok) throw new Error("فشل تحميل الملف");
-                            
-                            const blob = await videoRes.blob();
+                            // تحميل الفيديو كـ Blob لحفظه
+                            const vidRes = await fetch(`/api/download?jobId=${currentJobId}`);
+                            const blob = await vidRes.blob();
                             const url = URL.createObjectURL(blob);
                             
-                            // إعداد المشغل وزر التحميل
-                            const player = document.getElementById('player');
-                            const dlLink = document.getElementById('dlLink');
+                            document.getElementById('player').src = url;
+                            document.getElementById('dlLink').href = url;
+                            const fName = `Quran_${sSelect.value}_${startAyah.value}.mp4`;
+                            document.getElementById('dlLink').download = fName;
                             
-                            player.src = url;
-                            dlLink.href = url;
-                            dlLink.download = `Quran_${sSelect.value}_${startAyah.value}.mp4`;
-                            
-                            prog.style.display = 'none';
-                            res.style.display = 'block';
-                            stopBtn.style.display = 'none';
-                            btn.style.display = 'flex';
-                            res.scrollIntoView({behavior: "smooth"});
-                        }
-                        
-                        // لو وقف بدون اكتمال
-                        if (!d.is_running && !d.is_complete && !d.error) {
-                             clearInterval(poll);
-                             stopBtn.style.display = 'none';
-                             btn.style.display = 'flex';
-                        }
+                            // 🆕 حفظ في السجل
+                            const sName = sSelect.options[sSelect.selectedIndex].text.split('. ')[1];
+                            saveToHistory(sName, `${startAyah.value}-${endAyah.value}`, url);
 
-                    } catch(pollErr) {
+                            document.getElementById('progArea').style.display = 'none';
+                            document.getElementById('resArea').style.display = 'block';
+                            document.getElementById('stopBtn').style.display = 'none';
+                            document.getElementById('btn').style.display = 'flex';
+                        }
+                    } catch(err) {
                         clearInterval(poll);
-                        console.error(pollErr);
-                        alert("حدث خطأ: " + (pollErr.message || "Unknown error"));
-                        stopBtn.style.display = 'none';
-                        btn.style.display = 'flex';
-                        prog.style.display = 'none';
+                        alert(err.message);
+                        document.getElementById('stopBtn').style.display = 'none';
+                        document.getElementById('btn').style.display = 'flex';
                     }
-                }, 1500); // كل 1.5 ثانية
-
-            } catch(e) {
-                alert("فشل البدء: " + e.message);
-                stopBtn.style.display = 'none';
-                btn.style.display = 'flex';
-                prog.style.display = 'none';
-            }
+                }, 1000);
+            } catch(e) { alert(e.message); document.getElementById('stopBtn').style.display = 'none'; document.getElementById('btn').style.display = 'flex'; }
         };
     </script>
 </body>
