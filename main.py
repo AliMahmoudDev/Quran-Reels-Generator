@@ -22,6 +22,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import PIL.Image
 
+# Patch for older PIL versions
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
 
@@ -66,9 +67,9 @@ FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
 VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
 
-# Master Temp Directory
+# Master Temp Directories
 BASE_TEMP_DIR = os.path.join(EXEC_DIR, "temp_workspaces")
-AUDIO_CACHE_DIR = os.path.join(EXEC_DIR, "cache_audio_slices")  # ⚡ NEW: Persistent Cache
+AUDIO_CACHE_DIR = os.path.join(EXEC_DIR, "cache_audio_slices")
 os.makedirs(BASE_TEMP_DIR, exist_ok=True)
 os.makedirs(AUDIO_CACHE_DIR, exist_ok=True)
 os.makedirs(VISION_DIR, exist_ok=True)
@@ -368,89 +369,7 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     return pool
 
 # ==========================================
-# ⚡ SUPER OPTIMIZED BUILDER (CACHING)
-# ==========================================
-def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette):
-    job = get_job(job_id)
-    workspace = job['workspace']
-    target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
-    scale = 1.0 if quality == '1080' else 0.67
-    last = min(end if end else start+9, VERSE_COUNTS.get(surah, 286))
-    total_ayahs = (last - start) + 1
-    
-    try:
-        # 1. Backgrounds
-        vpool = fetch_video_pool(user_pexels_key, bg_query, count=total_ayahs if dynamic_bg else 1, job_id=job_id)
-        
-        # ⚡ PRE-RENDER BACKGROUND (Crucial for Speed)
-        processed_bg_paths = []
-        update_job_status(job_id, 5, "Optimizing Background Video...")
-        if not vpool:
-            base_bg_path = os.path.join(workspace, "optimized_bg_0.mp4")
-            ColorClip((target_w, target_h), color=(15, 20, 35), duration=10).write_videofile(
-                base_bg_path, fps=fps, codec='libx264', preset='ultrafast', logger=None
-            )
-            processed_bg_paths.append(base_bg_path)
-        else:
-            for idx, vid_path in enumerate(vpool):
-                optimized_path = os.path.join(workspace, f"optimized_bg_{idx}.mp4")
-                clip = VideoFileClip(vid_path)
-                if clip.w != target_w or clip.h != target_h:
-                    clip = clip.resize(height=target_h)
-                    clip = clip.crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
-                if clip.duration > 15: clip = clip.subclip(0, 15)
-                clip.write_videofile(optimized_path, fps=fps, codec='libx264', preset='ultrafast', threads=4, logger=None)
-                clip.close()
-                processed_bg_paths.append(optimized_path)
-
-        overlays_static = [ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.3)]
-        if use_vignette: overlays.append(create_vignette_mask(target_w, target_h))
-
-        segments = []
-        is_full_surah_mode = reciter_id in FULL_SURAH_RECITERS
-        sliced_audio_map = {}
-        
-        # ⚡ ISLAM SOBHI LOGIC (WITH PERSISTENT CACHING)
-        if is_full_surah_mode:
-            update_job_status(job_id, 10, "Checking Audio Cache...")
-            
-            # Create a persistent cache folder for this specific reciter/surah
-            reciter_safe_name = re.sub(r'[^a-zA-Z0-9]', '_', reciter_id)
-            surah_cache_dir = os.path.join(AUDIO_CACHE_DIR, reciter_safe_name, str(surah))
-            os.makedirs(surah_cache_dir, exist_ok=True)
-            
-            # Check if we already have the slices for the requested ayahs
-            missing_slices = False
-            for a in range(start, last+1):
-                if not os.path.exists(os.path.join(surah_cache_dir, f"{a}.mp3")):
-                    missing_slices = True
-                    break
-            
-            if missing_slices:
-                update_job_status(job_id, 15, "Processing Audio (First Run Only)...")
-                # We need to download and process
-                base_url = FULL_SURAH_RECITERS[reciter_id]
-                full_audio_url = f"{base_url}{surah:03d}.mp3"
-                full_audio_path = os.path.join(workspace, "full_surah.mp3")
-                
-                smart_download(full_audio_url, full_audio_path, job_id)
-                
-                # Get all texts for the WHOLE surah to map correctly
-                # (Or at least up to the last ayah needed)
-                # To be safe, we fetch texts for the requested range to map relative timing
-                all_texts = [get_text(surah, a) for a in range(start, last+1)]
-                
-                timings = estimate_ayah_timings(full_audio_path, all_texts)
-                
-                full_audio = AudioSegment.from_file(full_audio_path)
-                for t_idx, t in enumerate(timings):
-                    actual_ayah_num = start + t_idx
-                    cached_slice_path = os.path.join(surah_cache_dir, f"{actual_ayah_num}.mp3")
-                    
-                    start_ms = int(t['start'] * 1000)
-                    end_ms = int(t['end'] * 1000)
-# ==========================================
-# ⚡ SUPER OPTIMIZED BUILDER (FIXED SLICING)
+# ⚡ SUPER OPTIMIZED BUILDER (FIXED)
 # ==========================================
 def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette):
     job = get_job(job_id)
@@ -464,7 +383,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
     total_ayahs_to_render = (last_requested - start) + 1
     
     try:
-        # 2. Backgrounds (Optimized)
+        # 2. Backgrounds
         vpool = fetch_video_pool(user_pexels_key, bg_query, count=total_ayahs_to_render if dynamic_bg else 1, job_id=job_id)
         
         processed_bg_paths = []
@@ -497,7 +416,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         sliced_audio_map = {}
         
         # =========================================================
-        # ⚡ ISLAM SOBHI LOGIC (FIXED: MAP FULL SURAH FIRST)
+        # ⚡ ISLAM SOBHI LOGIC (FIXED)
         # =========================================================
         if is_full_surah_mode:
             update_job_status(job_id, 10, "Checking Audio Cache...")
@@ -506,7 +425,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             surah_cache_dir = os.path.join(AUDIO_CACHE_DIR, reciter_safe_name, str(surah))
             os.makedirs(surah_cache_dir, exist_ok=True)
             
-            # Check if we have the specific ayahs requested
+            # Check for existing slices
             missing_slices = False
             for a in range(start, last_requested+1):
                 if not os.path.exists(os.path.join(surah_cache_dir, f"{a}.mp3")):
@@ -523,7 +442,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 smart_download(full_audio_url, full_audio_path, job_id)
                 
                 # 🛑 FIX: Download Text for ALL ayahs in Surah (1 to Total)
-                # This ensures the audio chunks align 1:1 with the text lines.
                 all_surah_texts = []
                 for a_num in range(1, surah_total_verses + 1):
                     all_surah_texts.append(get_text(surah, a_num))
@@ -533,18 +451,15 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 
                 full_audio = AudioSegment.from_file(full_audio_path)
                 
-                # Save ALL slices to cache (so next time it's instant)
+                # Save ALL slices
                 for t in timings:
-                    ayah_num = t['ayah'] # This is the actual Ayah number (1, 2, 3...)
+                    ayah_num = t['ayah']
                     cached_slice_path = os.path.join(surah_cache_dir, f"{ayah_num}.mp3")
-                    
                     start_ms = int(t['start'] * 1000)
                     end_ms = int(t['end'] * 1000)
-                    
-                    # Export slice
                     full_audio[start_ms:end_ms].fade_in(50).fade_out(50).export(cached_slice_path, format="mp3", bitrate="64k")
             
-            # Now Map ONLY the requested ayahs
+            # Map requested ayahs
             for a in range(start, last_requested+1):
                 sliced_audio_map[a] = os.path.join(surah_cache_dir, f"{a}.mp3")
 
@@ -555,7 +470,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 
             if is_full_surah_mode:
                 ap = sliced_audio_map.get(ayah)
-                # Fallback check
                 if not ap or not os.path.exists(ap):
                      ap = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
             else:
@@ -564,7 +478,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             audioclip = AudioFileClip(ap)
             duration = audioclip.duration
 
-            # ... (Rest of logic remains identical) ...
             ar_text = f"{get_text(surah, ayah)} ({ayah})"
             en_text = get_en_text(surah, ayah)
             
@@ -623,13 +536,11 @@ def background_cleanup():
     while True:
         time.sleep(3600)
         current_time = time.time()
-        # Clean up old jobs
         with JOBS_LOCK:
             to_delete = []
             for jid, job in JOBS.items():
                 if current_time - job['created_at'] > 3600: to_delete.append(jid)
             for jid in to_delete: del JOBS[jid]
-        # Clean up workspaces (BUT NOT AUDIO CACHE)
         try:
             if os.path.exists(BASE_TEMP_DIR):
                 for folder in os.listdir(BASE_TEMP_DIR):
@@ -672,4 +583,3 @@ def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
-
