@@ -234,29 +234,65 @@ def create_vignette_mask(w, h):
     return ImageClip(mask_img, ismask=False)
 
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
-    font = ImageFont.truetype(FONT_PATH_ARABIC, int(48 * scale_factor))
-    lines = wrap_text(arabic, 7).split('\n')
+    font_path = FONT_PATH_ARABIC
     
+    # 1. استرجاع منطق حجم الخط الديناميكي (عشان الآيات الطويلة متضربش)
+    words = arabic.split()
+    wc = len(words)
+    
+    # القيم دي من كودك القديم بالمللي
+    if wc > 60: base_fs, pl = 30, 12
+    elif wc > 40: base_fs, pl = 35, 10
+    elif wc > 25: base_fs, pl = 41, 9
+    elif wc > 15: base_fs, pl = 46, 8
+    else: base_fs, pl = 48, 7
+    
+    final_fs = int(base_fs * scale_factor)
+    
+    try: font = ImageFont.truetype(font_path, final_fs)
+    except: font = ImageFont.load_default()
+
+    # 2. تقسيم النص (Wrap) بناءً على الطول المحسوب (pl)
+    wrapped_text = wrap_text(arabic, pl)
+    lines = wrapped_text.split('\n')
+    
+    # 3. حساب ارتفاع الصورة المطلوبة
     dummy = Image.new('RGBA', (target_w, 100))
     d = ImageDraw.Draw(dummy)
     
     line_metrics = []
     total_h = 0
-    GAP = 10 
+    GAP = 10 * scale_factor
     
-    for l in lines:
-        bbox = d.textbbox((0, 0), l, font=font)
+    # معالجة كل سطر (تشبيك + Bidi)
+    processed_lines = []
+    for line in lines:
+        # هنا الإضافة المهمة لإصلاح العربي
+        try:
+            import arabic_reshaper
+            from bidi.algorithm import get_display
+            reshaped_text = arabic_reshaper.reshape(line)
+            bidi_text = get_display(reshaped_text)
+        except:
+            bidi_text = line # لو المكتبات مش موجودة كمل عادي
+            
+        processed_lines.append(bidi_text)
+        
+        # حساب الأبعاد
+        bbox = d.textbbox((0, 0), bidi_text, font=font)
         h = bbox[3] - bbox[1]
         line_metrics.append(h)
         total_h += h + GAP
         
     total_h += 40 
     
-    img = Image.new('RGBA', (target_w, total_h), (0,0,0,0))
+    # 4. الرسم النهائي
+    img = Image.new('RGBA', (target_w, int(total_h)), (0,0,0,0))
     draw = ImageDraw.Draw(img)
     curr_y = 20
     
-    for i, line in enumerate(lines):
+    for i, line in enumerate(processed_lines):
+        # توسيط النص
         w = draw.textbbox((0, 0), line, font=font)[2]
         x = (target_w - w) // 2
         
@@ -456,3 +492,4 @@ def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
