@@ -264,19 +264,8 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     total_h = 0
     GAP = 10 * scale_factor
     
-    # معالجة كل سطر (تشبيك + Bidi)
-    processed_lines = []
+    
     for line in lines:
-        # هنا الإضافة المهمة لإصلاح العربي
-        try:
-            import arabic_reshaper
-            from bidi.algorithm import get_display
-            reshaped_text = arabic_reshaper.reshape(line)
-            bidi_text = get_display(reshaped_text)
-        except:
-            bidi_text = line # لو المكتبات مش موجودة كمل عادي
-            
-        processed_lines.append(bidi_text)
         
         # حساب الأبعاد
         bbox = d.textbbox((0, 0), bidi_text, font=font)
@@ -492,4 +481,5 @@ def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
