@@ -71,14 +71,13 @@ os.makedirs(VISION_DIR, exist_ok=True)
 VERSE_COUNTS = {1: 7, 2: 286, 3: 200, 4: 176, 5: 120, 6: 165, 7: 206, 8: 75, 9: 129, 10: 109, 11: 123, 12: 111, 13: 43, 14: 52, 15: 99, 16: 128, 17: 111, 18: 110, 19: 98, 20: 135, 21: 112, 22: 78, 23: 118, 24: 64, 25: 77, 26: 227, 27: 93, 28: 88, 29: 69, 30: 60, 31: 34, 32: 30, 33: 73, 34: 54, 35: 45, 36: 83, 37: 182, 38: 88, 39: 75, 40: 85, 41: 54, 42: 53, 43: 89, 44: 59, 45: 37, 46: 35, 47: 38, 48: 29, 49: 18, 50: 45, 51: 60, 52: 49, 53: 62, 54: 55, 55: 78, 56: 96, 57: 29, 58: 22, 59: 24, 60: 13, 61: 14, 62: 11, 63: 11, 64: 18, 65: 12, 66: 12, 67: 30, 68: 52, 69: 52, 70: 44, 71: 28, 72: 28, 73: 20, 74: 56, 75: 40, 76: 31, 77: 50, 78: 40, 79: 46, 80: 42, 81: 29, 82: 19, 83: 36, 84: 25, 85: 22, 86: 17, 87: 19, 88: 26, 89: 30, 90: 20, 91: 15, 92: 21, 93: 11, 94: 8, 95: 8, 96: 19, 97: 5, 98: 8, 99: 8, 100: 11, 101: 11, 102: 8, 103: 3, 104: 9, 105: 5, 106: 4, 107: 7, 108: 3, 109: 6, 110: 3, 111: 5, 112: 4, 113: 5, 114: 6}
 SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه', 'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم', 'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر', 'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق', 'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة', 'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج', 'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد', 'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس']
 
-# ----------------------------------------------------
-# 🚀 القراء الجدد (MP3Quran V3)
-# ----------------------------------------------------
+# 🚀 إعدادات القراء الجدد (MP3Quran V3)
 NEW_RECITERS_CONFIG = {
     'رعد الكردي': (221, "https://server6.mp3quran.net/kurdi/"),
     'هزاع البلوشي': (231, "https://server11.mp3quran.net/hazza/"),
 }
 
+# 🏛️ القراء القدامى
 OLD_RECITERS_MAP = {
     'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 
     'الشيخ عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 
@@ -93,7 +92,7 @@ OLD_RECITERS_MAP = {
     'علي جابر' :'Ali_Jaber_64kbps'
 }
 
-# دمج القوائم
+# دمج القائمتين
 RECITERS_MAP = {**{k: k for k in NEW_RECITERS_CONFIG.keys()}, **OLD_RECITERS_MAP}
 
 app = Flask(__name__, static_folder=EXEC_DIR)
@@ -211,7 +210,7 @@ def get_text(surah, ayah):
         t = requests.get(f'https://api.alquran.cloud/v1/ayah/{surah}:{ayah}/quran-simple').json()['data']['text']
         if surah not in [1, 9] and ayah == 1:
             t = re.sub(r'^بِسْمِ [^ ]+ [^ ]+ [^ ]+', '', t).strip()
-            t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
+            t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
         return t
     except: return "Text Error"
 
@@ -235,22 +234,39 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     font = ImageFont.truetype(FONT_PATH_ARABIC, int(48 * scale_factor))
     lines = wrap_text(arabic, 7).split('\n')
     
-    # حساب ارتفاع الصورة ديناميكياً
+    # ✅ حساب ارتفاع الصورة ديناميكياً مع مسافة 10 بيكسل فقط
     dummy = Image.new('RGBA', (target_w, 100))
     d = ImageDraw.Draw(dummy)
-    total_h = sum([d.textbbox((0, 0), l, font=font)[3] - d.textbbox((0, 0), l, font=font)[1] + 20 for l in lines]) + 40
+    
+    # حساب ارتفاع كل سطر + المسافة المطلوبة (10)
+    line_heights = []
+    total_h = 0
+    GAP = 10  # المسافة المطلوبة
+    
+    for l in lines:
+        bbox = d.textbbox((0, 0), l, font=font)
+        h = bbox[3] - bbox[1]
+        line_heights.append(h)
+        total_h += h + GAP
+        
+    total_h += 40 # هوامش
     
     img = Image.new('RGBA', (target_w, total_h), (0,0,0,0))
     draw = ImageDraw.Draw(img)
     curr_y = 20
     
-    for line in lines:
+    for i, line in enumerate(lines):
         w = draw.textbbox((0, 0), line, font=font)[2]
         x = (target_w - w) // 2
-        if glow: draw.text((x, curr_y), line, font=font, fill=(255,255,255,40), stroke_width=5, stroke_fill=(255,255,255,40))
+        
+        if glow: 
+            draw.text((x, curr_y), line, font=font, fill=(255,255,255,40), stroke_width=5, stroke_fill=(255,255,255,40))
+        
         draw.text((x+1, curr_y+1), line, font=font, fill=(0,0,0,180))
         draw.text((x, curr_y), line, font=font, fill='white', stroke_width=2, stroke_fill='black')
-        curr_y += 60 # مسافة تقريبية بين الأسطر
+        
+        # الانتقال للسطر التالي بناءً على ارتفاع السطر الحالي + 10 بيكسل
+        curr_y += line_heights[i] + GAP
         
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
@@ -289,14 +305,18 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             ap = download_audio(reciter_id, surah, ayah, i, workspace)
             seg = AudioSegment.from_file(ap)
             full_audio += seg
-            ayah_data.append({'ar': get_text(surah, ayah), 'en': get_en_text(surah, ayah), 'dur': seg.duration_seconds})
+            
+            # ✅ إضافة رقم الآية بجانب النص: (1)
+            ar_text_with_num = f"{get_text(surah, ayah)} ({ayah})"
+            
+            ayah_data.append({'ar': ar_text_with_num, 'en': get_en_text(surah, ayah), 'dur': seg.duration_seconds})
 
         a_path = os.path.join(workspace, "combined.mp3")
         full_audio.export(a_path, format="mp3")
         aclip = AudioFileClip(a_path)
         
         vpool = fetch_video_pool(user_pexels_key, bg_query, count=len(ayah_data) if dynamic_bg else 1)
-        if not vpool: # Fallback color clip if download fails
+        if not vpool: 
              bg = ColorClip((target_w, target_h), color=(15, 20, 35), duration=aclip.duration)
         else:
              bg = VideoFileClip(vpool[0]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2).loop(duration=aclip.duration)
