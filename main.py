@@ -127,7 +127,7 @@ def cleanup_job(job_id):
         except: pass
 
 # ==========================================
-# 📊 Scoped Logger (Fixed for immediate stop)
+# 📊 Scoped Logger
 # ==========================================
 class ScopedQuranLogger(ProgressBarLogger):
     def __init__(self, job_id):
@@ -136,13 +136,11 @@ class ScopedQuranLogger(ProgressBarLogger):
         self.start_time = None
     
     def callback(self, **changes):
-        # ✅ فحص الإيقاف مع كل تحديث للوغ
         check_stop(self.job_id)
         super().callback(**changes)
 
     def bars_callback(self, bar, attr, value, old_value=None):
-        check_stop(self.job_id) # ✅ فحص إضافي
-        
+        check_stop(self.job_id)
         if bar == 't':
             total = self.bars[bar]['total']
             if total > 0:
@@ -164,14 +162,13 @@ def detect_silence(sound, thresh):
     while t < len(sound) and sound[t:t+10].dBFS < thresh: t += 10
     return t
 
-# ✅ دالة تحميل ذكية تقبل المقاطعة
 def smart_download(url, dest_path, job_id):
     check_stop(job_id)
     with requests.get(url, stream=True, timeout=30) as r:
         r.raise_for_status()
         with open(dest_path, 'wb') as f:
             for chunk in r.iter_content(chunk_size=8192):
-                check_stop(job_id) # 🛑 يفحص التوقف كل 8 كيلو بايت
+                check_stop(job_id)
                 if chunk: f.write(chunk)
 
 def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id):
@@ -181,11 +178,9 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     full_audio_path = os.path.join(cache_dir, f"{surah:03d}.mp3")
     timings_path = os.path.join(cache_dir, f"{surah:03d}.json")
 
-    # تحميل الملفات لو مش موجودة
     if not os.path.exists(full_audio_path) or not os.path.exists(timings_path):
         smart_download(f"{server_url}{surah:03d}.mp3", full_audio_path, job_id)
         
-        # جلب التوقيتات
         check_stop(job_id)
         t_data = requests.get(f"https://mp3quran.net/api/v3/ayat_timing?surah={surah}&read={reciter_id}").json()
         timings = {item['ayah']: {'start': item['start_time'], 'end': item['end_time']} for item in t_data}
@@ -282,20 +277,62 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
     draw.text((target_w/2, 20), wrap_text(text, 10), font=font, fill='#FFD700', align='center', anchor="ma", stroke_width=1, stroke_fill='black')
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
+# ✅ دالة جلب الفيديو المعدلة (عشوائية حقيقية)
 def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     pool = []
-    q = GoogleTranslator(source='auto', target='en').translate(custom_query) if custom_query else "nature landscape"
+    
+    # 1. تحديد الموضوع (عشوائي لو لم يحدد المستخدم)
+    if custom_query and len(custom_query) > 2:
+        try:
+             q_base = GoogleTranslator(source='auto', target='en').translate(custom_query.strip())
+        except:
+             q_base = "nature landscape"
+    else:
+        # قائمة مواضيع متنوعة وعشوائية
+        safe_topics = [
+            'nature landscape', 'mosque architecture', 'sky clouds', 
+            'galaxy stars', 'ocean waves', 'forest trees', 
+            'desert dunes', 'waterfall', 'flowers blooming', 'mountains'
+        ]
+        q_base = random.choice(safe_topics)
+
+    # إضافة فلتر الأمان
+    q = f"{q_base} no people"
+
     try:
         check_stop(job_id)
-        vids = requests.get(f"https://api.pexels.com/videos/search?query={q}&per_page={count+2}&orientation=portrait", headers={'Authorization': user_key}, timeout=10).json().get('videos', [])
-        for vid in vids[:count]:
-            check_stop(job_id)
-            path = os.path.join(VISION_DIR, f"bg_{vid['id']}.mp4")
-            if not os.path.exists(path):
-                # ✅ التحميل باستخدام smart_download للمقاطعة الفورية
-                smart_download(vid['video_files'][0]['link'], path, job_id)
-            pool.append(path)
-    except: pass
+        
+        # 2. ✅ طلب صفحة عشوائية لضمان عدم تكرار نفس الفيديوهات
+        # نطلب صفحة عشوائية من 1 إلى 10 (عشان منبعدش أوي وتطلع نتائج فاضية)
+        random_page = random.randint(1, 10)
+        
+        url = f"https://api.pexels.com/videos/search?query={q}&per_page={count+5}&page={random_page}&orientation=portrait"
+        
+        r = requests.get(url, headers={'Authorization': user_key}, timeout=15)
+        
+        if r.status_code == 200:
+            vids = r.json().get('videos', [])
+            
+            # 3. ✅ خلط النتائج عشوائياً
+            random.shuffle(vids)
+            
+            for vid in vids:
+                if len(pool) >= count: break
+                check_stop(job_id)
+                
+                # البحث عن جودة مناسبة (ليست 4K وليست ضعيفة جداً)
+                f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), None)
+                if not f: 
+                     if vid['video_files']: f = vid['video_files'][0]
+                
+                if f:
+                    path = os.path.join(VISION_DIR, f"bg_{vid['id']}.mp4")
+                    if not os.path.exists(path):
+                        smart_download(f['link'], path, job_id)
+                    pool.append(path)
+    except Exception as e:
+        print(f"Fetch Error: {e}")
+        
     return pool
 
 def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette):
@@ -311,7 +348,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             check_stop(job_id)
             update_job_status(job_id, 10 + i, f'Processing Ayah {ayah}...')
             
-            # ✅ تمرير job_id
             ap = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
             seg = AudioSegment.from_file(ap)
             full_audio += seg
@@ -323,7 +359,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         full_audio.export(a_path, format="mp3")
         aclip = AudioFileClip(a_path)
         
-        # ✅ تمرير job_id لجلب الخلفيات
+        # جلب الخلفيات (عشوائية الآن)
         vpool = fetch_video_pool(user_pexels_key, bg_query, count=len(ayah_data) if dynamic_bg else 1, job_id=job_id)
         bg_clips = []
         
@@ -338,10 +374,14 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                     vid_path = vpool[i % len(vpool)]
                     dur = data['dur']
                     clip = VideoFileClip(vid_path).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
+                    
                     if clip.duration < dur: clip = clip.loop(duration=dur)
                     else:
-                        start_t = random.uniform(0, max(0, clip.duration - dur))
+                        max_start = max(0, clip.duration - dur)
+                        # عشوائية في اختيار مقطع من الفيديو الطويل
+                        start_t = random.uniform(0, max_start)
                         clip = clip.subclip(start_t, start_t + dur)
+                        
                     bg_clips.append(clip.fadein(0.5).fadeout(0.5))
                 bg = concatenate_videoclips(bg_clips, method="compose")
             else:
@@ -368,7 +408,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         out_p = os.path.join(workspace, f"out_{job_id}.mp4")
         check_stop(job_id)
         
-        # ✅ الريندر مع اللوجر المحسن
         CompositeVideoClip([bg] + overlays + texts).set_audio(aclip).write_videofile(out_p, fps=fps, codec='libx264', logger=ScopedQuranLogger(job_id))
         
         with JOBS_LOCK: JOBS[job_id].update({'output_path': out_p, 'is_complete': True, 'is_running': False, 'percent': 100, 'status': "Done!"})
