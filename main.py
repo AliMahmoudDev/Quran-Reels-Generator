@@ -73,6 +73,8 @@ SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'النسا�
 
 # 🚀 إعدادات القراء
 NEW_RECITERS_CONFIG = {
+     'ادريس أبكر': (12, "https://server6.mp3quran.net/abkr/"),
+    'منصور السالمي': (245, "https://server14.mp3quran.net/mansor/"),
     'رعد الكردي': (221, "https://server6.mp3quran.net/kurdi/"),
 }
 
@@ -81,8 +83,7 @@ OLD_RECITERS_MAP = {
     'الشيخ عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 
     'الشيخ ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 
     'الشيخ سعود الشريم': 'Saood_ash-Shuraym_64kbps', 
-    'الشيخ مشاري العفاسي': 'Alafasy_64kbps', 
-    'الشيخ أبو بكر الشاطري': 'Abu_Bakr_Ash-Shaatree_128kbps', 
+    'الشيخ مشاري العفاسي': 'Alafasy_64kbps',
     'ناصر القطامي':'Nasser_Alqatami_128kbps', 
 }
 
@@ -475,3 +476,4 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
