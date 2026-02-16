@@ -282,33 +282,12 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
     draw.text((target_w/2, 20), wrap_text(text, 10), font=font, fill='#FFD700', align='center', anchor="ma", stroke_width=1, stroke_fill='black')
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
-# ✅ تم تعديل دالة fetch_video_pool فقط لإضافة العشوائية
 def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     pool = []
-    
-    if custom_query and len(custom_query) > 2:
-        try:
-             q_base = GoogleTranslator(source='auto', target='en').translate(custom_query.strip())
-        except:
-             q_base = "nature landscape"
-    else:
-        # قائمة كلمات بحث متنوعة (عشوائية)
-        topics = ['nature landscape', 'mosque architecture', 'sky clouds', 'galaxy stars', 'ocean waves', 'forest trees', 'mountains', 'waterfall']
-        q_base = random.choice(topics)
-
-    q = f"{q_base} no people" # فلتر الأمان
-
+    q = GoogleTranslator(source='auto', target='en').translate(custom_query) if custom_query else "nature landscape"
     try:
         check_stop(job_id)
-        # صفحة عشوائية
-        random_page = random.randint(1, 10)
-        
-        # إضافة &page={random_page}
-        vids = requests.get(f"https://api.pexels.com/videos/search?query={q}&per_page={count+2}&orientation=portrait&page={random_page}", headers={'Authorization': user_key}, timeout=10).json().get('videos', [])
-        
-        # خلط النتائج
-        random.shuffle(vids)
-        
+        vids = requests.get(f"https://api.pexels.com/videos/search?query={q}&per_page={count+2}&orientation=portrait", headers={'Authorization': user_key}, timeout=10).json().get('videos', [])
         for vid in vids[:count]:
             check_stop(job_id)
             path = os.path.join(VISION_DIR, f"bg_{vid['id']}.mp4")
