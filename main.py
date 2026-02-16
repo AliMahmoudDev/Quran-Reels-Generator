@@ -71,25 +71,20 @@ os.makedirs(VISION_DIR, exist_ok=True)
 VERSE_COUNTS = {1: 7, 2: 286, 3: 200, 4: 176, 5: 120, 6: 165, 7: 206, 8: 75, 9: 129, 10: 109, 11: 123, 12: 111, 13: 43, 14: 52, 15: 99, 16: 128, 17: 111, 18: 110, 19: 98, 20: 135, 21: 112, 22: 78, 23: 118, 24: 64, 25: 77, 26: 227, 27: 93, 28: 88, 29: 69, 30: 60, 31: 34, 32: 30, 33: 73, 34: 54, 35: 45, 36: 83, 37: 182, 38: 88, 39: 75, 40: 85, 41: 54, 42: 53, 43: 89, 44: 59, 45: 37, 46: 35, 47: 38, 48: 29, 49: 18, 50: 45, 51: 60, 52: 49, 53: 62, 54: 55, 55: 78, 56: 96, 57: 29, 58: 22, 59: 24, 60: 13, 61: 14, 62: 11, 63: 11, 64: 18, 65: 12, 66: 12, 67: 30, 68: 52, 69: 52, 70: 44, 71: 28, 72: 28, 73: 20, 74: 56, 75: 40, 76: 31, 77: 50, 78: 40, 79: 46, 80: 42, 81: 29, 82: 19, 83: 36, 84: 25, 85: 22, 86: 17, 87: 19, 88: 26, 89: 30, 90: 20, 91: 15, 92: 21, 93: 11, 94: 8, 95: 8, 96: 19, 97: 5, 98: 8, 99: 8, 100: 11, 101: 11, 102: 8, 103: 3, 104: 9, 105: 5, 106: 4, 107: 7, 108: 3, 109: 6, 110: 3, 111: 5, 112: 4, 113: 5, 114: 6}
 SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه', 'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم', 'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر', 'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق', 'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة', 'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج', 'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد', 'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس']
 
-# 🚀 إعدادات القراء الجدد (MP3Quran V3)
+# 🚀 إعدادات القراء الجدد (MP3Quran V3) - تم حذف هزاع البلوشي
 NEW_RECITERS_CONFIG = {
     'رعد الكردي': (221, "https://server6.mp3quran.net/kurdi/"),
-    'هزاع البلوشي': (231, "https://server11.mp3quran.net/hazza/"),
 }
 
-# 🏛️ القراء القدامى
+# 🏛️ القراء القدامى - تم حذف (علي جابر، الرافعي، المنشاوي، الحصري)
 OLD_RECITERS_MAP = {
     'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 
     'الشيخ عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 
     'الشيخ ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 
-    'الشيخ محمد صديق المنشاوي (مجود)': 'Minshawy_Mujawwad_64kbps', 
     'الشيخ سعود الشريم': 'Saood_ash-Shuraym_64kbps', 
     'الشيخ مشاري العفاسي': 'Alafasy_64kbps', 
-    'الشيخ محمود خليل الحصري': 'Husary_64kbps', 
     'الشيخ أبو بكر الشاطري': 'Abu_Bakr_Ash-Shaatree_128kbps', 
     'ناصر القطامي':'Nasser_Alqatami_128kbps', 
-    'هاني الرافعي':'Hani_Rifai_192kbps', 
-    'علي جابر' :'Ali_Jaber_64kbps'
 }
 
 # دمج القائمتين
@@ -179,7 +174,6 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir):
         with open(timings_path, 'w') as f: json.dump(timings, f)
 
     with open(timings_path, 'r') as f:
-        # تحويل المفاتيح لأرقام لأن JSON بيحفظها نصوص
         t = json.load(f)[str(ayah)]
     
     # قص الصوت
@@ -189,11 +183,9 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir):
     return out
 
 def download_audio(reciter_key, surah, ayah, idx, workspace_dir):
-    # استخدام النظام الجديد لو القارئ موجود في القائمة الجديدة
     if reciter_key in NEW_RECITERS_CONFIG:
         return process_mp3quran_audio(reciter_key, surah, ayah, idx, workspace_dir)
     
-    # النظام القديم
     url = f'https://everyayah.com/data/{reciter_key}/{surah:03d}{ayah:03d}.mp3'
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
     r = requests.get(url, stream=True)
@@ -230,26 +222,24 @@ def create_vignette_mask(w, h):
     return ImageClip(mask_img, ismask=False)
 
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
-    # تم إزالة أي مكتبات reshaper خارجية للحفاظ على عمل الكود بالسيرفر
     font = ImageFont.truetype(FONT_PATH_ARABIC, int(48 * scale_factor))
     lines = wrap_text(arabic, 7).split('\n')
     
-    # ✅ حساب ارتفاع الصورة ديناميكياً مع مسافة 10 بيكسل فقط
+    # ✅ حساب الارتفاع وتحديد المسافة بين السطور بـ 10 بيكسل
     dummy = Image.new('RGBA', (target_w, 100))
     d = ImageDraw.Draw(dummy)
     
-    # حساب ارتفاع كل سطر + المسافة المطلوبة (10)
-    line_heights = []
+    line_metrics = []
     total_h = 0
-    GAP = 10  # المسافة المطلوبة
+    GAP = 10  # المسافة بين السطور
     
     for l in lines:
         bbox = d.textbbox((0, 0), l, font=font)
         h = bbox[3] - bbox[1]
-        line_heights.append(h)
+        line_metrics.append(h)
         total_h += h + GAP
         
-    total_h += 40 # هوامش
+    total_h += 40 
     
     img = Image.new('RGBA', (target_w, total_h), (0,0,0,0))
     draw = ImageDraw.Draw(img)
@@ -265,8 +255,7 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
         draw.text((x+1, curr_y+1), line, font=font, fill=(0,0,0,180))
         draw.text((x, curr_y), line, font=font, fill='white', stroke_width=2, stroke_fill='black')
         
-        # الانتقال للسطر التالي بناءً على ارتفاع السطر الحالي + 10 بيكسل
-        curr_y += line_heights[i] + GAP
+        curr_y += line_metrics[i] + GAP
         
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
@@ -274,7 +263,8 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
     font = ImageFont.truetype(FONT_PATH_ENGLISH, int(30 * scale_factor))
     img = Image.new('RGBA', (target_w, 200), (0,0,0,0))
     draw = ImageDraw.Draw(img)
-    draw.text((target_w/2, 100), wrap_text(text, 10), font=font, fill='#FFD700', align='center', anchor="mm", stroke_width=1, stroke_fill='black')
+    # رسم الإنجليزي في أعلى الـ Clip عشان يكون جاهز للالتصاق بالعربي
+    draw.text((target_w/2, 20), wrap_text(text, 10), font=font, fill='#FFD700', align='center', anchor="ma", stroke_width=1, stroke_fill='black')
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
 def fetch_video_pool(user_key, custom_query, count=1):
@@ -306,7 +296,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             seg = AudioSegment.from_file(ap)
             full_audio += seg
             
-            # ✅ إضافة رقم الآية بجانب النص: (1)
+            # ✅ إضافة رقم الآية بين قوسين: (1)
             ar_text_with_num = f"{get_text(surah, ayah)} ({ayah})"
             
             ayah_data.append({'ar': ar_text_with_num, 'en': get_en_text(surah, ayah), 'dur': seg.duration_seconds})
@@ -326,8 +316,23 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         
         texts, curr = [], 0
         for d in ayah_data:
-            texts.append(create_text_clip(d['ar'], d['dur'], target_w, scale, use_glow).set_start(curr).set_position(('center', target_h*0.4)))
-            texts.append(create_english_clip(d['en'], d['dur'], target_w, scale, use_glow).set_start(curr).set_position(('center', target_h*0.6)))
+            # 1. إنشاء الكليبات
+            ac = create_text_clip(d['ar'], d['dur'], target_w, scale, use_glow)
+            ec = create_english_clip(d['en'], d['dur'], target_w, scale, use_glow)
+            
+            # 2. حساب المواقع ديناميكياً لإصلاح المسافة الكبيرة
+            # نضع العربي في 40% من ارتفاع الشاشة
+            ar_y_pos = target_h * 0.4
+            
+            # نضع الإنجليزي تحت العربي مباشرة بمسافة صغيرة (20 بيكسل)
+            # ac.h هو ارتفاع صورة النص العربي
+            en_y_pos = ar_y_pos + ac.h + (20 * scale) 
+            
+            # 3. ضبط الأماكن
+            ac = ac.set_start(curr).set_position(('center', ar_y_pos))
+            ec = ec.set_start(curr).set_position(('center', en_y_pos))
+            
+            texts.extend([ac, ec])
             curr += d['dur']
         
         out_p = os.path.join(workspace, f"out_{job_id}.mp4")
