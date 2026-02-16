@@ -449,29 +449,122 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                     
                     start_ms = int(t['start'] * 1000)
                     end_ms = int(t['end'] * 1000)
-                    
-                    full_audio[start_ms:end_ms].fade_in(20).fade_out(20).export(cached_slice_path, format="mp3", bitrate="64k")
+# ==========================================
+# ⚡ SUPER OPTIMIZED BUILDER (FIXED SLICING)
+# ==========================================
+def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette):
+    job = get_job(job_id)
+    workspace = job['workspace']
+    target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
+    scale = 1.0 if quality == '1080' else 0.67
+    
+    # 1. Determine Range
+    surah_total_verses = VERSE_COUNTS.get(surah, 286)
+    last_requested = min(end if end else start+9, surah_total_verses)
+    total_ayahs_to_render = (last_requested - start) + 1
+    
+    try:
+        # 2. Backgrounds (Optimized)
+        vpool = fetch_video_pool(user_pexels_key, bg_query, count=total_ayahs_to_render if dynamic_bg else 1, job_id=job_id)
+        
+        processed_bg_paths = []
+        update_job_status(job_id, 5, "Optimizing Background Video...")
+        
+        if not vpool:
+            base_bg_path = os.path.join(workspace, "optimized_bg_0.mp4")
+            ColorClip((target_w, target_h), color=(15, 20, 35), duration=10).write_videofile(
+                base_bg_path, fps=fps, codec='libx264', preset='ultrafast', logger=None
+            )
+            processed_bg_paths.append(base_bg_path)
+        else:
+            for idx, vid_path in enumerate(vpool):
+                optimized_path = os.path.join(workspace, f"optimized_bg_{idx}.mp4")
+                clip = VideoFileClip(vid_path)
+                if clip.w != target_w or clip.h != target_h:
+                    clip = clip.resize(height=target_h)
+                    clip = clip.crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
+                if clip.duration > 15: clip = clip.subclip(0, 15)
+                clip.write_videofile(optimized_path, fps=fps, codec='libx264', preset='ultrafast', threads=4, logger=None)
+                clip.close()
+                processed_bg_paths.append(optimized_path)
+
+        # 3. Static Overlays
+        overlays_static = [ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.3)]
+        if use_vignette: overlays_static.append(create_vignette_mask(target_w, target_h))
+
+        segments = []
+        is_full_surah_mode = reciter_id in FULL_SURAH_RECITERS
+        sliced_audio_map = {}
+        
+        # =========================================================
+        # ⚡ ISLAM SOBHI LOGIC (FIXED: MAP FULL SURAH FIRST)
+        # =========================================================
+        if is_full_surah_mode:
+            update_job_status(job_id, 10, "Checking Audio Cache...")
             
-            # Map the cached files
-            for a in range(start, last+1):
+            reciter_safe_name = re.sub(r'[^a-zA-Z0-9]', '_', reciter_id)
+            surah_cache_dir = os.path.join(AUDIO_CACHE_DIR, reciter_safe_name, str(surah))
+            os.makedirs(surah_cache_dir, exist_ok=True)
+            
+            # Check if we have the specific ayahs requested
+            missing_slices = False
+            for a in range(start, last_requested+1):
+                if not os.path.exists(os.path.join(surah_cache_dir, f"{a}.mp3")):
+                    missing_slices = True
+                    break
+            
+            if missing_slices:
+                update_job_status(job_id, 15, "Analyzing Full Surah (One Time)...")
+                
+                base_url = FULL_SURAH_RECITERS[reciter_id]
+                full_audio_url = f"{base_url}{surah:03d}.mp3"
+                full_audio_path = os.path.join(workspace, "full_surah.mp3")
+                
+                smart_download(full_audio_url, full_audio_path, job_id)
+                
+                # 🛑 FIX: Download Text for ALL ayahs in Surah (1 to Total)
+                # This ensures the audio chunks align 1:1 with the text lines.
+                all_surah_texts = []
+                for a_num in range(1, surah_total_verses + 1):
+                    all_surah_texts.append(get_text(surah, a_num))
+                
+                # Run Estimator on the FULL Set
+                timings = estimate_ayah_timings(full_audio_path, all_surah_texts)
+                
+                full_audio = AudioSegment.from_file(full_audio_path)
+                
+                # Save ALL slices to cache (so next time it's instant)
+                for t in timings:
+                    ayah_num = t['ayah'] # This is the actual Ayah number (1, 2, 3...)
+                    cached_slice_path = os.path.join(surah_cache_dir, f"{ayah_num}.mp3")
+                    
+                    start_ms = int(t['start'] * 1000)
+                    end_ms = int(t['end'] * 1000)
+                    
+                    # Export slice
+                    full_audio[start_ms:end_ms].fade_in(50).fade_out(50).export(cached_slice_path, format="mp3", bitrate="64k")
+            
+            # Now Map ONLY the requested ayahs
+            for a in range(start, last_requested+1):
                 sliced_audio_map[a] = os.path.join(surah_cache_dir, f"{a}.mp3")
 
         # 4. Main Generation Loop
-        for i, ayah in enumerate(range(start, last+1)):
+        for i, ayah in enumerate(range(start, last_requested+1)):
             check_stop(job_id)
-            update_job_status(job_id, 20 + int((i / total_ayahs) * 70), f'Rendering Ayah {ayah}...')
+            update_job_status(job_id, 20 + int((i / total_ayahs_to_render) * 70), f'Rendering Ayah {ayah}...')
 
             if is_full_surah_mode:
                 ap = sliced_audio_map.get(ayah)
+                # Fallback check
                 if not ap or not os.path.exists(ap):
-                    # Fallback if slice failed
-                    ap = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
+                     ap = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
             else:
                 ap = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
                 
             audioclip = AudioFileClip(ap)
             duration = audioclip.duration
 
+            # ... (Rest of logic remains identical) ...
             ar_text = f"{get_text(surah, ayah)} ({ayah})"
             en_text = get_en_text(surah, ayah)
             
@@ -579,3 +672,4 @@ def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
