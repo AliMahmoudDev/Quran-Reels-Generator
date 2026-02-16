@@ -71,12 +71,12 @@ os.makedirs(VISION_DIR, exist_ok=True)
 VERSE_COUNTS = {1: 7, 2: 286, 3: 200, 4: 176, 5: 120, 6: 165, 7: 206, 8: 75, 9: 129, 10: 109, 11: 123, 12: 111, 13: 43, 14: 52, 15: 99, 16: 128, 17: 111, 18: 110, 19: 98, 20: 135, 21: 112, 22: 78, 23: 118, 24: 64, 25: 77, 26: 227, 27: 93, 28: 88, 29: 69, 30: 60, 31: 34, 32: 30, 33: 73, 34: 54, 35: 45, 36: 83, 37: 182, 38: 88, 39: 75, 40: 85, 41: 54, 42: 53, 43: 89, 44: 59, 45: 37, 46: 35, 47: 38, 48: 29, 49: 18, 50: 45, 51: 60, 52: 49, 53: 62, 54: 55, 55: 78, 56: 96, 57: 29, 58: 22, 59: 24, 60: 13, 61: 14, 62: 11, 63: 11, 64: 18, 65: 12, 66: 12, 67: 30, 68: 52, 69: 52, 70: 44, 71: 28, 72: 28, 73: 20, 74: 56, 75: 40, 76: 31, 77: 50, 78: 40, 79: 46, 80: 42, 81: 29, 82: 19, 83: 36, 84: 25, 85: 22, 86: 17, 87: 19, 88: 26, 89: 30, 90: 20, 91: 15, 92: 21, 93: 11, 94: 8, 95: 8, 96: 19, 97: 5, 98: 8, 99: 8, 100: 11, 101: 11, 102: 8, 103: 3, 104: 9, 105: 5, 106: 4, 107: 7, 108: 3, 109: 6, 110: 3, 111: 5, 112: 4, 113: 5, 114: 6}
 SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه', 'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم', 'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر', 'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق', 'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة', 'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج', 'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد', 'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس']
 
-# 🚀 إعدادات القراء الجدد (MP3Quran V3) - تم حذف هزاع البلوشي
+# 🚀 إعدادات القراء الجدد (MP3Quran V3)
 NEW_RECITERS_CONFIG = {
     'رعد الكردي': (221, "https://server6.mp3quran.net/kurdi/"),
 }
 
-# 🏛️ القراء القدامى - تم حذف (علي جابر، الرافعي، المنشاوي، الحصري)
+# 🏛️ القراء القدامى
 OLD_RECITERS_MAP = {
     'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 
     'الشيخ عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 
@@ -221,17 +221,17 @@ def create_vignette_mask(w, h):
     mask_img[:, :, 3] = (mask * 255).astype(np.uint8)
     return ImageClip(mask_img, ismask=False)
 
+# ⚠️ لم نعدل هنا أبداً حفاظاً على الخط
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     font = ImageFont.truetype(FONT_PATH_ARABIC, int(48 * scale_factor))
     lines = wrap_text(arabic, 7).split('\n')
     
-    # ✅ حساب الارتفاع وتحديد المسافة بين السطور بـ 10 بيكسل
     dummy = Image.new('RGBA', (target_w, 100))
     d = ImageDraw.Draw(dummy)
     
     line_metrics = []
     total_h = 0
-    GAP = 10  # المسافة بين السطور
+    GAP = 10 
     
     for l in lines:
         bbox = d.textbbox((0, 0), l, font=font)
@@ -263,7 +263,6 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
     font = ImageFont.truetype(FONT_PATH_ENGLISH, int(30 * scale_factor))
     img = Image.new('RGBA', (target_w, 200), (0,0,0,0))
     draw = ImageDraw.Draw(img)
-    # رسم الإنجليزي في أعلى الـ Clip عشان يكون جاهز للالتصاق بالعربي
     draw.text((target_w/2, 20), wrap_text(text, 10), font=font, fill='#FFD700', align='center', anchor="ma", stroke_width=1, stroke_fill='black')
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
@@ -296,39 +295,55 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             seg = AudioSegment.from_file(ap)
             full_audio += seg
             
-            # ✅ إضافة رقم الآية بين قوسين: (1)
             ar_text_with_num = f"{get_text(surah, ayah)} ({ayah})"
-            
             ayah_data.append({'ar': ar_text_with_num, 'en': get_en_text(surah, ayah), 'dur': seg.duration_seconds})
 
         a_path = os.path.join(workspace, "combined.mp3")
         full_audio.export(a_path, format="mp3")
         aclip = AudioFileClip(a_path)
         
+        # 🟢 منطق الخلفيات الجديد (تم استرجاع التغيير الديناميكي)
         vpool = fetch_video_pool(user_pexels_key, bg_query, count=len(ayah_data) if dynamic_bg else 1)
+        bg_clips = []
+        
         if not vpool: 
              bg = ColorClip((target_w, target_h), color=(15, 20, 35), duration=aclip.duration)
         else:
-             bg = VideoFileClip(vpool[0]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2).loop(duration=aclip.duration)
+            if dynamic_bg:
+                # تجميع الفيديوهات حسب مدة كل آية
+                for i, data in enumerate(ayah_data):
+                    vid_path = vpool[i % len(vpool)] # تدوير الفيديوهات إذا كانت أقل من عدد الآيات
+                    dur = data['dur']
+                    
+                    # تجهيز الفيديو (Resize & Crop)
+                    clip = VideoFileClip(vid_path).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
+                    
+                    # ضبط المدة (Loop if short, Subclip if long)
+                    if clip.duration < dur:
+                        clip = clip.loop(duration=dur)
+                    else:
+                        start_t = random.uniform(0, max(0, clip.duration - dur))
+                        clip = clip.subclip(start_t, start_t + dur)
+                        
+                    bg_clips.append(clip.fadein(0.5).fadeout(0.5)) # Fade بسيط بين الخلفيات
+                
+                bg = concatenate_videoclips(bg_clips, method="compose")
+            else:
+                # فيديو واحد ثابت
+                bg = VideoFileClip(vpool[0]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2).loop(duration=aclip.duration)
         
         overlays = [ColorClip((target_w, target_h), color=(0,0,0), duration=aclip.duration).set_opacity(0.3)]
         if use_vignette: overlays.append(create_vignette_mask(target_w, target_h).set_duration(aclip.duration))
         
         texts, curr = [], 0
         for d in ayah_data:
-            # 1. إنشاء الكليبات
             ac = create_text_clip(d['ar'], d['dur'], target_w, scale, use_glow)
             ec = create_english_clip(d['en'], d['dur'], target_w, scale, use_glow)
             
-            # 2. حساب المواقع ديناميكياً لإصلاح المسافة الكبيرة
-            # نضع العربي في 40% من ارتفاع الشاشة
-            ar_y_pos = target_h * 0.4
-            
-            # نضع الإنجليزي تحت العربي مباشرة بمسافة صغيرة (20 بيكسل)
-            # ac.h هو ارتفاع صورة النص العربي
+            # 🟢 التعديل المطلوب: رفع النصوص للأعلى (0.32 بدلاً من 0.40)
+            ar_y_pos = target_h * 0.32
             en_y_pos = ar_y_pos + ac.h + (20 * scale) 
             
-            # 3. ضبط الأماكن
             ac = ac.set_start(curr).set_position(('center', ar_y_pos))
             ec = ec.set_start(curr).set_position(('center', en_y_pos))
             
