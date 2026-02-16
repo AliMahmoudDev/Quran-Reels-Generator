@@ -97,7 +97,7 @@ OLD_RECITERS_MAP = {
 # Format: 'Name': 'URL_TO_FOLDER_CONTAINING_FULL_MP3s'
 # Make sure the files are named like 001.mp3, 002.mp3, etc.
 FULL_SURAH_RECITERS = {
-    'New Reciter Full': 'https://example.com/path/to/full/mp3s/' 
+    'إسلام صبحي': 'https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/' 
 }
 
 RECITERS_MAP = {**{k: k for k in NEW_RECITERS_CONFIG.keys()}, **OLD_RECITERS_MAP, **{k: k for k in FULL_SURAH_RECITERS.keys()}}
@@ -594,4 +594,5 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
