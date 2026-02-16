@@ -127,21 +127,23 @@ def cleanup_job(job_id):
         except: pass
 
 # ==========================================
-# 📊 Scoped Logger
+# 📊 Scoped Logger (Optimized for Speed)
 # ==========================================
 class ScopedQuranLogger(ProgressBarLogger):
     def __init__(self, job_id):
         super().__init__()
         self.job_id = job_id
         self.start_time = None
+        self.last_check = 0
     
-    def callback(self, **changes):
-        check_stop(self.job_id)
-        super().callback(**changes)
+    # ⚠️ تم حذف دالة callback التي كانت تبطئ الريندر
+    # نعتمد فقط على bars_callback التي تتحدث كل فريم
 
     def bars_callback(self, bar, attr, value, old_value=None):
-        check_stop(self.job_id)
         if bar == 't':
+            # ✅ فحص التوقف كل تحديث للفريم (آمن وسريع)
+            check_stop(self.job_id)
+            
             total = self.bars[bar]['total']
             if total > 0:
                 percent = int((value / total) * 100)
@@ -162,14 +164,20 @@ def detect_silence(sound, thresh):
     while t < len(sound) and sound[t:t+10].dBFS < thresh: t += 10
     return t
 
+# ✅ دالة تحميل ذكية وسريعة (تفحص كل 100 جزء)
 def smart_download(url, dest_path, job_id):
     check_stop(job_id)
     with requests.get(url, stream=True, timeout=30) as r:
         r.raise_for_status()
         with open(dest_path, 'wb') as f:
+            counter = 0
             for chunk in r.iter_content(chunk_size=8192):
-                check_stop(job_id)
-                if chunk: f.write(chunk)
+                if chunk: 
+                    f.write(chunk)
+                    counter += 1
+                    # ✅ الفحص كل 100 قطعة (حوالي 800KB) لعدم إبطاء التحميل
+                    if counter % 100 == 0: 
+                        check_stop(job_id)
 
 def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id):
     reciter_id, server_url = NEW_RECITERS_CONFIG[reciter_name]
@@ -235,7 +243,7 @@ def create_vignette_mask(w, h):
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     font_path = FONT_PATH_ARABIC
     
-    # ✅ استرجاع حجم الخط الديناميكي
+    # ✅ استرجاع حجم الخط الديناميكي (أهم تعديل من الكود القديم)
     words = arabic.split()
     wc = len(words)
     
