@@ -180,7 +180,6 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
 
     if not os.path.exists(full_audio_path) or not os.path.exists(timings_path):
         smart_download(f"{server_url}{surah:03d}.mp3", full_audio_path, job_id)
-        
         check_stop(job_id)
         t_data = requests.get(f"https://mp3quran.net/api/v3/ayat_timing?surah={surah}&read={reciter_id}").json()
         timings = {item['ayah']: {'start': item['start_time'], 'end': item['end_time']} for item in t_data}
@@ -236,11 +235,10 @@ def create_vignette_mask(w, h):
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     font_path = FONT_PATH_ARABIC
     
-    # 1. استرجاع منطق حجم الخط الديناميكي (عشان الآيات الطويلة متضربش)
+    # ✅ استرجاع حجم الخط الديناميكي
     words = arabic.split()
     wc = len(words)
     
-    # القيم دي من كودك القديم بالمللي
     if wc > 60: base_fs, pl = 30, 12
     elif wc > 40: base_fs, pl = 35, 10
     elif wc > 25: base_fs, pl = 41, 9
@@ -252,11 +250,9 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     try: font = ImageFont.truetype(font_path, final_fs)
     except: font = ImageFont.load_default()
 
-    # 2. تقسيم النص (Wrap) بناءً على الطول المحسوب (pl)
     wrapped_text = wrap_text(arabic, pl)
     lines = wrapped_text.split('\n')
     
-    # 3. حساب ارتفاع الصورة المطلوبة
     dummy = Image.new('RGBA', (target_w, 100))
     d = ImageDraw.Draw(dummy)
     
@@ -264,24 +260,19 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     total_h = 0
     GAP = 10 * scale_factor
     
-    
-    for line in lines:
-        
-        # حساب الأبعاد
-        bbox = d.textbbox((0, 0), bidi_text, font=font)
+    for l in lines:
+        bbox = d.textbbox((0, 0), l, font=font)
         h = bbox[3] - bbox[1]
         line_metrics.append(h)
         total_h += h + GAP
         
     total_h += 40 
     
-    # 4. الرسم النهائي
     img = Image.new('RGBA', (target_w, int(total_h)), (0,0,0,0))
     draw = ImageDraw.Draw(img)
     curr_y = 20
     
-    for i, line in enumerate(processed_lines):
-        # توسيط النص
+    for i, line in enumerate(lines):
         w = draw.textbbox((0, 0), line, font=font)[2]
         x = (target_w - w) // 2
         
@@ -302,50 +293,33 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
     draw.text((target_w/2, 20), wrap_text(text, 10), font=font, fill='#FFD700', align='center', anchor="ma", stroke_width=1, stroke_fill='black')
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
-# ✅ دالة جلب الفيديو المعدلة (عشوائية حقيقية)
 def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     pool = []
     
-    # 1. تحديد الموضوع (عشوائي لو لم يحدد المستخدم)
     if custom_query and len(custom_query) > 2:
-        try:
-             q_base = GoogleTranslator(source='auto', target='en').translate(custom_query.strip())
-        except:
-             q_base = "nature landscape"
+        try: q_base = GoogleTranslator(source='auto', target='en').translate(custom_query.strip())
+        except: q_base = "nature landscape"
     else:
-        # قائمة مواضيع متنوعة وعشوائية
-        safe_topics = [
-            'nature landscape', 'mosque architecture', 'sky clouds', 
-            'galaxy stars', 'ocean waves', 'forest trees', 
-            'desert dunes', 'waterfall', 'flowers blooming', 'mountains'
-        ]
+        # ✅ قائمة عشوائية لضمان التنوع
+        safe_topics = ['nature landscape', 'mosque architecture', 'sky clouds', 'galaxy stars', 'ocean waves', 'forest trees', 'desert dunes', 'waterfall', 'mountains']
         q_base = random.choice(safe_topics)
 
-    # إضافة فلتر الأمان
     q = f"{q_base} no people"
 
     try:
         check_stop(job_id)
-        
-        # 2. ✅ طلب صفحة عشوائية لضمان عدم تكرار نفس الفيديوهات
-        # نطلب صفحة عشوائية من 1 إلى 10 (عشان منبعدش أوي وتطلع نتائج فاضية)
+        # ✅ طلب صفحة عشوائية
         random_page = random.randint(1, 10)
-        
         url = f"https://api.pexels.com/videos/search?query={q}&per_page={count+5}&page={random_page}&orientation=portrait"
         
         r = requests.get(url, headers={'Authorization': user_key}, timeout=15)
-        
         if r.status_code == 200:
             vids = r.json().get('videos', [])
-            
-            # 3. ✅ خلط النتائج عشوائياً
-            random.shuffle(vids)
+            random.shuffle(vids) # ✅ خلط النتائج
             
             for vid in vids:
                 if len(pool) >= count: break
                 check_stop(job_id)
-                
-                # البحث عن جودة مناسبة (ليست 4K وليست ضعيفة جداً)
                 f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), None)
                 if not f: 
                      if vid['video_files']: f = vid['video_files'][0]
@@ -355,9 +329,7 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
                     if not os.path.exists(path):
                         smart_download(f['link'], path, job_id)
                     pool.append(path)
-    except Exception as e:
-        print(f"Fetch Error: {e}")
-        
+    except Exception as e: print(f"Fetch Error: {e}")
     return pool
 
 def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette):
@@ -372,7 +344,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         for i, ayah in enumerate(range(start, last+1), 1):
             check_stop(job_id)
             update_job_status(job_id, 10 + i, f'Processing Ayah {ayah}...')
-            
             ap = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
             seg = AudioSegment.from_file(ap)
             full_audio += seg
@@ -384,7 +355,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         full_audio.export(a_path, format="mp3")
         aclip = AudioFileClip(a_path)
         
-        # جلب الخلفيات (عشوائية الآن)
         vpool = fetch_video_pool(user_pexels_key, bg_query, count=len(ayah_data) if dynamic_bg else 1, job_id=job_id)
         bg_clips = []
         
@@ -399,14 +369,10 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                     vid_path = vpool[i % len(vpool)]
                     dur = data['dur']
                     clip = VideoFileClip(vid_path).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
-                    
                     if clip.duration < dur: clip = clip.loop(duration=dur)
                     else:
-                        max_start = max(0, clip.duration - dur)
-                        # عشوائية في اختيار مقطع من الفيديو الطويل
-                        start_t = random.uniform(0, max_start)
+                        start_t = random.uniform(0, max(0, clip.duration - dur))
                         clip = clip.subclip(start_t, start_t + dur)
-                        
                     bg_clips.append(clip.fadein(0.5).fadeout(0.5))
                 bg = concatenate_videoclips(bg_clips, method="compose")
             else:
@@ -421,6 +387,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             ac = create_text_clip(d['ar'], d['dur'], target_w, scale, use_glow)
             ec = create_english_clip(d['en'], d['dur'], target_w, scale, use_glow)
             
+            # ✅ رفع النص للأعلى (0.32)
             ar_y_pos = target_h * 0.32
             en_y_pos = ar_y_pos + ac.h + (20 * scale) 
             
@@ -479,7 +446,24 @@ def cancel_process():
 @app.route('/api/config')
 def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 'reciters': RECITERS_MAP})
 
+def background_cleanup():
+    while True:
+        time.sleep(3600)
+        current_time = time.time()
+        with JOBS_LOCK:
+            to_delete = []
+            for jid, job in JOBS.items():
+                if current_time - job['created_at'] > 3600: to_delete.append(jid)
+            for jid in to_delete: del JOBS[jid]
+        try:
+            if os.path.exists(BASE_TEMP_DIR):
+                for folder in os.listdir(BASE_TEMP_DIR):
+                    folder_path = os.path.join(BASE_TEMP_DIR, folder)
+                    if os.path.isdir(folder_path):
+                        if current_time - os.path.getctime(folder_path) > 3600: shutil.rmtree(folder_path, ignore_errors=True)
+        except: pass
+
+threading.Thread(target=background_cleanup, daemon=True).start()
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
-
-
