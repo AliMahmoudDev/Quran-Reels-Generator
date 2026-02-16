@@ -127,7 +127,7 @@ def cleanup_job(job_id):
         except: pass
 
 # ==========================================
-# 📊 Scoped Logger
+# 📊 Scoped Logger (FIXED FOR SPEED)
 # ==========================================
 class ScopedQuranLogger(ProgressBarLogger):
     def __init__(self, job_id):
@@ -135,13 +135,12 @@ class ScopedQuranLogger(ProgressBarLogger):
         self.job_id = job_id
         self.start_time = None
     
-    def callback(self, **changes):
-        check_stop(self.job_id)
-        super().callback(**changes)
+    # ❌ تم حذف دالة callback الكارثية من هنا
 
     def bars_callback(self, bar, attr, value, old_value=None):
-        check_stop(self.job_id)
+        # ✅ نفحص هنا بس (لأن دي بتتنادى مرات معقولة)
         if bar == 't':
+            check_stop(self.job_id)
             total = self.bars[bar]['total']
             if total > 0:
                 percent = int((value / total) * 100)
@@ -162,14 +161,20 @@ def detect_silence(sound, thresh):
     while t < len(sound) and sound[t:t+10].dBFS < thresh: t += 10
     return t
 
+# ✅ دالة تحميل محسنة (سريعة جداً)
 def smart_download(url, dest_path, job_id):
     check_stop(job_id)
     with requests.get(url, stream=True, timeout=30) as r:
         r.raise_for_status()
         with open(dest_path, 'wb') as f:
+            counter = 0
             for chunk in r.iter_content(chunk_size=8192):
-                check_stop(job_id)
-                if chunk: f.write(chunk)
+                if chunk: 
+                    f.write(chunk)
+                    counter += 1
+                    # ✅ نفحص كل 100 لفة (يعني كل 1 ميجا تقريباً) مش كل لفة
+                    if counter % 100 == 0:
+                        check_stop(job_id)
 
 def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id):
     reciter_id, server_url = NEW_RECITERS_CONFIG[reciter_name]
@@ -277,18 +282,14 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
     draw.text((target_w/2, 20), wrap_text(text, 10), font=font, fill='#FFD700', align='center', anchor="ma", stroke_width=1, stroke_fill='black')
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
 
-# ✅ دالة جلب الفيديو المعدلة (عشوائية حقيقية)
 def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     pool = []
     
-    # 1. تحديد الموضوع (عشوائي لو لم يحدد المستخدم)
     if custom_query and len(custom_query) > 2:
-        try:
-             q_base = GoogleTranslator(source='auto', target='en').translate(custom_query.strip())
-        except:
-             q_base = "nature landscape"
+        try: q_base = GoogleTranslator(source='auto', target='en').translate(custom_query.strip())
+        except: q_base = "nature landscape"
     else:
-        # قائمة مواضيع متنوعة وعشوائية
+        # ✅ قائمة عشوائية لضمان التنوع
         safe_topics = [
             'nature landscape', 'mosque architecture', 'sky clouds', 
             'galaxy stars', 'ocean waves', 'forest trees', 
@@ -296,14 +297,10 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
         ]
         q_base = random.choice(safe_topics)
 
-    # إضافة فلتر الأمان
     q = f"{q_base} no people"
 
     try:
         check_stop(job_id)
-        
-        # 2. ✅ طلب صفحة عشوائية لضمان عدم تكرار نفس الفيديوهات
-        # نطلب صفحة عشوائية من 1 إلى 10 (عشان منبعدش أوي وتطلع نتائج فاضية)
         random_page = random.randint(1, 10)
         
         url = f"https://api.pexels.com/videos/search?query={q}&per_page={count+5}&page={random_page}&orientation=portrait"
@@ -312,15 +309,12 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
         
         if r.status_code == 200:
             vids = r.json().get('videos', [])
-            
-            # 3. ✅ خلط النتائج عشوائياً
             random.shuffle(vids)
             
             for vid in vids:
                 if len(pool) >= count: break
                 check_stop(job_id)
                 
-                # البحث عن جودة مناسبة (ليست 4K وليست ضعيفة جداً)
                 f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), None)
                 if not f: 
                      if vid['video_files']: f = vid['video_files'][0]
@@ -359,7 +353,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         full_audio.export(a_path, format="mp3")
         aclip = AudioFileClip(a_path)
         
-        # جلب الخلفيات (عشوائية الآن)
         vpool = fetch_video_pool(user_pexels_key, bg_query, count=len(ayah_data) if dynamic_bg else 1, job_id=job_id)
         bg_clips = []
         
@@ -378,7 +371,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                     if clip.duration < dur: clip = clip.loop(duration=dur)
                     else:
                         max_start = max(0, clip.duration - dur)
-                        # عشوائية في اختيار مقطع من الفيديو الطويل
                         start_t = random.uniform(0, max_start)
                         clip = clip.subclip(start_t, start_t + dur)
                         
@@ -453,6 +445,25 @@ def cancel_process():
 
 @app.route('/api/config')
 def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 'reciters': RECITERS_MAP})
+
+def background_cleanup():
+    while True:
+        time.sleep(3600)
+        current_time = time.time()
+        with JOBS_LOCK:
+            to_delete = []
+            for jid, job in JOBS.items():
+                if current_time - job['created_at'] > 3600: to_delete.append(jid)
+            for jid in to_delete: del JOBS[jid]
+        try:
+            if os.path.exists(BASE_TEMP_DIR):
+                for folder in os.listdir(BASE_TEMP_DIR):
+                    folder_path = os.path.join(BASE_TEMP_DIR, folder)
+                    if os.path.isdir(folder_path):
+                        if current_time - os.path.getctime(folder_path) > 3600: shutil.rmtree(folder_path, ignore_errors=True)
+        except: pass
+
+threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
