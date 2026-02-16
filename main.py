@@ -470,9 +470,104 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             if is_full_surah_mode:
                 if ayah in sliced_audio_map:
                     ap = sliced_audio_map[ayah]
-                else:
-                    # Fallback if map missing (shouldn't happen)
-                    ap = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
+def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette):
+    job = get_job(job_id)
+    workspace = job['workspace']
+    target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
+    scale = 1.0 if quality == '1080' else 0.67
+    last = min(end if end else start+9, VERSE_COUNTS.get(surah, 286))
+    total_ayahs = (last - start) + 1
+    
+    try:
+        # 1. Fetch Raw Backgrounds
+        vpool = fetch_video_pool(user_pexels_key, bg_query, count=total_ayahs if dynamic_bg else 1, job_id=job_id)
+        
+        # ⚡ OPTIMIZATION: Pre-Process Background Video
+        # Instead of resizing "live" during render (slow), we resize ONCE and save to disk.
+        processed_bg_paths = []
+        
+        update_job_status(job_id, 5, "Optimizing Background Video...")
+        
+        if not vpool:
+            # Fallback color background
+            base_bg_path = os.path.join(workspace, "optimized_bg_0.mp4")
+            ColorClip((target_w, target_h), color=(15, 20, 35), duration=10).write_videofile(
+                base_bg_path, fps=fps, codec='libx264', preset='ultrafast', logger=None
+            )
+            processed_bg_paths.append(base_bg_path)
+        else:
+            # Process downloaded videos
+            for idx, vid_path in enumerate(vpool):
+                optimized_path = os.path.join(workspace, f"optimized_bg_{idx}.mp4")
+                
+                # Resize and Crop ONLY IF needed
+                clip = VideoFileClip(vid_path)
+                if clip.w != target_w or clip.h != target_h:
+                    clip = clip.resize(height=target_h)
+                    clip = clip.crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
+                
+                # Trim to 15s max to save processing time (loop later)
+                if clip.duration > 15: clip = clip.subclip(0, 15)
+                
+                # Write to disk (This is the magic step!)
+                clip.write_videofile(
+                    optimized_path, 
+                    fps=fps, 
+                    codec='libx264', 
+                    preset='ultrafast', 
+                    threads=4, 
+                    logger=None
+                )
+                clip.close()
+                processed_bg_paths.append(optimized_path)
+
+        # 2. Static Overlays (Create once)
+        overlays_static = [ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.3)]
+        if use_vignette:
+            overlays_static.append(create_vignette_mask(target_w, target_h))
+
+        segments = []
+        
+        # 3. Full Surah Audio Handling (Islam Sobhi Logic)
+        is_full_surah_mode = reciter_id in FULL_SURAH_RECITERS
+        sliced_audio_map = {}
+        
+        if is_full_surah_mode:
+            update_job_status(job_id, 10, "Processing Audio...")
+            all_texts = [get_text(surah, a) for a in range(start, last+1)]
+            
+            base_url = FULL_SURAH_RECITERS[reciter_id]
+            full_audio_url = f"{base_url}{surah:03d}.mp3"
+            full_audio_path = os.path.join(workspace, "full_surah.mp3")
+            
+            # Only download if we haven't already (simple caching)
+            if not os.path.exists(full_audio_path):
+                smart_download(full_audio_url, full_audio_path, job_id)
+            
+            # Run Estimator
+            timings = estimate_ayah_timings(full_audio_path, all_texts)
+            
+            # Slice Audio
+            full_audio = AudioSegment.from_file(full_audio_path)
+            for t_idx, t in enumerate(timings):
+                actual_ayah_num = start + t_idx
+                slice_path = os.path.join(workspace, f"split_{actual_ayah_num}.mp3")
+                start_ms = int(t['start'] * 1000)
+                end_ms = int(t['end'] * 1000)
+                
+                # Create slice
+                full_audio[start_ms:end_ms].fade_in(20).fade_out(20).export(slice_path, format="mp3")
+                sliced_audio_map[actual_ayah_num] = slice_path
+
+        # 4. Main Generation Loop
+        for i, ayah in enumerate(range(start, last+1)):
+            check_stop(job_id)
+            progress = 15 + int((i / total_ayahs) * 70)
+            update_job_status(job_id, progress, f'Rendering Ayah {ayah}...')
+
+            # A. Audio
+            if is_full_surah_mode:
+                ap = sliced_audio_map.get(ayah, sliced_audio_map.get(start)) # Fallback safe
             else:
                 ap = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
                 
@@ -491,12 +586,12 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             ac = ac.set_position(('center', ar_y_pos))
             ec = ec.set_position(('center', en_y_pos))
 
-            # C. Background
-            if dynamic_bg and i < len(vpool):
-                bg_clip = VideoFileClip(vpool[i]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
-            else:
-                bg_clip = base_bg_clip
+            # C. Background (Use PRE-RENDERED clip)
+            # Pick from our optimized pool
+            bg_source_path = processed_bg_paths[i % len(processed_bg_paths)] if dynamic_bg else processed_bg_paths[0]
+            bg_clip = VideoFileClip(bg_source_path)
             
+            # Loop it efficiently
             if bg_clip.duration < duration:
                 bg_clip = bg_clip.loop(duration=duration)
             else:
@@ -504,15 +599,14 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 start_t = random.uniform(0, max_start)
                 bg_clip = bg_clip.subclip(start_t, start_t + duration)
 
-            bg_clip = bg_clip.set_duration(duration).fadein(0.5).fadeout(0.5)
-            
             # D. Compose Segment
+            # We don't need to resize/crop here because we did it in step 1!
             segment_overlays = [o.set_duration(duration) for o in overlays_static]
             segment = CompositeVideoClip([bg_clip] + segment_overlays + [ac, ec]).set_audio(audioclip)
             segments.append(segment)
 
-        # 4. Concatenate & Render
-        update_job_status(job_id, 85, "Merging Clips...")
+        # 5. Concatenate & Final Render
+        update_job_status(job_id, 90, "Final Polish...")
         final_video = concatenate_videoclips(segments, method="compose")
         
         out_p = os.path.join(workspace, f"out_{job_id}.mp4")
@@ -538,7 +632,10 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
     finally:
         try:
             if 'final_video' in locals(): final_video.close()
-            if 'base_bg_clip' in locals(): base_bg_clip.close()
+            # Clean up optimized backgrounds
+            for p in processed_bg_paths:
+                try: os.remove(p)
+                except: pass
             for s in segments: s.close()
         except: pass
         gc.collect()
@@ -594,5 +691,6 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
 
