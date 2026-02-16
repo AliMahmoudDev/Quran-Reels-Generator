@@ -13,6 +13,7 @@ import gc
 import random
 import requests
 import json
+from functools import lru_cache  # ✅ Added for caching
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 
@@ -20,11 +21,15 @@ from flask_cors import CORS
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import PIL.Image
+
+# Patch for older PIL versions if needed
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
 
-from moviepy.editor import ImageClip, VideoFileClip, AudioFileClip, CompositeVideoClip, ColorClip, concatenate_videoclips
-import moviepy.video.fx.all as vfx
+from moviepy.editor import (
+    ImageClip, VideoFileClip, AudioFileClip, 
+    CompositeVideoClip, ColorClip, concatenate_videoclips
+)
 from moviepy.config import change_settings
 from proglog import ProgressBarLogger
 from pydub import AudioSegment
@@ -71,7 +76,7 @@ os.makedirs(VISION_DIR, exist_ok=True)
 VERSE_COUNTS = {1: 7, 2: 286, 3: 200, 4: 176, 5: 120, 6: 165, 7: 206, 8: 75, 9: 129, 10: 109, 11: 123, 12: 111, 13: 43, 14: 52, 15: 99, 16: 128, 17: 111, 18: 110, 19: 98, 20: 135, 21: 112, 22: 78, 23: 118, 24: 64, 25: 77, 26: 227, 27: 93, 28: 88, 29: 69, 30: 60, 31: 34, 32: 30, 33: 73, 34: 54, 35: 45, 36: 83, 37: 182, 38: 88, 39: 75, 40: 85, 41: 54, 42: 53, 43: 89, 44: 59, 45: 37, 46: 35, 47: 38, 48: 29, 49: 18, 50: 45, 51: 60, 52: 49, 53: 62, 54: 55, 55: 78, 56: 96, 57: 29, 58: 22, 59: 24, 60: 13, 61: 14, 62: 11, 63: 11, 64: 18, 65: 12, 66: 12, 67: 30, 68: 52, 69: 52, 70: 44, 71: 28, 72: 28, 73: 20, 74: 56, 75: 40, 76: 31, 77: 50, 78: 40, 79: 46, 80: 42, 81: 29, 82: 19, 83: 36, 84: 25, 85: 22, 86: 17, 87: 19, 88: 26, 89: 30, 90: 20, 91: 15, 92: 21, 93: 11, 94: 8, 95: 8, 96: 19, 97: 5, 98: 8, 99: 8, 100: 11, 101: 11, 102: 8, 103: 3, 104: 9, 105: 5, 106: 4, 107: 7, 108: 3, 109: 6, 110: 3, 111: 5, 112: 4, 113: 5, 114: 6}
 SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه', 'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم', 'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر', 'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق', 'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة', 'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج', 'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد', 'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس']
 
-# 🚀 إعدادات القراء
+# 🚀 Reciters Config
 NEW_RECITERS_CONFIG = {
      'ادريس أبكر': (12, "https://server6.mp3quran.net/abkr/"),
     'منصور السالمي': (245, "https://server14.mp3quran.net/mansor/"),
@@ -128,23 +133,17 @@ def cleanup_job(job_id):
         except: pass
 
 # ==========================================
-# 📊 Scoped Logger (Optimized for Speed)
+# 📊 Scoped Logger
 # ==========================================
 class ScopedQuranLogger(ProgressBarLogger):
     def __init__(self, job_id):
         super().__init__()
         self.job_id = job_id
         self.start_time = None
-        self.last_check = 0
-    
-    # ⚠️ تم حذف دالة callback التي كانت تبطئ الريندر
-    # نعتمد فقط على bars_callback التي تتحدث كل فريم
 
     def bars_callback(self, bar, attr, value, old_value=None):
         if bar == 't':
-            # ✅ فحص التوقف كل تحديث للفريم (آمن وسريع)
             check_stop(self.job_id)
-            
             total = self.bars[bar]['total']
             if total > 0:
                 percent = int((value / total) * 100)
@@ -158,14 +157,22 @@ class ScopedQuranLogger(ProgressBarLogger):
                 update_job_status(self.job_id, percent, f"جاري التصدير... {percent}%", eta=rem_str)
 
 # ==========================================
-# 🛠️ Helper Functions
+# 🛠️ Helper Functions & Optimization
 # ==========================================
+
+# ✅ Cache fonts to prevent repeated disk I/O
+@lru_cache(maxsize=10)
+def get_cached_font(font_path, size):
+    try:
+        return ImageFont.truetype(font_path, size)
+    except:
+        return ImageFont.load_default()
+
 def detect_silence(sound, thresh):
     t = 0
     while t < len(sound) and sound[t:t+10].dBFS < thresh: t += 10
     return t
 
-# ✅ دالة تحميل ذكية وسريعة (تفحص كل 100 جزء)
 def smart_download(url, dest_path, job_id):
     check_stop(job_id)
     with requests.get(url, stream=True, timeout=30) as r:
@@ -176,7 +183,6 @@ def smart_download(url, dest_path, job_id):
                 if chunk: 
                     f.write(chunk)
                     counter += 1
-                    # ✅ الفحص كل 100 قطعة (حوالي 800KB) لعدم إبطاء التحميل
                     if counter % 100 == 0: 
                         check_stop(job_id)
 
@@ -242,9 +248,6 @@ def create_vignette_mask(w, h):
     return ImageClip(mask_img, ismask=False)
 
 def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
-    font_path = FONT_PATH_ARABIC
-    
-    # ✅ استرجاع حجم الخط الديناميكي (أهم تعديل من الكود القديم)
     words = arabic.split()
     wc = len(words)
     
@@ -256,12 +259,13 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     
     final_fs = int(base_fs * scale_factor)
     
-    try: font = ImageFont.truetype(font_path, final_fs)
-    except: font = ImageFont.load_default()
+    # ✅ Using Cached Font
+    font = get_cached_font(FONT_PATH_ARABIC, final_fs)
 
     wrapped_text = wrap_text(arabic, pl)
     lines = wrapped_text.split('\n')
     
+    # We calculate height first
     dummy = Image.new('RGBA', (target_w, 100))
     d = ImageDraw.Draw(dummy)
     
@@ -293,14 +297,15 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
         
         curr_y += line_metrics[i] + GAP
         
-    return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
+    return ImageClip(np.array(img)).set_duration(duration).fadein(0.2).fadeout(0.2)
 
 def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
-    font = ImageFont.truetype(FONT_PATH_ENGLISH, int(30 * scale_factor))
+    # ✅ Using Cached Font
+    font = get_cached_font(FONT_PATH_ENGLISH, int(30 * scale_factor))
     img = Image.new('RGBA', (target_w, 200), (0,0,0,0))
     draw = ImageDraw.Draw(img)
     draw.text((target_w/2, 20), wrap_text(text, 10), font=font, fill='#FFD700', align='center', anchor="ma", stroke_width=1, stroke_fill='black')
-    return ImageClip(np.array(img)).set_duration(duration).fadein(0.25).fadeout(0.25)
+    return ImageClip(np.array(img)).set_duration(duration).fadein(0.2).fadeout(0.2)
 
 def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     pool = []
@@ -309,7 +314,6 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
         try: q_base = GoogleTranslator(source='auto', target='en').translate(custom_query.strip())
         except: q_base = "nature landscape"
     else:
-        # ✅ قائمة عشوائية لضمان التنوع
         safe_topics = ['nature landscape', 'mosque architecture', 'sky clouds', 'galaxy stars', 'ocean waves', 'forest trees', 'desert dunes', 'waterfall', 'mountains']
         q_base = random.choice(safe_topics)
 
@@ -317,14 +321,13 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
 
     try:
         check_stop(job_id)
-        # ✅ طلب صفحة عشوائية
         random_page = random.randint(1, 10)
         url = f"https://api.pexels.com/videos/search?query={q}&per_page={count+5}&page={random_page}&orientation=portrait"
         
         r = requests.get(url, headers={'Authorization': user_key}, timeout=15)
         if r.status_code == 200:
             vids = r.json().get('videos', [])
-            random.shuffle(vids) # ✅ خلط النتائج
+            random.shuffle(vids)
             
             for vid in vids:
                 if len(pool) >= count: break
@@ -341,87 +344,112 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     except Exception as e: print(f"Fetch Error: {e}")
     return pool
 
+# ==========================================
+# ⚡ Optimized Video Builder (Segmented)
+# ==========================================
 def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette):
     job = get_job(job_id)
     workspace = job['workspace']
     target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
     scale = 1.0 if quality == '1080' else 0.67
     last = min(end if end else start+9, VERSE_COUNTS.get(surah, 286))
+    total_ayahs = (last - start) + 1
     
     try:
-        ayah_data, full_audio = [], AudioSegment.empty()
-        for i, ayah in enumerate(range(start, last+1), 1):
-            check_stop(job_id)
-            update_job_status(job_id, 10 + i, f'Processing Ayah {ayah}...')
-            ap = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
-            seg = AudioSegment.from_file(ap)
-            full_audio += seg
-            
-            ar_text_with_num = f"{get_text(surah, ayah)} ({ayah})"
-            ayah_data.append({'ar': ar_text_with_num, 'en': get_en_text(surah, ayah), 'dur': seg.duration_seconds})
-
-        a_path = os.path.join(workspace, "combined.mp3")
-        full_audio.export(a_path, format="mp3")
-        aclip = AudioFileClip(a_path)
+        # 1. Fetch Backgrounds immediately
+        vpool = fetch_video_pool(user_pexels_key, bg_query, count=total_ayahs if dynamic_bg else 1, job_id=job_id)
         
-        vpool = fetch_video_pool(user_pexels_key, bg_query, count=len(ayah_data) if dynamic_bg else 1, job_id=job_id)
-        bg_clips = []
-        
-        check_stop(job_id)
-        
-        if not vpool: 
-             bg = ColorClip((target_w, target_h), color=(15, 20, 35), duration=aclip.duration)
+        # 2. Prepare Base Background (Load once)
+        if not vpool:
+            base_bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35))
         else:
-            if dynamic_bg:
-                for i, data in enumerate(ayah_data):
-                    check_stop(job_id)
-                    vid_path = vpool[i % len(vpool)]
-                    dur = data['dur']
-                    clip = VideoFileClip(vid_path).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
-                    if clip.duration < dur: clip = clip.loop(duration=dur)
-                    else:
-                        start_t = random.uniform(0, max(0, clip.duration - dur))
-                        clip = clip.subclip(start_t, start_t + dur)
-                    bg_clips.append(clip.fadein(0.5).fadeout(0.5))
-                bg = concatenate_videoclips(bg_clips, method="compose")
-            else:
-                bg = VideoFileClip(vpool[0]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2).loop(duration=aclip.duration)
+            base_bg_clip = VideoFileClip(vpool[0]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
+
+        # 3. Prepare Static Overlays (Create once)
+        overlays_static = [ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.3)]
+        if use_vignette:
+            overlays_static.append(create_vignette_mask(target_w, target_h))
+
+        segments = []
         
-        overlays = [ColorClip((target_w, target_h), color=(0,0,0), duration=aclip.duration).set_opacity(0.3)]
-        if use_vignette: overlays.append(create_vignette_mask(target_w, target_h).set_duration(aclip.duration))
-        
-        texts, curr = [], 0
-        for d in ayah_data:
+        # 4. Sequential Processing (Ayah by Ayah)
+        for i, ayah in enumerate(range(start, last+1)):
             check_stop(job_id)
-            ac = create_text_clip(d['ar'], d['dur'], target_w, scale, use_glow)
-            ec = create_english_clip(d['en'], d['dur'], target_w, scale, use_glow)
+            update_job_status(job_id, int((i / total_ayahs) * 80), f'Processing Ayah {ayah}...')
+
+            # A. Audio
+            ap = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
+            audioclip = AudioFileClip(ap)
+            duration = audioclip.duration
+
+            # B. Text
+            ar_text = f"{get_text(surah, ayah)} ({ayah})"
+            en_text = get_en_text(surah, ayah)
             
-            # ✅ رفع النص للأعلى (0.32)
+            ac = create_text_clip(ar_text, duration, target_w, scale, use_glow)
+            ec = create_english_clip(en_text, duration, target_w, scale, use_glow)
+
+            # Positioning
             ar_y_pos = target_h * 0.32
-            en_y_pos = ar_y_pos + ac.h + (20 * scale) 
+            en_y_pos = ar_y_pos + ac.h + (20 * scale)
             
-            ac = ac.set_start(curr).set_position(('center', ar_y_pos))
-            ec = ec.set_start(curr).set_position(('center', en_y_pos))
+            ac = ac.set_position(('center', ar_y_pos))
+            ec = ec.set_position(('center', en_y_pos))
+
+            # C. Background Slice
+            if dynamic_bg and i < len(vpool):
+                bg_clip = VideoFileClip(vpool[i]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
+            else:
+                bg_clip = base_bg_clip
             
-            texts.extend([ac, ec])
-            curr += d['dur']
+            # Smart Looping/Slicing
+            if bg_clip.duration < duration:
+                bg_clip = bg_clip.loop(duration=duration)
+            else:
+                # Random offset for variety if reusing static BG
+                max_start = max(0, bg_clip.duration - duration)
+                start_t = random.uniform(0, max_start)
+                bg_clip = bg_clip.subclip(start_t, start_t + duration)
+
+            bg_clip = bg_clip.set_duration(duration).fadein(0.5).fadeout(0.5)
+            
+            # Apply overlays to this segment
+            segment_overlays = [o.set_duration(duration) for o in overlays_static]
+            
+            # D. Compose Segment
+            segment = CompositeVideoClip([bg_clip] + segment_overlays + [ac, ec]).set_audio(audioclip)
+            segments.append(segment)
+
+        # 5. Concatenate
+        update_job_status(job_id, 85, "Merging Clips...")
+        final_video = concatenate_videoclips(segments, method="compose")
         
         out_p = os.path.join(workspace, f"out_{job_id}.mp4")
-        check_stop(job_id)
         
-        CompositeVideoClip([bg] + overlays + texts).set_audio(aclip).write_videofile(out_p, fps=fps, codec='libx264', logger=ScopedQuranLogger(job_id))
+        # 6. Render (Optimized)
+        final_video.write_videofile(
+            out_p, 
+            fps=fps, 
+            codec='libx264', 
+            audio_codec='aac', 
+            preset='ultrafast',  # 🚀 Critical Speed Fix
+            threads=os.cpu_count() or 4,
+            logger=ScopedQuranLogger(job_id)
+        )
         
         with JOBS_LOCK: JOBS[job_id].update({'output_path': out_p, 'is_complete': True, 'is_running': False, 'percent': 100, 'status': "Done!"})
     
     except Exception as e:
-         msg = str(e)
-         status = "Cancelled" if msg == "Stopped" else "Error"
-         with JOBS_LOCK: JOBS[job_id].update({'error': msg, 'status': status, 'is_running': False})
+        msg = str(e)
+        traceback.print_exc()
+        status = "Cancelled" if msg == "Stopped" else "Error"
+        with JOBS_LOCK: JOBS[job_id].update({'error': msg, 'status': status, 'is_running': False})
     
     finally:
         try:
-            if 'aclip' in locals(): aclip.close()
-            if 'bg' in locals(): bg.close()
+            if 'final_video' in locals(): final_video.close()
+            if 'base_bg_clip' in locals(): base_bg_clip.close()
+            for s in segments: s.close()
         except: pass
         gc.collect()
 
@@ -476,4 +504,3 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
-
