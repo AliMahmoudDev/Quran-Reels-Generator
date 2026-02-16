@@ -394,19 +394,49 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             ColorClip((target_w, target_h), color=(15, 20, 35), duration=10).write_videofile(
                 base_bg_path, fps=fps, codec='libx264', preset='ultrafast', logger=None
             )
+            # ... inside build_video_task ...
+
+        processed_bg_paths = []
+        update_job_status(job_id, 5, "Optimizing Background Video...")
+        
+        if not vpool:
+            # Fallback (Keep existing fallback code)
+            base_bg_path = os.path.join(workspace, "optimized_bg_0.mp4")
+            ColorClip((target_w, target_h), color=(15, 20, 35), duration=10).write_videofile(
+                base_bg_path, fps=fps, codec='libx264', preset='ultrafast', logger=None
+            )
             processed_bg_paths.append(base_bg_path)
         else:
             for idx, vid_path in enumerate(vpool):
                 optimized_path = os.path.join(workspace, f"optimized_bg_{idx}.mp4")
+                
+                # 1. Load the Clip
                 clip = VideoFileClip(vid_path)
+                
+                # ⚡ FAST FIX: Cut FIRST, Resize SECOND
+                # If video is long, cut it to 15s (or whatever duration needed) BEFORE resizing.
+                # This prevents resizing frames that will just be thrown away.
+                if clip.duration > 15: 
+                    clip = clip.subclip(0, 15)
+                
+                # 2. Resize & Crop (Now much faster because the clip is short)
                 if clip.w != target_w or clip.h != target_h:
+                    # Resize based on height first to fill the screen
                     clip = clip.resize(height=target_h)
+                    # Then crop the center
                     clip = clip.crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
-                if clip.duration > 15: clip = clip.subclip(0, 15)
-                clip.write_videofile(optimized_path, fps=fps, codec='libx264', preset='ultrafast', threads=4, logger=None)
+                
+                # 3. Write optimized file
+                clip.write_videofile(
+                    optimized_path, 
+                    fps=fps, 
+                    codec='libx264', 
+                    preset='ultrafast', 
+                    threads=os.cpu_count() or 4, 
+                    logger=None
+                )
                 clip.close()
                 processed_bg_paths.append(optimized_path)
-
         # 3. Static Overlays
         overlays_static = [ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.3)]
         if use_vignette: overlays_static.append(create_vignette_mask(target_w, target_h))
@@ -583,3 +613,4 @@ def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
