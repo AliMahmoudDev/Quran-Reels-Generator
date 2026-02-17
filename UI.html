@@ -411,14 +411,22 @@
             const pEn = document.getElementById('prevEn');
 
             pAr.style.color = arC;
-            pAr.style.fontSize = `${1.6 * arS}rem`;
+            // Slightly reduced preview font size to fit box better
+            pAr.style.fontSize = `${1.5 * arS}rem`; 
             
             pEn.style.color = enC;
-            pEn.style.fontSize = `${0.9 * enS}rem`;
+            pEn.style.fontSize = `${0.85 * enS}rem`;
 
             if (strkOn) {
-                pAr.style.webkitTextStroke = `${strkW/2}px ${strkC}`;
-                pAr.style.textShadow = `0 2px 10px ${strkC}`;
+                // FIX: Divide by 5 instead of 2. 
+                // This scales the stroke down to match the small screen size.
+                // It represents the "Proportions" of the final video, not the exact pixels.
+                const scaledStroke = strkW / 5; 
+                
+                pAr.style.webkitTextStroke = `${scaledStroke}px ${strkC}`;
+                
+                // Make shadow subtle so it doesn't make it look muddy
+                pAr.style.textShadow = `0 1px 3px ${strkC}`;
             } else {
                 pAr.style.webkitTextStroke = "0px transparent";
                 pAr.style.textShadow = "0 2px 5px rgba(0,0,0,0.5)";
@@ -628,3 +636,4 @@
     </script>
 </body>
 </html>
+
