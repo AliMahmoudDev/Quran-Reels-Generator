@@ -401,34 +401,35 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
     total_ayahs = (last - start) + 1
     
     try:
-        # 1. Fetch Backgrounds
         vpool = fetch_video_pool(user_pexels_key, bg_query, count=total_ayahs if dynamic_bg else 1, job_id=job_id)
         
-        # 2. Prepare Base Background
         if not vpool:
             base_bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35))
         else:
             base_bg_clip = VideoFileClip(vpool[0]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
 
+        # ----------------------------------------------------
+        # 🌑 DARKENING LAYER (Fix for Brightness)
+        # ----------------------------------------------------
+        # Opacity 0.45 means 45% black overlay (approx 30-40% less brightness)
+        # This ensures white text is always visible
+        dark_layer = ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.45) 
+
         segments = []
         
-        # 3. Sequential Processing (Ayah by Ayah)
         for i, ayah in enumerate(range(start, last+1)):
             check_stop(job_id)
             update_job_status(job_id, int((i / total_ayahs) * 80), f'Processing Ayah {ayah}...')
 
-            # A. Audio
             ap = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
             audioclip = AudioFileClip(ap)
             duration = audioclip.duration
 
-            # B. Background Slice
             if dynamic_bg and i < len(vpool):
                 bg_clip = VideoFileClip(vpool[i]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
             else:
                 bg_clip = base_bg_clip
             
-            # Smart Looping/Slicing
             if bg_clip.duration < duration:
                 bg_clip = bg_clip.loop(duration=duration)
             else:
@@ -437,29 +438,22 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 bg_clip = bg_clip.subclip(start_t, start_t + duration)
 
             bg_clip = bg_clip.set_duration(duration).fadein(0.5).fadeout(0.5)
-            
-            # C. Create MERGED Overlay (Single Layer)
+
+            # Generate Text Overlay
             overlay_clip = create_combined_overlay(surah, ayah, duration, target_w, target_h, scale, use_glow, use_vignette, style_cfg)
             
-            # D. Compose (Fast: only 2 layers)
-            segment = CompositeVideoClip([bg_clip, overlay_clip]).set_audio(audioclip)
+            # Combine: Background + Dark Layer + Text Overlay
+            segment = CompositeVideoClip([bg_clip, dark_layer.set_duration(duration), overlay_clip]).set_audio(audioclip)
             segments.append(segment)
 
-        # 4. Concatenate
         update_job_status(job_id, 85, "Merging Clips...")
         final_video = concatenate_videoclips(segments, method="compose")
         
         out_p = os.path.join(workspace, f"out_{job_id}.mp4")
         
-        # 5. Render (Optimized)
         final_video.write_videofile(
-            out_p, 
-            fps=fps, 
-            codec='libx264', 
-            audio_codec='aac', 
-            preset='ultrafast', 
-            threads=os.cpu_count() or 4,
-            logger=ScopedQuranLogger(job_id)
+            out_p, fps=fps, codec='libx264', audio_codec='aac', preset='ultrafast', 
+            threads=os.cpu_count() or 4, logger=ScopedQuranLogger(job_id)
         )
         
         with JOBS_LOCK: JOBS[job_id].update({'output_path': out_p, 'is_complete': True, 'is_running': False, 'percent': 100, 'status': "Done!"})
@@ -539,4 +533,5 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
