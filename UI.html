@@ -8,8 +8,7 @@
     <link rel="icon" href="https://ibb.co/zWy3WBhD"> 
     
     <meta property="og:title" content="صانع الريلز القرآني 🚀">
-    <meta property="og:description" content="أنشئ فيديوهات قرانية احترافية في ثوانٍ. صدقة جارية ومجانية.">
-    <meta property="og:image" content="https://ibb.co/zWy3WBhD">
+    <meta property="og:description" content="أنشئ فيديوهات قرانية احترافية في ثوانٍ.">
     <meta name="theme-color" content="#0a0a0e">
 
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -83,11 +82,14 @@
         .num-ctrl { display: flex; height: 50px; width: 100%; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; }
         .num-btn { width: 35px; background: rgba(255,255,255,0.05); border: none; color: var(--primary-gold); font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .num-val { flex: 1; background: transparent; border: none; color: #fff; text-align: center; font-weight: bold; font-size: 1.1rem; min-width: 0; outline: none; }
-        .btn-main { width: 100%; height: 55px; margin-top: 10px; background: var(--gradient-gold); border: none; border-radius: 12px; color: #000; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .btn-stop { width: 100%; height: 55px; margin-top: 10px; background: var(--danger-red); border: none; border-radius: 12px; color: #fff; font-weight: 800; font-size: 1.1rem; display: none; align-items: center; justify-content: center; gap: 10px; }
+        
+        .btn-main { width: 100%; height: 55px; margin-top: 10px; background: var(--gradient-gold); border: none; border-radius: 12px; color: #000; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; }
+        .btn-stop { width: 100%; height: 55px; margin-top: 10px; background: var(--danger-red); border: none; border-radius: 12px; color: #fff; font-weight: 800; font-size: 1.1rem; display: none; align-items: center; justify-content: center; gap: 10px; cursor: pointer; }
+        
         .prog-area { display: none; margin-top: 20px; text-align: center; }
         .bar-track { height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin: 10px 0; }
         .bar-fill { height: 100%; width: 0; background: var(--primary-gold); transition: 0.3s; }
+        
         .result-area { display: none; margin-top: 20px; text-align: center; }
         video { width: 100%; border-radius: 12px; border: 1px solid var(--primary-gold); background: #000; max-height: 70vh; }
         .dl-link { display: flex; align-items: center; justify-content: center; margin-top: 15px; padding: 15px; background: var(--success-green); color: #fff; text-decoration: none; border-radius: 12px; font-weight: 800; }
@@ -99,21 +101,67 @@
         .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s; }
         input:checked + .slider { background: var(--primary-gold); }
         input:checked + .slider:before { transform: translateX(24px); }
-        .btn-rand { width: 100%; height: 45px; margin-bottom: 20px; background: var(--random-purple); border: none; border-radius: 12px; color: #fff; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        
+        /* Control Buttons Row */
+        .ctrl-row { display: flex; gap: 10px; margin-bottom: 20px; }
+        .btn-rand { flex: 1; height: 45px; background: var(--random-purple); border: none; border-radius: 12px; color: #fff; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-gear { width: 50px; height: 45px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glow); color: var(--primary-gold); border-radius: 12px; cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .btn-gear:hover { background: rgba(212, 175, 55, 0.1); transform: rotate(45deg); }
 
-        .footer-contact {
-            margin-top: 30px; padding-top: 20px; text-align: center;
-            border-top: 1px solid var(--border-glow); display: flex; flex-direction: column; align-items: center; gap: 15px;
-        }
-        .contact-links { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-        .social-link {
-            display: inline-flex; align-items: center; gap: 8px; color: var(--primary-gold);
-            text-decoration: none; font-weight: 600; transition: 0.3s;
-            background: rgba(212, 175, 55, 0.05); padding: 8px 16px; border-radius: 50px;
-            border: 1px solid var(--border-glow); font-size: 0.9rem;
-        }
+        .footer-contact { margin-top: 30px; padding-top: 20px; text-align: center; border-top: 1px solid var(--border-glow); display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        .social-link { display: inline-flex; align-items: center; gap: 8px; color: var(--primary-gold); text-decoration: none; font-weight: 600; transition: 0.3s; background: rgba(212, 175, 55, 0.05); padding: 8px 16px; border-radius: 50px; border: 1px solid var(--border-glow); font-size: 0.9rem; }
         .social-link:hover { background: var(--gradient-gold); color: #000; transform: translateY(-3px); }
         .social-link svg { fill: currentColor; }
+
+        /* --- SETTINGS MODAL CSS --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 1000;
+            display: none; justify-content: center; align-items: center;
+            backdrop-filter: blur(8px); animation: fadeIn 0.2s;
+        }
+        @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+        
+        .settings-card {
+            background: #121215; width: 95%; max-width: 400px;
+            border: 1px solid var(--primary-gold); border-radius: 20px;
+            padding: 20px; max-height: 90vh; overflow-y: auto;
+            box-shadow: 0 0 40px rgba(212, 175, 55, 0.15);
+            display: flex; flex-direction: column;
+        }
+
+        .preview-box {
+            width: 100%; height: 160px; background: #000;
+            border-radius: 12px; border: 1px solid #333;
+            margin-bottom: 20px; position: relative; overflow: hidden;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background-image: url('https://images.pexels.com/photos/2341830/pexels-photo-2341830.jpeg?auto=compress&cs=tinysrgb&w=400'); 
+            background-size: cover; background-position: center;
+        }
+        .preview-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); z-index: 1; }
+        .prev-text-ar, .prev-text-en { position: relative; z-index: 2; text-align: center; width: 90%; transition: 0.2s; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .prev-text-ar { font-family: 'Amiri', serif; margin-bottom: 8px; line-height: 1.6; }
+        .prev-text-en { font-family: 'Cairo', sans-serif; line-height: 1.4; }
+
+        .set-section { margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; }
+        .set-title { font-size: 0.85rem; color: #888; margin-bottom: 10px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .color-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 8px; }
+        .color-input { width: 35px; height: 35px; border: none; background: none; cursor: pointer; padding: 0; border-radius: 50%; overflow: hidden; }
+        .color-input::-webkit-color-swatch-wrapper { padding: 0; }
+        .color-input::-webkit-color-swatch { border: 2px solid #555; border-radius: 50%; }
+        
+        .range-row { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
+        input[type="range"] { 
+            flex: 1; -webkit-appearance: none; height: 6px; background: rgba(255,255,255,0.1); border-radius: 5px; outline: none; 
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 18px; height: 18px; background: var(--primary-gold); border-radius: 50%; cursor: pointer; box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        }
+
+        .modal-btns { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-save { background: var(--success-green); color: white; flex: 1; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        .btn-cancel { background: #333; color: #ccc; width: 80px; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .btn-reset { background: transparent; color: #555; border: 1px dashed #444; width: 100%; padding: 8px; margin-top: 5px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -126,7 +174,10 @@
                 <p style="color:#888; font-size:0.8rem;">نسخة التوربو 🚀</p>
             </div>
 
-            <button type="button" class="btn-rand" onclick="smartRandomize()">🎲 اختيار عشوائي ذكي</button>
+            <div class="ctrl-row">
+                <button type="button" class="btn-rand" onclick="smartRandomize()">🎲 اختيار عشوائي</button>
+                <button type="button" class="btn-gear" onclick="openSettings()">⚙️</button>
+            </div>
 
             <div style="background: rgba(212, 175, 55, 0.05); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed var(--primary-gold);">
                 <label class="label">🔑 مفتاح Pexels (للخلفيات)</label>
@@ -137,6 +188,7 @@
                     </a>
                 </div>
             </div>
+
             <form id="vForm">
                 <div class="form-group">
                     <label class="label">القارئ</label>
@@ -248,14 +300,168 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="settingsModal">
+        <div class="settings-card">
+            <h3 style="text-align:center; color:white; margin-bottom:15px; font-family:'Amiri';">🎨 تخصيص مظهر النص</h3>
+            
+            <div class="preview-box">
+                <div class="preview-overlay"></div>
+                <div id="prevAr" class="prev-text-ar">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
+                <div id="prevEn" class="prev-text-en">In the name of Allah, the Entirely Merciful</div>
+            </div>
+
+            <div class="set-section">
+                <div class="set-title"><span>النص القرآني (Arabic)</span> <span id="arSizeVal" style="font-size:0.7rem;">100%</span></div>
+                <div class="color-row">
+                    <span style="font-size:0.9rem;">لون النص</span>
+                    <input type="color" id="arColor" class="color-input" value="#ffffff" oninput="updatePreview()">
+                </div>
+                <div class="range-row">
+                    <span style="font-size:0.8rem;">الحجم</span>
+                    <input type="range" id="arSize" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updatePreview()">
+                </div>
+            </div>
+
+            <div class="set-section">
+                <div class="set-title"><span>الترجمة (Translation)</span> <span id="enSizeVal" style="font-size:0.7rem;">100%</span></div>
+                <div class="color-row">
+                    <span style="font-size:0.9rem;">لون النص</span>
+                    <input type="color" id="enColor" class="color-input" value="#FFD700" oninput="updatePreview()">
+                </div>
+                <div class="range-row">
+                    <span style="font-size:0.8rem;">الحجم</span>
+                    <input type="range" id="enSize" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updatePreview()">
+                </div>
+            </div>
+
+            <div class="set-section" style="border:none;">
+                <div class="set-title">
+                    <span>الإطار (Outline)</span>
+                    <label class="switch" style="width:40px; height:20px;">
+                        <input type="checkbox" id="useStroke" checked onchange="updatePreview()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="color-row">
+                    <span style="font-size:0.9rem;">لون الإطار</span>
+                    <input type="color" id="strokeColor" class="color-input" value="#000000" oninput="updatePreview()">
+                </div>
+                <div class="range-row">
+                    <span style="font-size:0.8rem;">السمك</span>
+                    <input type="range" id="strokeWidth" min="1" max="10" step="1" value="4" oninput="updatePreview()">
+                </div>
+            </div>
+
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="closeSettings()">إلغاء</button>
+                <button class="btn-save" onclick="saveSettings()">💾 حفظ</button>
+            </div>
+            <button class="btn-reset" onclick="resetSettings()">↩️ استعادة الافتراضي</button>
+        </div>
+    </div>
+
     <script>
         let COUNTS = {};
         let currentJobId = null;
+
+        // --- Settings Logic ---
+        const defaultSettings = {
+            arColor: "#ffffff", arSize: "1.0",
+            enColor: "#FFD700", enSize: "1.0",
+            useStroke: true, strokeColor: "#000000", strokeWidth: "4"
+        };
+
+        function openSettings() {
+            loadSettingsUI();
+            updatePreview();
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        function resetSettings() {
+            if(confirm("استعادة الإعدادات الافتراضية؟")) {
+                localStorage.removeItem('quran_app_styles');
+                loadSettingsUI();
+                updatePreview();
+            }
+        }
+
+        function updatePreview() {
+            // Get inputs
+            const arC = document.getElementById('arColor').value;
+            const arS = document.getElementById('arSize').value;
+            const enC = document.getElementById('enColor').value;
+            const enS = document.getElementById('enSize').value;
+            const strkOn = document.getElementById('useStroke').checked;
+            const strkC = document.getElementById('strokeColor').value;
+            const strkW = document.getElementById('strokeWidth').value;
+
+            // Update Labels
+            document.getElementById('arSizeVal').innerText = Math.round(arS * 100) + "%";
+            document.getElementById('enSizeVal').innerText = Math.round(enS * 100) + "%";
+
+            // Apply to Preview
+            const pAr = document.getElementById('prevAr');
+            const pEn = document.getElementById('prevEn');
+
+            pAr.style.color = arC;
+            pAr.style.fontSize = `${1.6 * arS}rem`;
+            
+            pEn.style.color = enC;
+            pEn.style.fontSize = `${0.9 * enS}rem`;
+
+            if (strkOn) {
+                pAr.style.webkitTextStroke = `${strkW/2}px ${strkC}`;
+                pAr.style.textShadow = `0 2px 10px ${strkC}`;
+            } else {
+                pAr.style.webkitTextStroke = "0px transparent";
+                pAr.style.textShadow = "0 2px 5px rgba(0,0,0,0.5)";
+            }
+        }
+
+        function saveSettings() {
+            const settings = {
+                arColor: document.getElementById('arColor').value,
+                arSize: document.getElementById('arSize').value,
+                enColor: document.getElementById('enColor').value,
+                enSize: document.getElementById('enSize').value,
+                useStroke: document.getElementById('useStroke').checked,
+                strokeColor: document.getElementById('strokeColor').value,
+                strokeWidth: document.getElementById('strokeWidth').value
+            };
+            localStorage.setItem('quran_app_styles', JSON.stringify(settings));
+            closeSettings();
+            
+            const btn = document.querySelector('.btn-gear');
+            const oldTxt = btn.innerText;
+            btn.innerText = "✅";
+            setTimeout(() => btn.innerText = oldTxt, 1500);
+        }
+
+        function loadSettingsUI() {
+            const saved = JSON.parse(localStorage.getItem('quran_app_styles')) || defaultSettings;
+            
+            // Apply safe defaults if keys missing
+            document.getElementById('arColor').value = saved.arColor || defaultSettings.arColor;
+            document.getElementById('arSize').value = saved.arSize || defaultSettings.arSize;
+            document.getElementById('enColor').value = saved.enColor || defaultSettings.enColor;
+            document.getElementById('enSize').value = saved.enSize || defaultSettings.enSize;
+            document.getElementById('useStroke').checked = (saved.useStroke !== undefined) ? saved.useStroke : defaultSettings.useStroke;
+            document.getElementById('strokeColor').value = saved.strokeColor || defaultSettings.strokeColor;
+            document.getElementById('strokeWidth').value = saved.strokeWidth || defaultSettings.strokeWidth;
+        }
+
+        // --- Main Logic ---
 
         window.onload = async () => {
             const savedKey = localStorage.getItem('user_pexels_key');
             if(savedKey) document.getElementById('pexelsKey').value = savedKey;
             loadHistory();
+            loadSettingsUI(); // Ensure settings are ready for submission even if modal not opened
+            
             try {
                 const r = await fetch(`/api/config`);
                 const d = await r.json();
@@ -345,14 +551,8 @@
             document.getElementById('resArea').style.display = 'none';
             document.getElementById('timerBadge').style.display = 'none'; 
             
-            const selReciter = rSelect.options[rSelect.selectedIndex].text;
-            const selFps = document.getElementById('fpsSelect').value;
-            const selQuality = qSelect.value;
-            const isDynamicBg = document.getElementById('dynamicBg').checked;
-            
-            // قراءة الخيارات الأساسية فقط
-            const useGlow = document.getElementById('useGlow').checked;
-            const useVignette = document.getElementById('useVignette').checked;
+            // Get Styles
+            const styles = JSON.parse(localStorage.getItem('quran_app_styles')) || defaultSettings;
 
             try {
                 const res = await fetch(`/api/generate`, {
@@ -362,11 +562,12 @@
                         pexelsKey: pKey, reciter: rSelect.value, surah: sSelect.value,
                         startAyah: startAyah.value, endAyah: endAyah.value,
                         quality: qSelect.value,
-                        fps: selFps, 
+                        fps: document.getElementById('fpsSelect').value, 
                         bgQuery: document.getElementById('useSearch').checked ? document.getElementById('bgQuery').value : "",
-                        dynamicBg: isDynamicBg,
-                        useGlow: useGlow,
-                        useVignette: useVignette
+                        dynamicBg: document.getElementById('dynamicBg').checked,
+                        useGlow: document.getElementById('useGlow').checked,
+                        useVignette: document.getElementById('useVignette').checked,
+                        style: styles // Sending new style object
                     })
                 });
                 
@@ -404,8 +605,8 @@
                             dlLink.setAttribute('download', fName);
                             
                             const sName = sSelect.options[sSelect.selectedIndex].text.split('. ')[1];
-                            
-                            saveToHistory(sName, `${startAyah.value}-${endAyah.value}`, url, selReciter, selFps, selQuality);
+                            const selRec = rSelect.options[rSelect.selectedIndex].text;
+                            saveToHistory(sName, `${startAyah.value}-${endAyah.value}`, url, selRec, document.getElementById('fpsSelect').value, qSelect.value);
 
                             document.getElementById('progArea').style.display = 'none';
                             document.getElementById('resArea').style.display = 'block';
