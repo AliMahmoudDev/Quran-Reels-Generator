@@ -422,9 +422,9 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         # Opacity 0.45 means 45% black overlay (approx 30-40% less brightness)
         # This ensures white text is always visible
         dark_layer = ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.45) 
-        if use_vignette:
-            overlays_static.append(create_vignette_mask(target_w, target_h))
-        
+
+        # Note: Vignette is now drawn INSIDE create_combined_overlay for optimization
+        # so we do not append it to overlays here.
 
         segments = []
         
@@ -544,6 +544,3 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
-
-
-
