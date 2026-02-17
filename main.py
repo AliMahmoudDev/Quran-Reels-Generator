@@ -161,7 +161,6 @@ class ScopedQuranLogger(ProgressBarLogger):
 # 🛠️ Helper Functions & Optimization
 # ==========================================
 
-# ✅ Cache fonts to prevent repeated disk I/O
 @lru_cache(maxsize=10)
 def get_cached_font(font_path, size):
     try:
@@ -170,7 +169,6 @@ def get_cached_font(font_path, size):
         return ImageFont.load_default()
 
 def hex_to_rgb(hex_color):
-    """Convert hex string (e.g., #ffffff) to RGB tuple."""
     hex_color = hex_color.lstrip('#')
     return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
@@ -246,119 +244,100 @@ def wrap_text(text, per_line):
     words = text.split()
     return '\n'.join([' '.join(words[i:i+per_line]) for i in range(0, len(words), per_line)])
 
-def create_vignette_mask(w, h):
-    Y, X = np.ogrid[:h, :w]
-    mask = np.clip((np.sqrt((X - w/2)**2 + (Y - h/2)**2) / np.sqrt((w/2)**2 + (h/2)**2)) * 1.16, 0, 1) ** 3 
-    mask_img = np.zeros((h, w, 4), dtype=np.uint8)
-    mask_img[:, :, 3] = (mask * 255).astype(np.uint8)
-    return ImageClip(mask_img, ismask=False)
-
 # ==========================================
-# 🎨 Text Rendering Engine (Updated)
+# 🎨 Optimized Text Rendering (Merged Layers)
 # ==========================================
 
-def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False, style_cfg=None):
-    # Defaults
-    fill_color = "white"
-    stroke_color = "black"
-    stroke_w = 2
-    font_scale_mult = 1.0
+def create_combined_overlay(surah, ayah, duration, target_w, target_h, scale_factor, use_glow, use_vignette, style_cfg):
+    """
+    Creates a SINGLE image layer containing the vignette, Arabic text, and English text.
+    This forces MoviePy to do only 1 composition per frame instead of 3 or 4.
+    """
+    # 1. Init Canvas (Transparent)
+    img = Image.new('RGBA', (target_w, target_h), (0,0,0,0))
+    draw = ImageDraw.Draw(img)
 
-    # Parse Config if exists
-    if style_cfg:
-        fill_color = style_cfg.get('arColor', '#ffffff')
-        font_scale_mult = float(style_cfg.get('arSize', 1.0))
-        if style_cfg.get('useStroke', True):
-            stroke_color = style_cfg.get('strokeColor', '#000000')
-            # Scale stroke with resolution and user scaling
-            stroke_w = int(float(style_cfg.get('strokeWidth', 4)) * scale_factor) 
-        else:
-            stroke_w = 0
+    # 2. Draw Vignette (If enabled)
+    if use_vignette:
+        # Create gradient mask manually with Pillow for speed
+        overlay = Image.new('RGBA', (target_w, target_h), (0,0,0,0))
+        v_draw = ImageDraw.Draw(overlay)
+        # Draw dark gradient at bottom for text contrast
+        for i in range(int(target_h * 0.6), target_h, 2):
+            alpha = int(180 * ((i - target_h * 0.6) / (target_h * 0.4)))
+            v_draw.line([(0, i), (target_w, i)], fill=(0, 0, 0, alpha), width=2)
+        img.alpha_composite(overlay)
 
-    words = arabic.split()
+    # 3. Text Config
+    ar_color = style_cfg.get('arColor', '#ffffff')
+    en_color = style_cfg.get('enColor', '#FFD700')
+    ar_scale = float(style_cfg.get('arSize', 1.0))
+    en_scale = float(style_cfg.get('enSize', 1.0))
+    use_stroke = style_cfg.get('useStroke', True)
+    stroke_c = style_cfg.get('strokeColor', '#000000')
+    stroke_w = int(float(style_cfg.get('strokeWidth', 4)) * scale_factor) if use_stroke else 0
+
+    # 4. Prepare Arabic Text
+    ar_text = f"{get_text(surah, ayah)} ({ayah})"
+    words = ar_text.split()
     wc = len(words)
-    
-    # Adaptive base font size based on text length
     if wc > 60: base_fs, pl = 30, 12
     elif wc > 40: base_fs, pl = 35, 10
     elif wc > 25: base_fs, pl = 41, 9
     elif wc > 15: base_fs, pl = 46, 8
     else: base_fs, pl = 48, 7
     
-    final_fs = int(base_fs * scale_factor * font_scale_mult)
+    final_ar_fs = int(base_fs * scale_factor * ar_scale)
+    ar_font = get_cached_font(FONT_PATH_ARABIC, final_ar_fs)
     
-    # Use cached font loader
-    font = get_cached_font(FONT_PATH_ARABIC, final_fs)
-    wrapped_text = wrap_text(arabic, pl)
-    lines = wrapped_text.split('\n')
+    # Wrap Arabic
+    wrapped_ar = wrap_text(ar_text, pl)
+    ar_lines = wrapped_ar.split('\n')
     
-    # Calculate Texture Dimensions
-    dummy = Image.new('RGBA', (target_w, 100))
-    d = ImageDraw.Draw(dummy)
-    
+    # Calculate Arabic Dimensions
     line_metrics = []
-    total_h = 0
-    GAP = 10 * scale_factor * font_scale_mult
+    total_ar_h = 0
+    GAP = 10 * scale_factor * ar_scale
     
-    for l in lines:
-        bbox = d.textbbox((0, 0), l, font=font, stroke_width=stroke_w)
+    for l in ar_lines:
+        bbox = draw.textbbox((0, 0), l, font=ar_font, stroke_width=stroke_w)
         h = bbox[3] - bbox[1]
         line_metrics.append(h)
-        total_h += h + GAP
-        
-    total_h += 40 
+        total_ar_h += h + GAP
     
-    img = Image.new('RGBA', (target_w, int(total_h)), (0,0,0,0))
-    draw = ImageDraw.Draw(img)
-    curr_y = 20
+    # 5. Prepare English Text
+    en_text = get_en_text(surah, ayah)
+    final_en_fs = int(30 * scale_factor * en_scale)
+    en_font = get_cached_font(FONT_PATH_ENGLISH, final_en_fs)
+    wrapped_en = wrap_text(en_text, 10)
     
-    for i, line in enumerate(lines):
-        bbox = draw.textbbox((0, 0), line, font=font, stroke_width=stroke_w)
+    # 6. Positioning (Center Vertical)
+    current_y = target_h * 0.35 
+    
+    # DRAW ARABIC
+    for i, line in enumerate(ar_lines):
+        bbox = draw.textbbox((0, 0), line, font=ar_font, stroke_width=stroke_w)
         w = bbox[2] - bbox[0]
         x = (target_w - w) // 2
         
-        # Glow Effect (Optional)
-        if glow: 
-            # Parse hex to rgb for transparency
-            try:
-                glow_rgb = hex_to_rgb(fill_color)
-            except:
-                glow_rgb = (255, 255, 255)
-            glow_rgba = glow_rgb + (40,) # 40 is alpha
-            draw.text((x, curr_y), line, font=font, fill=glow_rgba, stroke_width=stroke_w+4, stroke_fill=glow_rgba)
-        
-        # Legacy Shadow (only if no custom style is active to avoid clutter)
-        if not style_cfg:
-            draw.text((x+1, curr_y+1), line, font=font, fill=(0,0,0,180))
-            
+        # Glow
+        if use_glow:
+            try: glow_rgb = hex_to_rgb(ar_color)
+            except: glow_rgb = (255,255,255)
+            glow_rgba = glow_rgb + (50,) # Lighter alpha for speed
+            draw.text((x, current_y), line, font=ar_font, fill=glow_rgba, stroke_width=stroke_w+5, stroke_fill=glow_rgba)
+
         # Main Text
-        draw.text((x, curr_y), line, font=font, fill=fill_color, stroke_width=stroke_w, stroke_fill=stroke_color)
-        
-        curr_y += line_metrics[i] + GAP
-        
-    return ImageClip(np.array(img)).set_duration(duration).fadein(0.2).fadeout(0.2)
+        draw.text((x, current_y), line, font=ar_font, fill=ar_color, stroke_width=stroke_w, stroke_fill=stroke_c)
+        current_y += line_metrics[i] + GAP
 
-def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, style_cfg=None):
-    # Defaults
-    fill_color = "#FFD700"
-    font_scale_mult = 1.0
+    # DRAW ENGLISH (Below Arabic)
+    current_y += (20 * scale_factor) # Spacing
     
-    if style_cfg:
-        fill_color = style_cfg.get('enColor', '#FFD700')
-        font_scale_mult = float(style_cfg.get('enSize', 1.0))
+    # Draw English centered
+    draw.multiline_text((target_w/2, current_y), wrapped_en, font=en_font, fill=en_color, align='center', anchor="ma", stroke_width=1, stroke_fill='black')
 
-    final_fs = int(30 * scale_factor * font_scale_mult)
-    font = get_cached_font(FONT_PATH_ENGLISH, final_fs)
-    
-    # Dynamic height
-    img_h = 200 + int((len(text)/50) * 50) 
-    
-    img = Image.new('RGBA', (target_w, img_h), (0,0,0,0))
-    draw = ImageDraw.Draw(img)
-    
-    # Slight stroke for readability
-    draw.text((target_w/2, 20), wrap_text(text, 10), font=font, fill=fill_color, align='center', anchor="ma", stroke_width=1, stroke_fill='black')
-    
+    # 7. Convert to MoviePy Clip
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.2).fadeout(0.2)
 
 def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
@@ -410,23 +389,18 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
     total_ayahs = (last - start) + 1
     
     try:
-        # 1. Fetch Backgrounds immediately
+        # 1. Fetch Backgrounds
         vpool = fetch_video_pool(user_pexels_key, bg_query, count=total_ayahs if dynamic_bg else 1, job_id=job_id)
         
-        # 2. Prepare Base Background (Load once)
+        # 2. Prepare Base Background
         if not vpool:
             base_bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35))
         else:
             base_bg_clip = VideoFileClip(vpool[0]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
 
-        # 3. Prepare Static Overlays (Create once)
-        overlays_static = [ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.3)]
-        if use_vignette:
-            overlays_static.append(create_vignette_mask(target_w, target_h))
-
         segments = []
         
-        # 4. Sequential Processing (Ayah by Ayah)
+        # 3. Sequential Processing (Ayah by Ayah)
         for i, ayah in enumerate(range(start, last+1)):
             check_stop(job_id)
             update_job_status(job_id, int((i / total_ayahs) * 80), f'Processing Ayah {ayah}...')
@@ -436,25 +410,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             audioclip = AudioFileClip(ap)
             duration = audioclip.duration
 
-            # B. Text
-            ar_text = f"{get_text(surah, ayah)} ({ayah})"
-            en_text = get_en_text(surah, ayah)
-            
-            # Pass style_cfg to rendering functions
-            ac = create_text_clip(ar_text, duration, target_w, scale, use_glow, style_cfg)
-            ec = create_english_clip(en_text, duration, target_w, scale, use_glow, style_cfg)
-
-            # Positioning
-            ar_y_pos = target_h * 0.32
-            
-            # Adjust gap based on Arabic text size setting
-            gap_mult = float(style_cfg.get('arSize', 1.0)) if style_cfg else 1.0
-            en_y_pos = ar_y_pos + ac.h + (20 * scale * gap_mult)
-            
-            ac = ac.set_position(('center', ar_y_pos))
-            ec = ec.set_position(('center', en_y_pos))
-
-            # C. Background Slice
+            # B. Background Slice
             if dynamic_bg and i < len(vpool):
                 bg_clip = VideoFileClip(vpool[i]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
             else:
@@ -464,33 +420,32 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             if bg_clip.duration < duration:
                 bg_clip = bg_clip.loop(duration=duration)
             else:
-                # Random offset for variety if reusing static BG
                 max_start = max(0, bg_clip.duration - duration)
                 start_t = random.uniform(0, max_start)
                 bg_clip = bg_clip.subclip(start_t, start_t + duration)
 
             bg_clip = bg_clip.set_duration(duration).fadein(0.5).fadeout(0.5)
             
-            # Apply overlays to this segment
-            segment_overlays = [o.set_duration(duration) for o in overlays_static]
+            # C. Create MERGED Overlay (Single Layer)
+            overlay_clip = create_combined_overlay(surah, ayah, duration, target_w, target_h, scale, use_glow, use_vignette, style_cfg)
             
-            # D. Compose Segment
-            segment = CompositeVideoClip([bg_clip] + segment_overlays + [ac, ec]).set_audio(audioclip)
+            # D. Compose (Fast: only 2 layers)
+            segment = CompositeVideoClip([bg_clip, overlay_clip]).set_audio(audioclip)
             segments.append(segment)
 
-        # 5. Concatenate
+        # 4. Concatenate
         update_job_status(job_id, 85, "Merging Clips...")
         final_video = concatenate_videoclips(segments, method="compose")
         
         out_p = os.path.join(workspace, f"out_{job_id}.mp4")
         
-        # 6. Render (Optimized)
+        # 5. Render (Optimized)
         final_video.write_videofile(
             out_p, 
             fps=fps, 
             codec='libx264', 
             audio_codec='aac', 
-            preset='ultrafast',  # 🚀 Critical Speed Fix
+            preset='ultrafast', 
             threads=os.cpu_count() or 4,
             logger=ScopedQuranLogger(job_id)
         )
@@ -519,7 +474,6 @@ def gen():
     d = request.json
     job_id = create_job()
     
-    # Extract style config
     style_cfg = d.get('style', {})
 
     threading.Thread(target=build_video_task, args=(
@@ -528,7 +482,7 @@ def gen():
         d.get('quality','720'), d.get('bgQuery',''), 
         int(d.get('fps',20)), d.get('dynamicBg',False), 
         d.get('useGlow',False), d.get('useVignette',False),
-        style_cfg # Pass style config to thread
+        style_cfg
     ), daemon=True).start()
     return jsonify({'ok': True, 'jobId': job_id})
 
