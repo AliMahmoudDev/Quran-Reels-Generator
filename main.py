@@ -302,9 +302,8 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 full_mp3 = os.path.join(cache_dir, f"{surah:03d}.mp3")
                 timings_p = os.path.join(cache_dir, f"{surah:03d}.json")
                 
-                # Fetch Audio Logic (Thread Safe via File Lock implied by exist check)
+                # Fetch Audio Logic
                 if not os.path.exists(full_mp3) or not os.path.exists(timings_p):
-                    # We might need a small sleep if another thread is downloading
                     time.sleep(random.uniform(0.1, 0.5))
                     if not os.path.exists(full_mp3):
                         smart_download(f"{server_url}{surah:03d}.mp3", full_mp3, job_id)
@@ -317,7 +316,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             else:
                 url = f'https://everyayah.com/data/{reciter_id}/{surah:03d}{ayah:03d}.mp3'
                 smart_download(url, out_audio, job_id)
-                # Trim Silence Logic
                 snd = AudioSegment.from_file(out_audio)
                 start_s, end_s = detect_silence(snd, snd.dBFS-20), detect_silence(snd.reverse(), snd.dBFS-20)
                 (AudioSegment.silent(duration=50) + snd[max(0, start_s-30):len(snd)-max(0, end_s-30)].fade_in(20).fade_out(20)).export(out_audio, format='mp3')
@@ -338,7 +336,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             darken = ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.45).set_duration(duration)
             
             # COMPOSITE & WRITE
-            # Threads=1 is crucial here to avoid cpu thrashing when running multiple parallel segments
             final = CompositeVideoClip([bg_clip, darken, overlay]).set_audio(audioclip)
             final.write_videofile(out_video, fps=fps, codec='libx264', audio_codec='aac', preset='ultrafast', threads=1, verbose=False, logger=None)
             
@@ -357,41 +354,57 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 
         update_job_status(job_id, 5, "Fetching Assets...")
         vpool = fetch_video_pool_optimized(total_ayahs if dynamic_bg else 1)
-        if not vpool: vpool = [os.path.join(VISION_DIR, "default.mp4")] # Fallback logic needed if fetch fails
+        if not vpool: vpool = [os.path.join(VISION_DIR, "default.mp4")]
         if len(vpool) < total_ayahs and not dynamic_bg: vpool = [vpool[0]] * total_ayahs
         elif len(vpool) < total_ayahs: vpool = (vpool * (total_ayahs // len(vpool) + 1))[:total_ayahs]
 
         # PARALLEL PROCESSING START
-        futures = []
-        completed = 0
-        seg_files = [None] * total_ayahs # Preserves order
+        # Using a map to keep track of indices to ensure final concatenation order is correct
+        future_to_index = {}
+        seg_files = [None] * total_ayahs
+        
+        start_time = time.time()
+        completed_count = 0
 
-        # Limit max_workers to avoid memory crash. 4 is usually safe for video encoding.
         with ThreadPoolExecutor(max_workers=min(os.cpu_count(), 4)) as executor:
             for i, ayah in enumerate(range(start, last+1)):
                 bg_file = vpool[i] if dynamic_bg else vpool[0]
-                futures.append(executor.submit(process_ayah_segment, i, ayah, bg_file, workspace))
+                future = executor.submit(process_ayah_segment, i, ayah, bg_file, workspace)
+                future_to_index[future] = i
 
-            for f in as_completed(futures):
+            # as_completed yields futures as they finish (Real-time updates!)
+            for future in as_completed(future_to_index):
                 check_stop(job_id)
-                completed += 1
-                percent = 10 + int((completed / total_ayahs) * 80)
-                update_job_status(job_id, percent, f"Rendering Segments ({completed}/{total_ayahs})...")
-
-            # Collect results in order
-            for i, f in enumerate(futures):
-                seg_files[i] = f.result()
+                idx = future_to_index[future]
+                try:
+                    seg_files[idx] = future.result()
+                    
+                    # Update Progress and ETA
+                    completed_count += 1
+                    elapsed = time.time() - start_time
+                    avg_time_per_ayah = elapsed / completed_count
+                    remaining_ayahs = total_ayahs - completed_count
+                    
+                    eta_seconds = int(avg_time_per_ayah * remaining_ayahs)
+                    eta_str = str(datetime.timedelta(seconds=eta_seconds))
+                    if eta_seconds < 3600: eta_str = eta_str[2:] # Trim HH: if less than hour
+                    
+                    percent = 10 + int((completed_count / total_ayahs) * 85)
+                    update_job_status(job_id, percent, f"Rendering ({completed_count}/{total_ayahs})", eta=eta_str)
+                    
+                except Exception as exc:
+                    print(f"Verse processing generated an exception: {exc}")
+                    raise exc
 
         # FAST CONCATENATION (Stream Copy)
-        update_job_status(job_id, 95, "Stitching Video...")
+        update_job_status(job_id, 98, "Final Stitching...", eta="00:00")
         list_path = os.path.join(workspace, "list.txt")
         with open(list_path, "w") as f:
             for path in seg_files:
-                f.write(f"file '{path}'\n")
+                if path: f.write(f"file '{path}'\n")
 
         out_p = os.path.join(workspace, f"out_{job_id}.mp4")
         
-        # Use FFmpeg to concat without re-encoding
         cmd = [FFMPEG_EXE, "-f", "concat", "-safe", "0", "-i", list_path, "-c", "copy", "-y", out_p]
         subprocess.run(cmd, check=True)
 
