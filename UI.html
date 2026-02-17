@@ -337,8 +337,43 @@
         let COUNTS = {};
         let currentJobId = null;
         let pollInterval = null; 
+        
+        // --- SMART TIMER LOGIC ---
+        let etaSeconds = 0;
+        let countdownInterval = null;
 
-        // Debounce Function to optimize rendering calls
+        function startSmartCountdown(initialEta) {
+            if (countdownInterval) clearInterval(countdownInterval);
+            
+            // Parse initial "MM:SS"
+            if (initialEta && initialEta.includes(':')) {
+                const parts = initialEta.split(':');
+                etaSeconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+            } else {
+                etaSeconds = 60; // Default fallback
+            }
+
+            const etaTxt = document.getElementById('etaTxt');
+            
+            countdownInterval = setInterval(() => {
+                if (etaSeconds > 0) {
+                    etaSeconds--;
+                    const m = Math.floor(etaSeconds / 60).toString().padStart(2, '0');
+                    const s = (etaSeconds % 60).toString().padStart(2, '0');
+                    etaTxt.innerText = `${m}:${s}`;
+                } else {
+                    etaTxt.innerText = "00:00";
+                }
+            }, 1000); // Visual Tick every second
+        }
+
+        function stopSmartCountdown() {
+            if (countdownInterval) clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+
+        // --- Standard UI Logic ---
+
         function debounce(func, wait) {
             let timeout;
             return function(...args) {
@@ -356,38 +391,27 @@
         function openSettings() { loadSettingsUI(); upd(); document.getElementById('settingsModal').style.display = 'flex'; }
         
         function upd() {
-            // Arabic Preview
             const pAr = document.getElementById('prevAr');
             pAr.style.color = document.getElementById('arColor').value;
             pAr.style.fontSize = (1.5 * document.getElementById('arSize').value) + 'rem';
-            
             const arOutW = document.getElementById('arOutW').value / 5; 
             const arOutC = document.getElementById('arOutC').value;
             pAr.style.webkitTextStroke = (arOutW > 0) ? `${arOutW}px ${arOutC}` : '0px transparent';
-            
             if(document.getElementById('arShadow').checked) {
                 pAr.style.textShadow = `2px 2px 0px ${document.getElementById('arShadowC').value}`;
-            } else {
-                pAr.style.textShadow = 'none';
-            }
+            } else { pAr.style.textShadow = 'none'; }
 
-            // English Preview
             const pEn = document.getElementById('prevEn');
             pEn.style.color = document.getElementById('enColor').value;
             pEn.style.fontSize = (0.85 * document.getElementById('enSize').value) + 'rem';
-
             const enOutW = document.getElementById('enOutW').value / 5;
             const enOutC = document.getElementById('enOutC').value;
             pEn.style.webkitTextStroke = (enOutW > 0) ? `${enOutW}px ${enOutC}` : '0px transparent';
-
             if(document.getElementById('enShadow').checked) {
                 pEn.style.textShadow = `1px 1px 0px ${document.getElementById('enShadowC').value}`;
-            } else {
-                pEn.style.textShadow = 'none';
-            }
+            } else { pEn.style.textShadow = 'none'; }
         }
         
-        // Debounced version of upd for sliders/inputs
         const debouncedUpd = debounce(upd, 50);
 
         function saveSettings() {
@@ -398,7 +422,6 @@
             s.enShadow = document.getElementById('enShadow').checked;
             localStorage.setItem('quran_app_styles_v2', JSON.stringify(s));
             document.getElementById('settingsModal').style.display='none';
-            
             const btn = document.querySelector('.btn-gear');
             const old = btn.innerText; btn.innerText = "✅"; setTimeout(() => btn.innerText = old, 1500);
         }
@@ -425,7 +448,6 @@
                 const d = await (await fetch(`/api/config`)).json();
                 COUNTS = d.verseCounts;
                 
-                // Optimized DOM Insertion (DocumentFragment)
                 const sSelect = document.getElementById('sSelect');
                 const sFrag = document.createDocumentFragment();
                 d.surahs.forEach((n, i) => {
@@ -454,6 +476,7 @@
         async function stopProcess() { 
             if(currentJobId && confirm("إيقاف؟")) {
                 if(pollInterval) clearInterval(pollInterval);
+                stopSmartCountdown();
                 await fetch('/api/cancel', {method:'POST', body:JSON.stringify({jobId:currentJobId}), headers:{'Content-Type':'application/json'}});
                 document.getElementById('stopBtn').style.display = 'none';
                 document.getElementById('btn').style.display = 'flex';
@@ -529,19 +552,27 @@
                 if(d.error) throw new Error(d.error);
                 currentJobId = d.jobId;
 
+                // Start Polling
                 pollInterval = setInterval(async () => {
                     try {
                         const p = await (await fetch(`/api/progress?jobId=${currentJobId}`)).json();
                         document.getElementById('barFill').style.width = p.percent+'%';
                         document.getElementById('statusTxt').innerText = p.status;
                         
+                        // --- TIMER LOGIC FIX ---
                         if(p.percent > 0 && p.percent < 100) {
                             document.getElementById('timerBadge').style.display = 'inline-flex';
-                            document.getElementById('etaTxt').innerText = p.eta || "--:--";
+                            
+                            // If first time or new estimate arrived from server, sync the timer
+                            if (!countdownInterval && p.eta && p.eta !== "--:--") {
+                                startSmartCountdown(p.eta);
+                            }
                         }
 
                         if(p.is_complete) {
                             clearInterval(pollInterval);
+                            stopSmartCountdown(); // Stop timer
+                            
                             const vidRes = await fetch(`/api/download?jobId=${currentJobId}`);
                             if(!vidRes.ok) throw new Error("Download failed");
                             const b = await vidRes.blob();
@@ -562,6 +593,7 @@
                         }
                     } catch(err) {
                         clearInterval(pollInterval);
+                        stopSmartCountdown();
                         alert(err.message);
                         document.getElementById('stopBtn').style.display = 'none';
                         document.getElementById('btn').style.display = 'flex';
