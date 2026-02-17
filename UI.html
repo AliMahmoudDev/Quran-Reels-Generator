@@ -8,7 +8,6 @@
     <link rel="icon" href="https://ibb.co/zWy3WBhD"> 
     
     <meta property="og:title" content="صانع الريلز القرآني 🚀">
-    <meta property="og:description" content="أنشئ فيديوهات قرانية احترافية في ثوانٍ.">
     <meta name="theme-color" content="#0a0a0e">
 
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -39,38 +38,18 @@
 
         .container { width: 100%; max-width: 500px; padding-bottom: 50px; }
         
-        .logo-img {
-            width: 80px; height: 80px; border-radius: 50%;
-            border: 2px solid var(--primary-gold); margin-bottom: 10px;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
-        }
-
-        .card {
-            background: var(--bg-glass); backdrop-filter: blur(10px);
-            border-radius: 16px; border: 1px solid var(--border-glow);
-            padding: 20px 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
+        .logo-img { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--primary-gold); margin-bottom: 10px; box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
+        .card { background: var(--bg-glass); backdrop-filter: blur(10px); border-radius: 16px; border: 1px solid var(--border-glow); padding: 20px 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         
-        .timer-badge {
-            background: rgba(255, 255, 255, 0.1); padding: 5px 10px;
-            border-radius: 20px; font-size: 0.9rem; color: var(--primary-gold);
-            font-family: monospace; display: inline-flex; align-items: center; gap: 5px; margin-top: 5px;
-        }
+        .timer-badge { background: rgba(255, 255, 255, 0.1); padding: 5px 10px; border-radius: 20px; font-size: 0.9rem; color: var(--primary-gold); font-family: monospace; display: inline-flex; align-items: center; gap: 5px; margin-top: 5px; }
 
         .history-section { margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
         .history-title { font-size: 1rem; color: #888; margin-bottom: 10px; text-align: center; }
-        .history-item {
-            background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px;
-            margin-bottom: 8px; display: flex; justify-content: space-between;
-            align-items: center; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.05);
-        }
+        .history-item { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.05); }
         .hist-info { display: flex; flex-direction: column; }
         .hist-meta { font-size: 0.65rem; color: #aaa; margin-top: 2px; }
         .hist-date { font-size: 0.6rem; color: #666; margin-top: 2px; }
-        .hist-btn {
-            background: var(--primary-gold); color: #000; text-decoration: none;
-            padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 0.8rem;
-        }
+        .hist-btn { background: var(--primary-gold); color: #000; text-decoration: none; padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 0.8rem; }
 
         .header { text-align: center; margin-bottom: 20px; }
         .title { font-family: 'Amiri', serif; font-size: 1.8rem; background: var(--gradient-gold); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -95,14 +74,13 @@
         .dl-link { display: flex; align-items: center; justify-content: center; margin-top: 15px; padding: 15px; background: var(--success-green); color: #fff; text-decoration: none; border-radius: 12px; font-weight: 800; }
         
         .toggle-box { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 10px; }
-        .switch { position: relative; width: 50px; height: 26px; }
+        .switch { position: relative; width: 45px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.1); border-radius: 34px; transition: .3s; }
-        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s; }
         input:checked + .slider { background: var(--primary-gold); }
-        input:checked + .slider:before { transform: translateX(24px); }
+        input:checked + .slider:before { transform: translateX(21px); }
         
-        /* Control Buttons Row */
         .ctrl-row { display: flex; gap: 10px; margin-bottom: 20px; }
         .btn-rand { flex: 1; height: 45px; background: var(--random-purple); border: none; border-radius: 12px; color: #fff; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-gear { width: 50px; height: 45px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glow); color: var(--primary-gold); border-radius: 12px; cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
@@ -113,7 +91,7 @@
         .social-link:hover { background: var(--gradient-gold); color: #000; transform: translateY(-3px); }
         .social-link svg { fill: currentColor; }
 
-        /* --- SETTINGS MODAL CSS --- */
+        /* --- SETTINGS MODAL --- */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); z-index: 1000;
@@ -130,41 +108,33 @@
             display: flex; flex-direction: column;
         }
 
-        /* FIXED PREVIEW BOX CSS - NO EXTERNAL IMAGES */
         .preview-box {
-            width: 100%; 
-            min-height: 150px; /* Ensure it never collapses */
-            background: linear-gradient(45deg, #1a1a2e, #16213e); /* Reliable gradient */
+            width: 100%; min-height: 150px;
+            background: linear-gradient(45deg, #1a1a2e, #16213e);
             border-radius: 12px; border: 1px solid #444;
             margin-bottom: 20px; position: relative; overflow: hidden;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            flex-shrink: 0; /* Prevent shrinking on small screens */
+            flex-shrink: 0;
         }
         .preview-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.8)); z-index: 1; pointer-events: none;}
         
-        .prev-text-ar, .prev-text-en { position: relative; z-index: 2; text-align: center; width: 90%; transition: 0.2s; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .prev-text-ar, .prev-text-en { position: relative; z-index: 2; text-align: center; width: 90%; transition: 0.2s; }
         .prev-text-ar { font-family: 'Amiri', serif; margin-bottom: 8px; line-height: 1.6; font-size: 1.6rem; }
         .prev-text-en { font-family: 'Cairo', sans-serif; line-height: 1.4; font-size: 0.9rem; }
 
         .set-section { margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; }
-        .set-title { font-size: 0.85rem; color: #888; margin-bottom: 10px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
-        .color-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 8px; }
-        .color-input { width: 35px; height: 35px; border: none; background: none; cursor: pointer; padding: 0; border-radius: 50%; overflow: hidden; }
+        .set-header { color: var(--primary-gold); font-size: 0.95rem; font-weight: bold; margin-bottom: 10px; display:flex; justify-content:space-between; }
+
+        .ctrl-line { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; color:#ccc; }
+        .color-input { width: 30px; height: 30px; border: none; background: none; cursor: pointer; padding: 0; border-radius: 50%; overflow: hidden; }
         .color-input::-webkit-color-swatch-wrapper { padding: 0; }
         .color-input::-webkit-color-swatch { border: 2px solid #555; border-radius: 50%; }
         
-        .range-row { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
-        input[type="range"] { 
-            flex: 1; -webkit-appearance: none; height: 6px; background: rgba(255,255,255,0.1); border-radius: 5px; outline: none; 
-        }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 18px; height: 18px; background: var(--primary-gold); border-radius: 50%; cursor: pointer; box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
-        }
+        .sm-slider { width: 80px; accent-color: var(--primary-gold); height: 4px; }
 
         .modal-btns { display: flex; gap: 10px; margin-top: 10px; }
         .btn-save { background: var(--success-green); color: white; flex: 1; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
         .btn-cancel { background: #333; color: #ccc; width: 80px; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        .btn-reset { background: transparent; color: #555; border: 1px dashed #444; width: 100%; padding: 8px; margin-top: 5px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -174,7 +144,6 @@
             <div class="header">
                 <img src="https://ibb.co/zWy3WBhD" alt="Logo" class="logo-img" onerror="this.style.display='none'">
                 <h1 class="title">صانع الريلز القرآني</h1>
-                <p style="color:#888; font-size:0.8rem;">نسخة التوربو 🚀</p>
             </div>
 
             <div class="ctrl-row">
@@ -183,13 +152,8 @@
             </div>
 
             <div style="background: rgba(212, 175, 55, 0.05); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed var(--primary-gold);">
-                <label class="label">🔑 مفتاح Pexels (للخلفيات)</label>
+                <label class="label">🔑 مفتاح Pexels</label>
                 <input type="text" id="pexelsKey" class="input-box" placeholder="الصق الـ API Key هنا">
-                <div style="text-align:center; margin-top:10px;">
-                    <a href="https://www.pexels.com/api/" target="_blank" style="color: #4ade80; text-decoration: underline; font-weight: bold; font-size: 0.95rem;">
-                        👉 اضغط هنا للحصول على مفتاح مجاني
-                    </a>
-                </div>
             </div>
 
             <form id="vForm">
@@ -202,110 +166,72 @@
                     <select id="sSelect" class="input-box"></select>
                 </div>
                 <div class="num-row">
-                    <div class="num-group">
-                        <label class="label">من آية</label>
-                        <div class="num-ctrl">
-                            <button type="button" class="num-btn" onclick="adj('startAyah',-1)">−</button>
-                            <input type="number" id="startAyah" class="num-val" value="1" onchange="validateAyah('startAyah')">
-                            <button type="button" class="num-btn" onclick="adj('startAyah',1)">+</button>
-                        </div>
-                    </div>
-                    <div class="num-group">
-                        <label class="label">إلى آية</label>
-                        <div class="num-ctrl">
-                            <button type="button" class="num-btn" onclick="adj('endAyah',-1)">−</button>
-                            <input type="number" id="endAyah" class="num-val" value="5" onchange="validateAyah('endAyah')">
-                            <button type="button" class="num-btn" onclick="adj('endAyah',1)">+</button>
-                        </div>
-                    </div>
+                    <div class="num-group"><label class="label">من</label><div class="num-ctrl"><input type="number" id="startAyah" class="num-val" value="1"></div></div>
+                    <div class="num-group"><label class="label">إلى</label><div class="num-ctrl"><input type="number" id="endAyah" class="num-val" value="5"></div></div>
                 </div>
                 
                 <div class="form-group">
-                    <label class="label">سلاسة الفيديو (FPS)</label>
+                    <label class="label">FPS</label>
                     <select id="fpsSelect" class="input-box">
-                        <option value="15">🚀 15 FPS (سريع جداً)</option>
-                        <option value="20" selected>⚖️ 20 FPS (متوازن - ينصح به)</option>
-                        <option value="24">🎬 24 FPS (سينمائي)</option>
-                        <option value="30">💎 30 FPS (الأكثر سلاسة)</option>
+                        <option value="20" selected>⚖️ 20 FPS (المستحسن)</option>
+                        <option value="30">💎 30 FPS</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label class="label">جودة الفيديو</label>
+                    <label class="label">الجودة</label>
                     <select id="qSelect" class="input-box">
-                        <option value="720">⚡ 720p HD (الأسرع)</option>
+                        <option value="720">⚡ 720p HD</option>
                         <option value="1080">🌟 1080p FHD</option>
                     </select>
                 </div>
 
                 <div class="toggle-box">
-                    <span style="font-size:0.9rem;">🔍 بحث مخصص (خلفية)</span>
+                    <span>🔍 بحث مخصص</span>
                     <label class="switch"><input type="checkbox" id="useSearch" onchange="toggleSearch()"><span class="slider"></span></label>
                 </div>
-                <input type="text" id="bgQuery" class="input-box" placeholder="اكتب: بحر، سماء..." style="display:none; margin-bottom:15px;">
+                <input type="text" id="bgQuery" class="input-box" placeholder="بحر، سماء..." style="display:none; margin-bottom:15px;">
 
                 <div class="toggle-box">
-                    <div style="display:flex; flex-direction:column;">
-                        <span style="font-size:0.9rem;">🔄 تغيير الخلفية مع الآيات</span>
-                        <span style="font-size:0.65rem; color:#aaa;">(يستهلك بيانات أكثر)</span>
-                    </div>
+                    <span>🔄 خلفية متحركة</span>
                     <label class="switch"><input type="checkbox" id="dynamicBg" checked><span class="slider"></span></label>
                 </div>
 
-                <div class="toggle-box" style="background: rgba(212, 175, 55, 0.1); border: 1px solid var(--border-glow);">
-                    <div style="display:flex; flex-direction:column;">
-                        <span style="font-size:0.9rem; color: var(--primary-gold);">✨ توهج النص (Glow)</span>
-                        <span style="font-size:0.65rem; color:#aaa;">(تأثير هالة خفيفة)</span>
-                    </div>
+                <div class="toggle-box" style="background: rgba(212, 175, 55, 0.1);">
+                    <span>✨ توهج (Glow)</span>
                     <label class="switch"><input type="checkbox" id="useGlow" checked><span class="slider"></span></label>
                 </div>
 
-                <div class="toggle-box" style="background: rgba(212, 175, 55, 0.1); border: 1px solid var(--border-glow);">
-                    <div style="display:flex; flex-direction:column;">
-                        <span style="font-size:0.9rem; color: var(--primary-gold);">🎬 تعتيم سينمائي (Vignette)</span>
-                    </div>
+                <div class="toggle-box" style="background: rgba(212, 175, 55, 0.1);">
+                    <span>🎬 تعتيم (Vignette)</span>
                     <label class="switch"><input type="checkbox" id="useVignette" checked><span class="slider"></span></label>
                 </div>
 
-                <button type="submit" id="btn" class="btn-main">✨ إنشاء الفيديو</button>
+                <button type="submit" id="btn" class="btn-main">✨ إنشاء</button>
                 <button type="button" id="stopBtn" class="btn-stop" onclick="stopProcess()">🛑 إيقاف</button>
             </form>
 
             <div class="prog-area" id="progArea">
-                <div class="status-txt" id="statusTxt">جاري الاتصال...</div>
-                <div class="timer-badge" id="timerBadge" style="display:none;">
-                    ⏳ متبقي: <span id="etaTxt">--:--</span>
-                </div>
+                <div class="status-txt" id="statusTxt">جاري العمل...</div>
                 <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
             </div>
 
             <div class="result-area" id="resArea">
-                <div style="color: #4ade80; font-weight: bold; font-size: 1.2rem; margin-bottom: 10px;">✅ تم الانتهاء!</div>
                 <video id="player" controls playsinline loop></video>
-                <a id="dlLink" href="#" class="dl-link" download>⬇️ تحميل الفيديو</a>
+                <a id="dlLink" href="#" class="dl-link" download>⬇️ تحميل</a>
             </div>
 
             <div class="history-section" id="histSection" style="display:none;">
-                <div class="history-title">📜 سجل العمليات (آخر 5)</div>
+                <div class="history-title">سجل العمليات</div>
                 <div id="histList"></div>
-                <button onclick="clearHistory()" style="width:100%; padding:5px; background:none; border:none; color:#666; font-size:0.8rem; cursor:pointer; margin-top:5px;">🗑️ مسح السجل</button>
-            </div>
-
-            <div class="footer-contact">
-                <p style="color: #888; font-size: 0.85rem;">للتطوير أو الإبلاغ عن أخطاء، يسعدنا تواصلك</p>
-                <div class="contact-links">
-                    <a href="https://t.me/QuranReelsGen" target="_blank" class="social-link">
-                        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.35-.97.52-1.35.51-.42-.01-1.22-.24-1.82-.43-.74-.24-1.33-.37-1.28-.77.03-.21.32-.42.88-.63 3.42-1.49 5.71-2.48 6.85-2.97 3.27-1.4 3.95-1.64 4.39-1.65.1 0 .32.02.46.14.12.1.15.24.16.33.01.06.02.19.01.28z"/></svg>
-                        قناة التحديثات
-                    </a>
-                </div>
+                <button onclick="clearHistory()" style="width:100%; padding:5px; background:none; border:none; color:#666; font-size:0.8rem; cursor:pointer;">مسح</button>
             </div>
         </div>
     </div>
 
     <div class="modal-overlay" id="settingsModal">
         <div class="settings-card">
-            <h3 style="text-align:center; color:white; margin-bottom:15px; font-family:'Amiri';">🎨 تخصيص مظهر النص</h3>
+            <h3 style="text-align:center; color:white; margin-bottom:15px;">🎨 تخصيص مفصل</h3>
             
             <div class="preview-box">
                 <div class="preview-overlay"></div>
@@ -314,52 +240,48 @@
             </div>
 
             <div class="set-section">
-                <div class="set-title"><span>النص القرآني (Arabic)</span> <span id="arSizeVal" style="font-size:0.7rem;">100%</span></div>
-                <div class="color-row">
-                    <span style="font-size:0.9rem;">لون النص</span>
-                    <input type="color" id="arColor" class="color-input" value="#ffffff" oninput="updatePreview()">
+                <div class="set-header">اللغة العربية (Arabic)</div>
+                <div class="ctrl-line">
+                    <span>اللون & الحجم</span>
+                    <input type="color" id="arColor" class="color-input" value="#ffffff" oninput="upd()">
+                    <input type="range" id="arSize" class="sm-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="upd()">
                 </div>
-                <div class="range-row">
-                    <span style="font-size:0.8rem;">الحجم</span>
-                    <input type="range" id="arSize" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updatePreview()">
+                <div class="ctrl-line">
+                    <span>إطار (Outline)</span>
+                    <input type="color" id="arOutC" class="color-input" value="#000000" oninput="upd()">
+                    <input type="range" id="arOutW" class="sm-slider" min="0" max="10" step="1" value="4" oninput="upd()">
+                </div>
+                <div class="ctrl-line">
+                    <span>ظل (Shadow)</span>
+                    <input type="checkbox" id="arShadow" onchange="upd()">
+                    <input type="color" id="arShadowC" class="color-input" value="#000000" oninput="upd()">
                 </div>
             </div>
 
             <div class="set-section">
-                <div class="set-title"><span>الترجمة (Translation)</span> <span id="enSizeVal" style="font-size:0.7rem;">100%</span></div>
-                <div class="color-row">
-                    <span style="font-size:0.9rem;">لون النص</span>
-                    <input type="color" id="enColor" class="color-input" value="#FFD700" oninput="updatePreview()">
+                <div class="set-header">الترجمة (Translation)</div>
+                <div class="ctrl-line">
+                    <span>اللون & الحجم</span>
+                    <input type="color" id="enColor" class="color-input" value="#FFD700" oninput="upd()">
+                    <input type="range" id="enSize" class="sm-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="upd()">
                 </div>
-                <div class="range-row">
-                    <span style="font-size:0.8rem;">الحجم</span>
-                    <input type="range" id="enSize" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updatePreview()">
+                <div class="ctrl-line">
+                    <span>إطار (Outline)</span>
+                    <input type="color" id="enOutC" class="color-input" value="#000000" oninput="upd()">
+                    <input type="range" id="enOutW" class="sm-slider" min="0" max="10" step="1" value="3" oninput="upd()">
                 </div>
-            </div>
-
-            <div class="set-section" style="border:none;">
-                <div class="set-title">
-                    <span>الإطار (Outline)</span>
-                    <label class="switch" style="width:40px; height:20px;">
-                        <input type="checkbox" id="useStroke" checked onchange="updatePreview()">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="color-row">
-                    <span style="font-size:0.9rem;">لون الإطار</span>
-                    <input type="color" id="strokeColor" class="color-input" value="#000000" oninput="updatePreview()">
-                </div>
-                <div class="range-row">
-                    <span style="font-size:0.8rem;">السمك</span>
-                    <input type="range" id="strokeWidth" min="1" max="10" step="1" value="4" oninput="updatePreview()">
+                <div class="ctrl-line">
+                    <span>ظل (Shadow)</span>
+                    <input type="checkbox" id="enShadow" onchange="upd()">
+                    <input type="color" id="enShadowC" class="color-input" value="#000000" oninput="upd()">
                 </div>
             </div>
 
             <div class="modal-btns">
-                <button class="btn-cancel" onclick="closeSettings()">إلغاء</button>
+                <button class="btn-cancel" onclick="document.getElementById('settingsModal').style.display='none'">إلغاء</button>
                 <button class="btn-save" onclick="saveSettings()">💾 حفظ</button>
             </div>
-            <button class="btn-reset" onclick="resetSettings()">↩️ استعادة الافتراضي</button>
+            <button onclick="resetSettings()" style="width:100%; margin-top:10px; background:none; border:1px dashed #555; padding:5px; color:#777; border-radius:8px;">استعادة الافتراضي</button>
         </div>
     </div>
 
@@ -368,272 +290,145 @@
         let currentJobId = null;
 
         // --- Settings Logic ---
-        const defaultSettings = {
-            arColor: "#ffffff", arSize: "1.0",
-            enColor: "#FFD700", enSize: "1.0",
-            useStroke: true, strokeColor: "#000000", strokeWidth: "4"
+        const defSet = {
+            arColor: "#ffffff", arSize: "1.0", arOutC: "#000000", arOutW: "4", arShadow: false, arShadowC: "#000000",
+            enColor: "#FFD700", enSize: "1.0", enOutC: "#000000", enOutW: "3", enShadow: false, enShadowC: "#000000"
         };
 
-        function openSettings() {
-            loadSettingsUI();
-            updatePreview();
-            document.getElementById('settingsModal').style.display = 'flex';
-        }
-
-        function closeSettings() {
-            document.getElementById('settingsModal').style.display = 'none';
-        }
-
-        function resetSettings() {
-            if(confirm("استعادة الإعدادات الافتراضية؟")) {
-                localStorage.removeItem('quran_app_styles');
-                loadSettingsUI();
-                updatePreview();
-            }
-        }
-
-        function updatePreview() {
-            // Get inputs
-            const arC = document.getElementById('arColor').value;
-            const arS = document.getElementById('arSize').value;
-            const enC = document.getElementById('enColor').value;
-            const enS = document.getElementById('enSize').value;
-            const strkOn = document.getElementById('useStroke').checked;
-            const strkC = document.getElementById('strokeColor').value;
-            const strkW = document.getElementById('strokeWidth').value;
-
-            // Update Labels
-            document.getElementById('arSizeVal').innerText = Math.round(arS * 100) + "%";
-            document.getElementById('enSizeVal').innerText = Math.round(enS * 100) + "%";
-
-            // Apply to Preview
+        function openSettings() { loadSettingsUI(); upd(); document.getElementById('settingsModal').style.display = 'flex'; }
+        
+        function upd() {
+            // Arabic Preview
             const pAr = document.getElementById('prevAr');
-            const pEn = document.getElementById('prevEn');
-
-            pAr.style.color = arC;
-            // Slightly reduced preview font size to fit box better
-            pAr.style.fontSize = `${1.5 * arS}rem`; 
+            pAr.style.color = document.getElementById('arColor').value;
+            pAr.style.fontSize = (1.5 * document.getElementById('arSize').value) + 'rem';
             
-            pEn.style.color = enC;
-            pEn.style.fontSize = `${0.85 * enS}rem`;
-
-            if (strkOn) {
-                // FIX: Divide by 5 instead of 2. 
-                // This scales the stroke down to match the small screen size.
-                // It represents the "Proportions" of the final video, not the exact pixels.
-                const scaledStroke = strkW / 5; 
-                
-                pAr.style.webkitTextStroke = `${scaledStroke}px ${strkC}`;
-                
-                // Make shadow subtle so it doesn't make it look muddy
-                pAr.style.textShadow = `0 1px 3px ${strkC}`;
+            const arOutW = document.getElementById('arOutW').value / 5; // Scale down for preview
+            const arOutC = document.getElementById('arOutC').value;
+            pAr.style.webkitTextStroke = (arOutW > 0) ? `${arOutW}px ${arOutC}` : '0px transparent';
+            
+            if(document.getElementById('arShadow').checked) {
+                pAr.style.textShadow = `2px 2px 0px ${document.getElementById('arShadowC').value}`;
             } else {
-                pAr.style.webkitTextStroke = "0px transparent";
-                pAr.style.textShadow = "0 2px 5px rgba(0,0,0,0.5)";
+                pAr.style.textShadow = 'none';
+            }
+
+            // English Preview
+            const pEn = document.getElementById('prevEn');
+            pEn.style.color = document.getElementById('enColor').value;
+            pEn.style.fontSize = (0.85 * document.getElementById('enSize').value) + 'rem';
+
+            const enOutW = document.getElementById('enOutW').value / 5;
+            const enOutC = document.getElementById('enOutC').value;
+            pEn.style.webkitTextStroke = (enOutW > 0) ? `${enOutW}px ${enOutC}` : '0px transparent';
+
+            if(document.getElementById('enShadow').checked) {
+                pEn.style.textShadow = `1px 1px 0px ${document.getElementById('enShadowC').value}`;
+            } else {
+                pEn.style.textShadow = 'none';
             }
         }
 
         function saveSettings() {
-            const settings = {
-                arColor: document.getElementById('arColor').value,
-                arSize: document.getElementById('arSize').value,
-                enColor: document.getElementById('enColor').value,
-                enSize: document.getElementById('enSize').value,
-                useStroke: document.getElementById('useStroke').checked,
-                strokeColor: document.getElementById('strokeColor').value,
-                strokeWidth: document.getElementById('strokeWidth').value
-            };
-            localStorage.setItem('quran_app_styles', JSON.stringify(settings));
-            closeSettings();
-            
-            const btn = document.querySelector('.btn-gear');
-            const oldTxt = btn.innerText;
-            btn.innerText = "✅";
-            setTimeout(() => btn.innerText = oldTxt, 1500);
+            const s = {};
+            ['arColor','arSize','arOutC','arOutW','arShadowC',
+             'enColor','enSize','enOutC','enOutW','enShadowC'].forEach(k => s[k] = document.getElementById(k).value);
+            s.arShadow = document.getElementById('arShadow').checked;
+            s.enShadow = document.getElementById('enShadow').checked;
+            localStorage.setItem('quran_app_styles_v2', JSON.stringify(s));
+            document.getElementById('settingsModal').style.display='none';
         }
 
         function loadSettingsUI() {
-            const saved = JSON.parse(localStorage.getItem('quran_app_styles')) || defaultSettings;
-            
-            // Apply safe defaults if keys missing
-            document.getElementById('arColor').value = saved.arColor || defaultSettings.arColor;
-            document.getElementById('arSize').value = saved.arSize || defaultSettings.arSize;
-            document.getElementById('enColor').value = saved.enColor || defaultSettings.enColor;
-            document.getElementById('enSize').value = saved.enSize || defaultSettings.enSize;
-            document.getElementById('useStroke').checked = (saved.useStroke !== undefined) ? saved.useStroke : defaultSettings.useStroke;
-            document.getElementById('strokeColor').value = saved.strokeColor || defaultSettings.strokeColor;
-            document.getElementById('strokeWidth').value = saved.strokeWidth || defaultSettings.strokeWidth;
+            const s = JSON.parse(localStorage.getItem('quran_app_styles_v2')) || defSet;
+            Object.keys(s).forEach(k => {
+                const el = document.getElementById(k);
+                if(el) {
+                    if(el.type === 'checkbox') el.checked = s[k];
+                    else el.value = s[k];
+                }
+            });
+        }
+        
+        function resetSettings() {
+            if(confirm('reset?')) { localStorage.removeItem('quran_app_styles_v2'); loadSettingsUI(); upd(); }
         }
 
-        // --- Main Logic ---
-
+        // --- Standard App Logic ---
         window.onload = async () => {
-            const savedKey = localStorage.getItem('user_pexels_key');
-            if(savedKey) document.getElementById('pexelsKey').value = savedKey;
-            loadHistory();
-            loadSettingsUI(); // Ensure settings are ready for submission even if modal not opened
-            
+            if(localStorage.getItem('user_pexels_key')) document.getElementById('pexelsKey').value = localStorage.getItem('user_pexels_key');
+            loadHistory(); loadSettingsUI();
             try {
-                const r = await fetch(`/api/config`);
-                const d = await r.json();
+                const d = await (await fetch(`/api/config`)).json();
                 COUNTS = d.verseCounts;
-                rSelect.innerHTML = ''; sSelect.innerHTML = '';
-                for(const [n, id] of Object.entries(d.reciters)) rSelect.add(new Option(n, id));
                 d.surahs.forEach((n, i) => sSelect.add(new Option(`${i+1}. ${n}`, i+1)));
-                sSelect.onchange = () => { validateAyah('startAyah'); validateAyah('endAyah'); };
-                sSelect.onchange();
+                for(const [n, id] of Object.entries(d.reciters)) rSelect.add(new Option(n, id));
             } catch(e) {}
         };
 
-        function validateAyah(id) {
-            const el = document.getElementById(id);
-            const max = COUNTS[sSelect.value] || 286;
-            let val = parseInt(el.value);
-            if (isNaN(val) || val < 1) val = 1; if (val > max) val = max;
-            el.value = val;
-        }
-        function adj(id, v) { document.getElementById(id).value = parseInt(document.getElementById(id).value) + v; validateAyah(id); }
-        function smartRandomize() { 
-            if(rSelect.length) rSelect.selectedIndex = Math.floor(Math.random() * rSelect.length);
-            if(sSelect.length) {
-                sSelect.selectedIndex = Math.floor(Math.random() * sSelect.length);
-                const max = COUNTS[sSelect.value] || 286;
-                const start = Math.floor(Math.random() * Math.max(1, max - 5)) + 1;
-                document.getElementById('startAyah').value = start;
-                document.getElementById('endAyah').value = Math.min(start + 4, max);
-            }
-        }
-        function toggleSearch() { 
-            const chk = document.getElementById('useSearch');
-            document.getElementById('bgQuery').style.display = chk.checked ? 'block' : 'none';
-        }
-        async function stopProcess() {
-            if(currentJobId && confirm("إيقاف؟")) await fetch('/api/cancel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({jobId:currentJobId})});
-        }
-
-        function saveToHistory(surahTxt, ayahs, url, reciter, fps, quality) {
-            let hist = JSON.parse(localStorage.getItem('quran_hist') || '[]');
-            const newItem = {
-                id: Date.now(),
-                title: `${surahTxt} (${ayahs})`,
-                details: `${reciter} • ${quality}p • ${fps}fps`,
-                date: new Date().toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'}),
-                url: url
-            };
-            hist.unshift(newItem); 
-            if(hist.length > 5) hist.pop();
-            localStorage.setItem('quran_hist', JSON.stringify(hist));
-            loadHistory();
-        }
-
+        function toggleSearch() { document.getElementById('bgQuery').style.display = document.getElementById('useSearch').checked ? 'block' : 'none'; }
+        async function stopProcess() { if(currentJobId) await fetch('/api/cancel', {method:'POST', body:JSON.stringify({jobId:currentJobId}), headers:{'Content-Type':'application/json'}}); }
+        
+        // History functions (Simplified)
         function loadHistory() {
-            const hist = JSON.parse(localStorage.getItem('quran_hist') || '[]');
-            const list = document.getElementById('histList');
-            const sec = document.getElementById('histSection');
-            list.innerHTML = '';
-            if(hist.length === 0) { sec.style.display = 'none'; return; }
-            sec.style.display = 'block';
-            
-            hist.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'history-item';
-                div.innerHTML = `
-                    <div class="hist-info">
-                        <strong>${item.title}</strong>
-                        <div class="hist-meta">${item.details || ''}</div>
-                        <span class="hist-date">${item.date}</span>
-                    </div>
-                    <a href="${item.url}" class="hist-btn" download>تحميل</a>
-                `;
-                list.appendChild(div);
-            });
+            const h = JSON.parse(localStorage.getItem('q_hist')||'[]');
+            const l = document.getElementById('histList'); l.innerHTML='';
+            if(h.length) document.getElementById('histSection').style.display='block';
+            h.forEach(x => l.innerHTML += `<div class="history-item"><span>${x.t}</span><a href="${x.u}" class="hist-btn" download>تحميل</a></div>`);
         }
-        function clearHistory() { localStorage.removeItem('quran_hist'); loadHistory(); }
+        function clearHistory() { localStorage.removeItem('q_hist'); loadHistory(); document.getElementById('histSection').style.display='none'; }
 
         document.getElementById('vForm').onsubmit = async (e) => {
             e.preventDefault();
-            const pKey = document.getElementById('pexelsKey').value.trim();
-            if(!pKey) { alert("⚠️ مفتاح Pexels مطلوب!"); return; }
-            localStorage.setItem('user_pexels_key', pKey);
-
-            document.getElementById('btn').style.display = 'none';
-            document.getElementById('stopBtn').style.display = 'flex';
-            document.getElementById('progArea').style.display = 'block';
-            document.getElementById('resArea').style.display = 'none';
-            document.getElementById('timerBadge').style.display = 'none'; 
+            const pk = document.getElementById('pexelsKey').value;
+            if(!pk) return alert('Pexels Key Required');
+            localStorage.setItem('user_pexels_key', pk);
             
-            // Get Styles
-            const styles = JSON.parse(localStorage.getItem('quran_app_styles')) || defaultSettings;
+            document.getElementById('btn').style.display='none';
+            document.getElementById('progArea').style.display='block';
+            document.getElementById('resArea').style.display='none';
+
+            const sty = JSON.parse(localStorage.getItem('quran_app_styles_v2')) || defSet;
 
             try {
-                const res = await fetch(`/api/generate`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                const res = await fetch('/api/generate', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
                     body: JSON.stringify({
-                        pexelsKey: pKey, reciter: rSelect.value, surah: sSelect.value,
+                        pexelsKey: pk, reciter: rSelect.value, surah: sSelect.value,
                         startAyah: startAyah.value, endAyah: endAyah.value,
-                        quality: qSelect.value,
-                        fps: document.getElementById('fpsSelect').value, 
+                        quality: qSelect.value, fps: fpsSelect.value,
                         bgQuery: document.getElementById('useSearch').checked ? document.getElementById('bgQuery').value : "",
                         dynamicBg: document.getElementById('dynamicBg').checked,
                         useGlow: document.getElementById('useGlow').checked,
                         useVignette: document.getElementById('useVignette').checked,
-                        style: styles // Sending new style object
+                        style: sty
                     })
                 });
-                
-                const dStart = await res.json();
-                if(dStart.error) throw new Error(dStart.error);
-                
-                currentJobId = dStart.jobId;
+                const d = await res.json();
+                if(d.error) throw new Error(d.error);
+                currentJobId = d.jobId;
 
-                let poll = setInterval(async () => {
-                    try {
-                        const r = await fetch(`/api/progress?jobId=${currentJobId}`);
-                        const d = await r.json();
-                        if(d.error) throw new Error(d.error);
-
-                        document.getElementById('barFill').style.width = d.percent + "%";
-                        document.getElementById('statusTxt').innerText = d.status;
+                const t = setInterval(async () => {
+                    const p = await (await fetch(`/api/progress?jobId=${currentJobId}`)).json();
+                    document.getElementById('barFill').style.width = p.percent+'%';
+                    document.getElementById('statusTxt').innerText = p.status;
+                    if(p.is_complete) {
+                        clearInterval(t);
+                        const b = await (await fetch(`/api/download?jobId=${currentJobId}`)).blob();
+                        const u = URL.createObjectURL(b);
+                        document.getElementById('player').src = u;
+                        document.getElementById('dlLink').href = u;
+                        document.getElementById('progArea').style.display='none';
+                        document.getElementById('resArea').style.display='block';
+                        document.getElementById('btn').style.display='block';
                         
-                        if(d.percent > 0 && d.percent < 100) {
-                            document.getElementById('timerBadge').style.display = 'inline-flex';
-                            document.getElementById('etaTxt').innerText = d.eta || "--:--";
-                        }
-
-                        if(d.is_complete) {
-                            clearInterval(poll);
-                            const vidRes = await fetch(`/api/download?jobId=${currentJobId}`);
-                            if(!vidRes.ok) throw new Error("Download failed");
-                            
-                            const blob = await vidRes.blob();
-                            const url = URL.createObjectURL(blob);
-                            
-                            document.getElementById('player').src = url;
-                            const dlLink = document.getElementById('dlLink');
-                            dlLink.href = url;
-                            const fName = `Quran_${sSelect.value}_${startAyah.value}.mp4`;
-                            dlLink.setAttribute('download', fName);
-                            
-                            const sName = sSelect.options[sSelect.selectedIndex].text.split('. ')[1];
-                            const selRec = rSelect.options[rSelect.selectedIndex].text;
-                            saveToHistory(sName, `${startAyah.value}-${endAyah.value}`, url, selRec, document.getElementById('fpsSelect').value, qSelect.value);
-
-                            document.getElementById('progArea').style.display = 'none';
-                            document.getElementById('resArea').style.display = 'block';
-                            document.getElementById('stopBtn').style.display = 'none';
-                            document.getElementById('btn').style.display = 'flex';
-                        }
-                    } catch(err) {
-                        clearInterval(poll);
-                        alert(err.message);
-                        document.getElementById('stopBtn').style.display = 'none';
-                        document.getElementById('btn').style.display = 'flex';
+                        const h = JSON.parse(localStorage.getItem('q_hist')||'[]');
+                        h.unshift({t:`${sSelect.options[sSelect.selectedIndex].text} (${startAyah.value})`, u:u});
+                        localStorage.setItem('q_hist', JSON.stringify(h.slice(0,5))); loadHistory();
                     }
                 }, 1000);
-            } catch(e) { alert(e.message); document.getElementById('stopBtn').style.display = 'none'; document.getElementById('btn').style.display = 'flex'; }
+            } catch(err) { alert(err.message); document.getElementById('btn').style.display='block'; }
         };
     </script>
 </body>
 </html>
-
