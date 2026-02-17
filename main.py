@@ -149,7 +149,17 @@ def wrap_text(text, per_line):
 # ==========================================
 def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, style_cfg):
     try:
-        update_job_status(job_id, 1, "Loading Engine...")
+        # --- 1. PRE-CALCULATE WORKLOAD & ETA ---
+        last = min(end if end else start+9, VERSE_COUNTS.get(surah, 286))
+        total_ayahs = (last - start) + 1
+        
+        # Estimate: 8 seconds per ayah (Download + Render)
+        est_seconds = total_ayahs * 8
+        est_str = str(datetime.timedelta(seconds=est_seconds))
+        if est_seconds < 3600: est_str = est_str[2:] # Format MM:SS
+
+        # Show ETA IMMEDIATELY
+        update_job_status(job_id, 2, "Initializing...", eta=est_str)
         
         # --- LAZY IMPORTS ---
         import re
@@ -181,7 +191,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             while t < len(sound) and sound[t:t+10].dBFS < thresh: t += 10
             return t
 
-        def fetch_video_pool_optimized(count):
+        def fetch_video_pool_optimized(count, current_eta):
             pool = []
             if bg_query and len(bg_query) > 2:
                 try: q_base = GoogleTranslator(source='auto', target='en').translate(bg_query.strip())
@@ -208,8 +218,20 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                         if not os.path.exists(path): smart_download(link, path, job_id)
                         return path
 
+                    # Download with Progress Updates
+                    downloaded = 0
+                    futures = []
                     with ThreadPoolExecutor(max_workers=5) as executor:
-                        pool = list(executor.map(dl_video, selected_vids))
+                        for v in selected_vids:
+                            futures.append(executor.submit(dl_video, v))
+                        
+                        for f in as_completed(futures):
+                            downloaded += 1
+                            path = f.result()
+                            if path: pool.append(path)
+                            # Keep updating ETA during download
+                            update_job_status(job_id, 5 + int((downloaded/count)*10), f"Fetching Assets ({downloaded}/{count})", eta=current_eta)
+
             except Exception as e: print(f"Fetch Error: {e}")
             return pool
 
@@ -349,17 +371,17 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         workspace = job['workspace']
         target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
         scale = 1.0 if quality == '1080' else 0.67
-        last = min(end if end else start+9, VERSE_COUNTS.get(surah, 286))
-        total_ayahs = (last - start) + 1
-
-        update_job_status(job_id, 5, "Fetching Assets...")
-        vpool = fetch_video_pool_optimized(total_ayahs if dynamic_bg else 1)
+        
+        # We estimated ETA earlier, pass it here too
+        update_job_status(job_id, 5, "Fetching Assets...", eta=est_str)
+        
+        vpool = fetch_video_pool_optimized(total_ayahs if dynamic_bg else 1, est_str)
+        
         if not vpool: vpool = [os.path.join(VISION_DIR, "default.mp4")]
         if len(vpool) < total_ayahs and not dynamic_bg: vpool = [vpool[0]] * total_ayahs
         elif len(vpool) < total_ayahs: vpool = (vpool * (total_ayahs // len(vpool) + 1))[:total_ayahs]
 
         # PARALLEL PROCESSING START
-        # Using a map to keep track of indices to ensure final concatenation order is correct
         future_to_index = {}
         seg_files = [None] * total_ayahs
         
@@ -372,14 +394,13 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 future = executor.submit(process_ayah_segment, i, ayah, bg_file, workspace)
                 future_to_index[future] = i
 
-            # as_completed yields futures as they finish (Real-time updates!)
             for future in as_completed(future_to_index):
                 check_stop(job_id)
                 idx = future_to_index[future]
                 try:
                     seg_files[idx] = future.result()
                     
-                    # Update Progress and ETA
+                    # Update Progress and ETA (Real Math)
                     completed_count += 1
                     elapsed = time.time() - start_time
                     avg_time_per_ayah = elapsed / completed_count
@@ -387,17 +408,17 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                     
                     eta_seconds = int(avg_time_per_ayah * remaining_ayahs)
                     eta_str = str(datetime.timedelta(seconds=eta_seconds))
-                    if eta_seconds < 3600: eta_str = eta_str[2:] # Trim HH: if less than hour
+                    if eta_seconds < 3600: eta_str = eta_str[2:] 
                     
-                    percent = 10 + int((completed_count / total_ayahs) * 85)
+                    percent = 15 + int((completed_count / total_ayahs) * 80)
                     update_job_status(job_id, percent, f"Rendering ({completed_count}/{total_ayahs})", eta=eta_str)
                     
                 except Exception as exc:
-                    print(f"Verse processing generated an exception: {exc}")
+                    print(f"Verse error: {exc}")
                     raise exc
 
-        # FAST CONCATENATION (Stream Copy)
-        update_job_status(job_id, 98, "Final Stitching...", eta="00:00")
+        # FAST CONCATENATION
+        update_job_status(job_id, 98, "Final Stitching...", eta="00:01")
         list_path = os.path.join(workspace, "list.txt")
         with open(list_path, "w") as f:
             for path in seg_files:
