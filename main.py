@@ -84,6 +84,7 @@ NEW_RECITERS_CONFIG = {
 }
 
 OLD_RECITERS_MAP = {
+    'أبو بكر الشاطري':'Abu_Bakr_Ash-Shaatree_128kbps',
     'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 
     'الشيخ عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 
     'الشيخ ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 
@@ -504,3 +505,4 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
