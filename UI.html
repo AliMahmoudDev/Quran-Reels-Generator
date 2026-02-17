@@ -130,18 +130,21 @@
             display: flex; flex-direction: column;
         }
 
+        /* FIXED PREVIEW BOX CSS - NO EXTERNAL IMAGES */
         .preview-box {
-            width: 100%; height: 160px; background: #000;
-            border-radius: 12px; border: 1px solid #333;
+            width: 100%; 
+            min-height: 150px; /* Ensure it never collapses */
+            background: linear-gradient(45deg, #1a1a2e, #16213e); /* Reliable gradient */
+            border-radius: 12px; border: 1px solid #444;
             margin-bottom: 20px; position: relative; overflow: hidden;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            background-image: url('https://images.pexels.com/photos/2341830/pexels-photo-2341830.jpeg?auto=compress&cs=tinysrgb&w=400'); 
-            background-size: cover; background-position: center;
+            flex-shrink: 0; /* Prevent shrinking on small screens */
         }
-        .preview-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); z-index: 1; }
+        .preview-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.8)); z-index: 1; pointer-events: none;}
+        
         .prev-text-ar, .prev-text-en { position: relative; z-index: 2; text-align: center; width: 90%; transition: 0.2s; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
-        .prev-text-ar { font-family: 'Amiri', serif; margin-bottom: 8px; line-height: 1.6; }
-        .prev-text-en { font-family: 'Cairo', sans-serif; line-height: 1.4; }
+        .prev-text-ar { font-family: 'Amiri', serif; margin-bottom: 8px; line-height: 1.6; font-size: 1.6rem; }
+        .prev-text-en { font-family: 'Cairo', sans-serif; line-height: 1.4; font-size: 0.9rem; }
 
         .set-section { margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; }
         .set-title { font-size: 0.85rem; color: #888; margin-bottom: 10px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
