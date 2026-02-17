@@ -108,7 +108,6 @@
             padding: 20px; max-height: 90vh; overflow-y: auto;
             box-shadow: 0 0 40px rgba(212, 175, 55, 0.15);
             display: flex; flex-direction: column;
-            will-change: transform;
         }
 
         /* FIXED PREVIEW BOX CSS */
@@ -122,7 +121,7 @@
         }
         .preview-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.8)); z-index: 1; pointer-events: none;}
         
-        .prev-text-ar, .prev-text-en { position: relative; z-index: 2; text-align: center; width: 90%; transition: 0.2s; will-change: transform, color; }
+        .prev-text-ar, .prev-text-en { position: relative; z-index: 2; text-align: center; width: 90%; transition: 0.2s; }
         .prev-text-ar { font-family: 'Amiri', serif; margin-bottom: 8px; line-height: 1.6; font-size: 1.6rem; }
         .prev-text-en { font-family: 'Cairo', sans-serif; line-height: 1.4; font-size: 0.9rem; }
 
@@ -283,7 +282,7 @@
             
             <div class="preview-box">
                 <div class="preview-overlay"></div>
-                <div id="prevAr" class="prev-text-ar">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
+                <div id="prevAr" class="prev-text-ar">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
                 <div id="prevEn" class="prev-text-en">In the name of Allah, the Entirely Merciful</div>
             </div>
 
@@ -291,18 +290,18 @@
                 <div class="set-header">اللغة العربية (Arabic)</div>
                 <div class="ctrl-line">
                     <span>اللون & الحجم</span>
-                    <input type="color" id="arColor" class="color-input" value="#ffffff" oninput="debouncedUpd()">
-                    <input type="range" id="arSize" class="sm-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="debouncedUpd()">
+                    <input type="color" id="arColor" class="color-input" value="#ffffff" oninput="upd()">
+                    <input type="range" id="arSize" class="sm-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="upd()">
                 </div>
                 <div class="ctrl-line">
                     <span>إطار (Outline)</span>
-                    <input type="color" id="arOutC" class="color-input" value="#000000" oninput="debouncedUpd()">
-                    <input type="range" id="arOutW" class="sm-slider" min="0" max="10" step="1" value="4" oninput="debouncedUpd()">
+                    <input type="color" id="arOutC" class="color-input" value="#000000" oninput="upd()">
+                    <input type="range" id="arOutW" class="sm-slider" min="0" max="10" step="1" value="4" oninput="upd()">
                 </div>
                 <div class="ctrl-line">
                     <span>ظل (Shadow)</span>
                     <input type="checkbox" id="arShadow" onchange="upd()">
-                    <input type="color" id="arShadowC" class="color-input" value="#000000" oninput="debouncedUpd()">
+                    <input type="color" id="arShadowC" class="color-input" value="#000000" oninput="upd()">
                 </div>
             </div>
 
@@ -310,18 +309,18 @@
                 <div class="set-header">الترجمة (Translation)</div>
                 <div class="ctrl-line">
                     <span>اللون & الحجم</span>
-                    <input type="color" id="enColor" class="color-input" value="#FFD700" oninput="debouncedUpd()">
-                    <input type="range" id="enSize" class="sm-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="debouncedUpd()">
+                    <input type="color" id="enColor" class="color-input" value="#FFD700" oninput="upd()">
+                    <input type="range" id="enSize" class="sm-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="upd()">
                 </div>
                 <div class="ctrl-line">
                     <span>إطار (Outline)</span>
-                    <input type="color" id="enOutC" class="color-input" value="#000000" oninput="debouncedUpd()">
-                    <input type="range" id="enOutW" class="sm-slider" min="0" max="10" step="1" value="3" oninput="debouncedUpd()">
+                    <input type="color" id="enOutC" class="color-input" value="#000000" oninput="upd()">
+                    <input type="range" id="enOutW" class="sm-slider" min="0" max="10" step="1" value="3" oninput="upd()">
                 </div>
                 <div class="ctrl-line">
                     <span>ظل (Shadow)</span>
                     <input type="checkbox" id="enShadow" onchange="upd()">
-                    <input type="color" id="enShadowC" class="color-input" value="#000000" oninput="debouncedUpd()">
+                    <input type="color" id="enShadowC" class="color-input" value="#000000" oninput="upd()">
                 </div>
             </div>
 
@@ -336,53 +335,9 @@
     <script>
         let COUNTS = {};
         let currentJobId = null;
-        let pollInterval = null; 
-        
-        // --- SMART TIMER LOGIC ---
-        let etaSeconds = 0;
-        let countdownInterval = null;
+        let pollInterval = null; // Global poll var for Stop functionality
 
-        function startSmartCountdown(initialEta) {
-            if (countdownInterval) clearInterval(countdownInterval);
-            
-            // Parse initial "MM:SS"
-            if (initialEta && initialEta.includes(':')) {
-                const parts = initialEta.split(':');
-                etaSeconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-            } else {
-                etaSeconds = 60; // Default fallback
-            }
-
-            const etaTxt = document.getElementById('etaTxt');
-            
-            countdownInterval = setInterval(() => {
-                if (etaSeconds > 0) {
-                    etaSeconds--;
-                    const m = Math.floor(etaSeconds / 60).toString().padStart(2, '0');
-                    const s = (etaSeconds % 60).toString().padStart(2, '0');
-                    etaTxt.innerText = `${m}:${s}`;
-                } else {
-                    etaTxt.innerText = "00:00";
-                }
-            }, 1000); // Visual Tick every second
-        }
-
-        function stopSmartCountdown() {
-            if (countdownInterval) clearInterval(countdownInterval);
-            countdownInterval = null;
-        }
-
-        // --- Standard UI Logic ---
-
-        function debounce(func, wait) {
-            let timeout;
-            return function(...args) {
-                const context = this;
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(context, args), wait);
-            };
-        }
-
+        // --- Settings Logic ---
         const defSet = {
             arColor: "#ffffff", arSize: "1.0", arOutC: "#000000", arOutW: "4", arShadow: false, arShadowC: "#000000",
             enColor: "#FFD700", enSize: "1.0", enOutC: "#000000", enOutW: "3", enShadow: false, enShadowC: "#000000"
@@ -391,28 +346,36 @@
         function openSettings() { loadSettingsUI(); upd(); document.getElementById('settingsModal').style.display = 'flex'; }
         
         function upd() {
+            // Arabic Preview
             const pAr = document.getElementById('prevAr');
             pAr.style.color = document.getElementById('arColor').value;
             pAr.style.fontSize = (1.5 * document.getElementById('arSize').value) + 'rem';
+            
             const arOutW = document.getElementById('arOutW').value / 5; 
             const arOutC = document.getElementById('arOutC').value;
             pAr.style.webkitTextStroke = (arOutW > 0) ? `${arOutW}px ${arOutC}` : '0px transparent';
+            
             if(document.getElementById('arShadow').checked) {
                 pAr.style.textShadow = `2px 2px 0px ${document.getElementById('arShadowC').value}`;
-            } else { pAr.style.textShadow = 'none'; }
+            } else {
+                pAr.style.textShadow = 'none';
+            }
 
+            // English Preview
             const pEn = document.getElementById('prevEn');
             pEn.style.color = document.getElementById('enColor').value;
             pEn.style.fontSize = (0.85 * document.getElementById('enSize').value) + 'rem';
+
             const enOutW = document.getElementById('enOutW').value / 5;
             const enOutC = document.getElementById('enOutC').value;
             pEn.style.webkitTextStroke = (enOutW > 0) ? `${enOutW}px ${enOutC}` : '0px transparent';
+
             if(document.getElementById('enShadow').checked) {
                 pEn.style.textShadow = `1px 1px 0px ${document.getElementById('enShadowC').value}`;
-            } else { pEn.style.textShadow = 'none'; }
+            } else {
+                pEn.style.textShadow = 'none';
+            }
         }
-        
-        const debouncedUpd = debounce(upd, 50);
 
         function saveSettings() {
             const s = {};
@@ -422,6 +385,7 @@
             s.enShadow = document.getElementById('enShadow').checked;
             localStorage.setItem('quran_app_styles_v2', JSON.stringify(s));
             document.getElementById('settingsModal').style.display='none';
+            
             const btn = document.querySelector('.btn-gear');
             const old = btn.innerText; btn.innerText = "✅"; setTimeout(() => btn.innerText = old, 1500);
         }
@@ -441,42 +405,24 @@
             if(confirm('reset?')) { localStorage.removeItem('quran_app_styles_v2'); loadSettingsUI(); upd(); }
         }
 
+        // --- Standard App Logic ---
         window.onload = async () => {
             if(localStorage.getItem('user_pexels_key')) document.getElementById('pexelsKey').value = localStorage.getItem('user_pexels_key');
             loadHistory(); loadSettingsUI();
             try {
                 const d = await (await fetch(`/api/config`)).json();
                 COUNTS = d.verseCounts;
-                
-                const sSelect = document.getElementById('sSelect');
-                const sFrag = document.createDocumentFragment();
-                d.surahs.forEach((n, i) => {
-                    const opt = document.createElement('option');
-                    opt.value = i+1;
-                    opt.textContent = `${i+1}. ${n}`;
-                    sFrag.appendChild(opt);
-                });
-                sSelect.appendChild(sFrag);
-
-                const rSelect = document.getElementById('rSelect');
-                const rFrag = document.createDocumentFragment();
-                for(const [n, id] of Object.entries(d.reciters)) {
-                    const opt = document.createElement('option');
-                    opt.value = id;
-                    opt.textContent = n;
-                    rFrag.appendChild(opt);
-                }
-                rSelect.appendChild(rFrag);
-
+                d.surahs.forEach((n, i) => sSelect.add(new Option(`${i+1}. ${n}`, i+1)));
+                for(const [n, id] of Object.entries(d.reciters)) rSelect.add(new Option(n, id));
             } catch(e) {}
         };
 
         function toggleSearch() { document.getElementById('bgQuery').style.display = document.getElementById('useSearch').checked ? 'block' : 'none'; }
         
+        // FIXED STOP PROCESS
         async function stopProcess() { 
             if(currentJobId && confirm("إيقاف؟")) {
                 if(pollInterval) clearInterval(pollInterval);
-                stopSmartCountdown();
                 await fetch('/api/cancel', {method:'POST', body:JSON.stringify({jobId:currentJobId}), headers:{'Content-Type':'application/json'}});
                 document.getElementById('stopBtn').style.display = 'none';
                 document.getElementById('btn').style.display = 'flex';
@@ -487,17 +433,13 @@
 
         function validateAyah(id) {
             const el = document.getElementById(id);
-            const sSelect = document.getElementById('sSelect');
             const max = COUNTS[sSelect.value] || 286;
             let val = parseInt(el.value);
             if (isNaN(val) || val < 1) val = 1; if (val > max) val = max;
             el.value = val;
         }
         function adj(id, v) { document.getElementById(id).value = parseInt(document.getElementById(id).value) + v; validateAyah(id); }
-        
         function smartRandomize() { 
-            const rSelect = document.getElementById('rSelect');
-            const sSelect = document.getElementById('sSelect');
             if(rSelect.length) rSelect.selectedIndex = Math.floor(Math.random() * rSelect.length);
             if(sSelect.length) {
                 sSelect.selectedIndex = Math.floor(Math.random() * sSelect.length);
@@ -529,10 +471,6 @@
             document.getElementById('timerBadge').style.display = 'none';
 
             const sty = JSON.parse(localStorage.getItem('quran_app_styles_v2')) || defSet;
-            const rSelect = document.getElementById('rSelect');
-            const sSelect = document.getElementById('sSelect');
-            const startAyah = document.getElementById('startAyah');
-            const endAyah = document.getElementById('endAyah');
 
             try {
                 const res = await fetch('/api/generate', {
@@ -540,7 +478,7 @@
                     body: JSON.stringify({
                         pexelsKey: pk, reciter: rSelect.value, surah: sSelect.value,
                         startAyah: startAyah.value, endAyah: endAyah.value,
-                        quality: document.getElementById('qSelect').value, fps: document.getElementById('fpsSelect').value,
+                        quality: qSelect.value, fps: fpsSelect.value,
                         bgQuery: document.getElementById('useSearch').checked ? document.getElementById('bgQuery').value : "",
                         dynamicBg: document.getElementById('dynamicBg').checked,
                         useGlow: document.getElementById('useGlow').checked,
@@ -552,35 +490,26 @@
                 if(d.error) throw new Error(d.error);
                 currentJobId = d.jobId;
 
-                // Start Polling
                 pollInterval = setInterval(async () => {
                     try {
                         const p = await (await fetch(`/api/progress?jobId=${currentJobId}`)).json();
                         document.getElementById('barFill').style.width = p.percent+'%';
                         document.getElementById('statusTxt').innerText = p.status;
                         
-                        // --- TIMER LOGIC FIX ---
                         if(p.percent > 0 && p.percent < 100) {
                             document.getElementById('timerBadge').style.display = 'inline-flex';
-                            
-                            // If first time or new estimate arrived from server, sync the timer
-                            if (!countdownInterval && p.eta && p.eta !== "--:--") {
-                                startSmartCountdown(p.eta);
-                            }
+                            document.getElementById('etaTxt').innerText = p.eta || "--:--";
                         }
 
                         if(p.is_complete) {
                             clearInterval(pollInterval);
-                            stopSmartCountdown(); // Stop timer
-                            
                             const vidRes = await fetch(`/api/download?jobId=${currentJobId}`);
                             if(!vidRes.ok) throw new Error("Download failed");
                             const b = await vidRes.blob();
                             const u = URL.createObjectURL(b);
                             document.getElementById('player').src = u;
-                            const dlLink = document.getElementById('dlLink');
-                            dlLink.href = u;
-                            dlLink.setAttribute('download', `Quran_${sSelect.value}_${startAyah.value}.mp4`);
+                            document.getElementById('dlLink').href = u;
+                            document.getElementById('dlLink').setAttribute('download', `Quran_${sSelect.value}_${startAyah.value}.mp4`);
                             
                             document.getElementById('progArea').style.display='none';
                             document.getElementById('resArea').style.display='block';
@@ -593,7 +522,6 @@
                         }
                     } catch(err) {
                         clearInterval(pollInterval);
-                        stopSmartCountdown();
                         alert(err.message);
                         document.getElementById('stopBtn').style.display = 'none';
                         document.getElementById('btn').style.display = 'flex';
