@@ -8,6 +8,7 @@
     <link rel="icon" href="https://ibb.co/zWy3WBhD"> 
     
     <meta property="og:title" content="صانع الريلز القرآني 🚀">
+    <meta property="og:description" content="أنشئ فيديوهات قرانية احترافية في ثوانٍ.">
     <meta name="theme-color" content="#0a0a0e">
 
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -38,18 +39,38 @@
 
         .container { width: 100%; max-width: 500px; padding-bottom: 50px; }
         
-        .logo-img { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--primary-gold); margin-bottom: 10px; box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
-        .card { background: var(--bg-glass); backdrop-filter: blur(10px); border-radius: 16px; border: 1px solid var(--border-glow); padding: 20px 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .logo-img {
+            width: 80px; height: 80px; border-radius: 50%;
+            border: 2px solid var(--primary-gold); margin-bottom: 10px;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .card {
+            background: var(--bg-glass); backdrop-filter: blur(10px);
+            border-radius: 16px; border: 1px solid var(--border-glow);
+            padding: 20px 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
         
-        .timer-badge { background: rgba(255, 255, 255, 0.1); padding: 5px 10px; border-radius: 20px; font-size: 0.9rem; color: var(--primary-gold); font-family: monospace; display: inline-flex; align-items: center; gap: 5px; margin-top: 5px; }
+        .timer-badge {
+            background: rgba(255, 255, 255, 0.1); padding: 5px 10px;
+            border-radius: 20px; font-size: 0.9rem; color: var(--primary-gold);
+            font-family: monospace; display: inline-flex; align-items: center; gap: 5px; margin-top: 5px;
+        }
 
         .history-section { margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
         .history-title { font-size: 1rem; color: #888; margin-bottom: 10px; text-align: center; }
-        .history-item { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.05); }
+        .history-item {
+            background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px;
+            margin-bottom: 8px; display: flex; justify-content: space-between;
+            align-items: center; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.05);
+        }
         .hist-info { display: flex; flex-direction: column; }
         .hist-meta { font-size: 0.65rem; color: #aaa; margin-top: 2px; }
         .hist-date { font-size: 0.6rem; color: #666; margin-top: 2px; }
-        .hist-btn { background: var(--primary-gold); color: #000; text-decoration: none; padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 0.8rem; }
+        .hist-btn {
+            background: var(--primary-gold); color: #000; text-decoration: none;
+            padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 0.8rem;
+        }
 
         .header { text-align: center; margin-bottom: 20px; }
         .title { font-family: 'Amiri', serif; font-size: 1.8rem; background: var(--gradient-gold); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -92,7 +113,7 @@
         .social-link:hover { background: var(--gradient-gold); color: #000; transform: translateY(-3px); }
         .social-link svg { fill: currentColor; }
 
-        /* --- SETTINGS MODAL --- */
+        /* --- SETTINGS MODAL CSS --- */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); z-index: 1000;
@@ -109,6 +130,7 @@
             display: flex; flex-direction: column;
         }
 
+        /* FIXED PREVIEW BOX CSS */
         .preview-box {
             width: 100%; min-height: 150px;
             background: linear-gradient(45deg, #1a1a2e, #16213e);
@@ -154,8 +176,13 @@
             </div>
 
             <div style="background: rgba(212, 175, 55, 0.05); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed var(--primary-gold);">
-                <label class="label">🔑 مفتاح Pexels</label>
+                <label class="label">🔑 مفتاح Pexels (للخلفيات)</label>
                 <input type="text" id="pexelsKey" class="input-box" placeholder="الصق الـ API Key هنا">
+                <div style="text-align:center; margin-top:10px;">
+                    <a href="https://www.pexels.com/api/" target="_blank" style="color: #4ade80; text-decoration: underline; font-weight: bold; font-size: 0.95rem;">
+                        👉 اضغط هنا للحصول على مفتاح مجاني
+                    </a>
+                </div>
             </div>
 
             <form id="vForm">
@@ -168,65 +195,103 @@
                     <select id="sSelect" class="input-box"></select>
                 </div>
                 <div class="num-row">
-                    <div class="num-group"><label class="label">من</label><div class="num-ctrl"><input type="number" id="startAyah" class="num-val" value="1"></div></div>
-                    <div class="num-group"><label class="label">إلى</label><div class="num-ctrl"><input type="number" id="endAyah" class="num-val" value="5"></div></div>
+                    <div class="num-group">
+                        <label class="label">من آية</label>
+                        <div class="num-ctrl">
+                            <button type="button" class="num-btn" onclick="adj('startAyah',-1)">−</button>
+                            <input type="number" id="startAyah" class="num-val" value="1" onchange="validateAyah('startAyah')">
+                            <button type="button" class="num-btn" onclick="adj('startAyah',1)">+</button>
+                        </div>
+                    </div>
+                    <div class="num-group">
+                        <label class="label">إلى آية</label>
+                        <div class="num-ctrl">
+                            <button type="button" class="num-btn" onclick="adj('endAyah',-1)">−</button>
+                            <input type="number" id="endAyah" class="num-val" value="5" onchange="validateAyah('endAyah')">
+                            <button type="button" class="num-btn" onclick="adj('endAyah',1)">+</button>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="form-group">
-                    <label class="label">FPS</label>
+                    <label class="label">سلاسة الفيديو (FPS)</label>
                     <select id="fpsSelect" class="input-box">
-                        <option value="20" selected>⚖️ 20 FPS (المستحسن)</option>
-                        <option value="30">💎 30 FPS</option>
+                        <option value="15">🚀 15 FPS (سريع جداً)</option>
+                        <option value="20" selected>⚖️ 20 FPS (متوازن - ينصح به)</option>
+                        <option value="24">🎬 24 FPS (سينمائي)</option>
+                        <option value="30">💎 30 FPS (الأكثر سلاسة)</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label class="label">الجودة</label>
+                    <label class="label">جودة الفيديو</label>
                     <select id="qSelect" class="input-box">
-                        <option value="720">⚡ 720p HD</option>
+                        <option value="720">⚡ 720p HD (الأسرع)</option>
                         <option value="1080">🌟 1080p FHD</option>
                     </select>
                 </div>
 
                 <div class="toggle-box">
-                    <span>🔍 بحث مخصص</span>
+                    <span style="font-size:0.9rem;">🔍 بحث مخصص (خلفية)</span>
                     <label class="switch"><input type="checkbox" id="useSearch" onchange="toggleSearch()"><span class="slider"></span></label>
                 </div>
-                <input type="text" id="bgQuery" class="input-box" placeholder="بحر، سماء..." style="display:none; margin-bottom:15px;">
+                <input type="text" id="bgQuery" class="input-box" placeholder="اكتب: بحر، سماء..." style="display:none; margin-bottom:15px;">
 
                 <div class="toggle-box">
-                    <span>🔄 خلفية متحركة</span>
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-size:0.9rem;">🔄 تغيير الخلفية مع الآيات</span>
+                        <span style="font-size:0.65rem; color:#aaa;">(يستهلك بيانات أكثر)</span>
+                    </div>
                     <label class="switch"><input type="checkbox" id="dynamicBg" checked><span class="slider"></span></label>
                 </div>
 
-                <div class="toggle-box" style="background: rgba(212, 175, 55, 0.1);">
-                    <span>✨ توهج (Glow)</span>
+                <div class="toggle-box" style="background: rgba(212, 175, 55, 0.1); border: 1px solid var(--border-glow);">
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-size:0.9rem; color: var(--primary-gold);">✨ توهج النص (Glow)</span>
+                        <span style="font-size:0.65rem; color:#aaa;">(تأثير هالة خفيفة)</span>
+                    </div>
                     <label class="switch"><input type="checkbox" id="useGlow" checked><span class="slider"></span></label>
                 </div>
 
-                <div class="toggle-box" style="background: rgba(212, 175, 55, 0.1);">
-                    <span>🎬 تعتيم (Vignette)</span>
+                <div class="toggle-box" style="background: rgba(212, 175, 55, 0.1); border: 1px solid var(--border-glow);">
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-size:0.9rem; color: var(--primary-gold);">🎬 تعتيم سينمائي (Vignette)</span>
+                    </div>
                     <label class="switch"><input type="checkbox" id="useVignette" checked><span class="slider"></span></label>
                 </div>
 
-                <button type="submit" id="btn" class="btn-main">✨ إنشاء</button>
+                <button type="submit" id="btn" class="btn-main">✨ إنشاء الفيديو</button>
                 <button type="button" id="stopBtn" class="btn-stop" onclick="stopProcess()">🛑 إيقاف</button>
             </form>
 
             <div class="prog-area" id="progArea">
-                <div class="status-txt" id="statusTxt">جاري العمل...</div>
+                <div class="status-txt" id="statusTxt">جاري الاتصال...</div>
+                <div class="timer-badge" id="timerBadge" style="display:none;">
+                    ⏳ متبقي: <span id="etaTxt">--:--</span>
+                </div>
                 <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
             </div>
 
             <div class="result-area" id="resArea">
+                <div style="color: #4ade80; font-weight: bold; font-size: 1.2rem; margin-bottom: 10px;">✅ تم الانتهاء!</div>
                 <video id="player" controls playsinline loop></video>
-                <a id="dlLink" href="#" class="dl-link" download>⬇️ تحميل</a>
+                <a id="dlLink" href="#" class="dl-link" download>⬇️ تحميل الفيديو</a>
             </div>
 
             <div class="history-section" id="histSection" style="display:none;">
-                <div class="history-title">سجل العمليات</div>
+                <div class="history-title">📜 سجل العمليات (آخر 5)</div>
                 <div id="histList"></div>
-                <button onclick="clearHistory()" style="width:100%; padding:5px; background:none; border:none; color:#666; font-size:0.8rem; cursor:pointer;">مسح</button>
+                <button onclick="clearHistory()" style="width:100%; padding:5px; background:none; border:none; color:#666; font-size:0.8rem; cursor:pointer; margin-top:5px;">🗑️ مسح السجل</button>
+            </div>
+
+            <div class="footer-contact">
+                <p style="color: #888; font-size: 0.85rem;">للتطوير أو الإبلاغ عن أخطاء، يسعدنا تواصلك</p>
+                <div class="contact-links">
+                    <a href="https://t.me/QuranReelsGen" target="_blank" class="social-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.35-.97.52-1.35.51-.42-.01-1.22-.24-1.82-.43-.74-.24-1.33-.37-1.28-.77.03-.21.32-.42.88-.63 3.42-1.49 5.71-2.48 6.85-2.97 3.27-1.4 3.95-1.64 4.39-1.65.1 0 .32.02.46.14.12.1.15.24.16.33.01.06.02.19.01.28z"/></svg>
+                        قناة التحديثات
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -290,7 +355,7 @@
     <script>
         let COUNTS = {};
         let currentJobId = null;
-        let pollInterval = null; // Global variable for the polling timer
+        let pollInterval = null; // Global poll var for Stop functionality
 
         // --- Settings Logic ---
         const defSet = {
@@ -306,7 +371,7 @@
             pAr.style.color = document.getElementById('arColor').value;
             pAr.style.fontSize = (1.5 * document.getElementById('arSize').value) + 'rem';
             
-            const arOutW = document.getElementById('arOutW').value / 5; // Scale down for preview
+            const arOutW = document.getElementById('arOutW').value / 5; 
             const arOutC = document.getElementById('arOutC').value;
             pAr.style.webkitTextStroke = (arOutW > 0) ? `${arOutW}px ${arOutC}` : '0px transparent';
             
@@ -342,8 +407,7 @@
             document.getElementById('settingsModal').style.display='none';
             
             const btn = document.querySelector('.btn-gear');
-            btn.innerHTML = "✅";
-            setTimeout(() => btn.innerHTML = "⚙️", 1500);
+            const old = btn.innerText; btn.innerText = "✅"; setTimeout(() => btn.innerText = old, 1500);
         }
 
         function loadSettingsUI() {
@@ -374,6 +438,19 @@
         };
 
         function toggleSearch() { document.getElementById('bgQuery').style.display = document.getElementById('useSearch').checked ? 'block' : 'none'; }
+        
+        // FIXED STOP PROCESS
+        async function stopProcess() { 
+            if(currentJobId && confirm("إيقاف؟")) {
+                if(pollInterval) clearInterval(pollInterval);
+                await fetch('/api/cancel', {method:'POST', body:JSON.stringify({jobId:currentJobId}), headers:{'Content-Type':'application/json'}});
+                document.getElementById('stopBtn').style.display = 'none';
+                document.getElementById('btn').style.display = 'flex';
+                document.getElementById('progArea').style.display = 'none';
+                document.getElementById('statusTxt').innerText = 'تم الإيقاف';
+            }
+        }
+
         function validateAyah(id) {
             const el = document.getElementById(id);
             const max = COUNTS[sSelect.value] || 286;
@@ -393,23 +470,6 @@
             }
         }
 
-        // FIXED STOP PROCESS
-        async function stopProcess() { 
-            if(currentJobId && confirm("إيقاف؟")) {
-                // 1. Immediately kill the polling loop
-                if (pollInterval) clearInterval(pollInterval);
-                
-                // 2. Send the cancel request silently
-                await fetch('/api/cancel', {method:'POST', body:JSON.stringify({jobId:currentJobId}), headers:{'Content-Type':'application/json'}});
-                
-                // 3. Reset the UI immediately
-                document.getElementById('stopBtn').style.display = 'none';
-                document.getElementById('btn').style.display = 'flex';
-                document.getElementById('progArea').style.display = 'none';
-                document.getElementById('statusTxt').innerText = "تم الإيقاف";
-            }
-        }
-        
         function loadHistory() {
             const h = JSON.parse(localStorage.getItem('q_hist')||'[]');
             const l = document.getElementById('histList'); l.innerHTML='';
@@ -428,6 +488,7 @@
             document.getElementById('stopBtn').style.display = 'flex';
             document.getElementById('progArea').style.display='block';
             document.getElementById('resArea').style.display='none';
+            document.getElementById('timerBadge').style.display = 'none';
 
             const sty = JSON.parse(localStorage.getItem('quran_app_styles_v2')) || defSet;
 
@@ -449,18 +510,27 @@
                 if(d.error) throw new Error(d.error);
                 currentJobId = d.jobId;
 
-                // Assign to global variable so stopProcess can kill it
                 pollInterval = setInterval(async () => {
                     try {
                         const p = await (await fetch(`/api/progress?jobId=${currentJobId}`)).json();
                         document.getElementById('barFill').style.width = p.percent+'%';
                         document.getElementById('statusTxt').innerText = p.status;
+                        
+                        if(p.percent > 0 && p.percent < 100) {
+                            document.getElementById('timerBadge').style.display = 'inline-flex';
+                            document.getElementById('etaTxt').innerText = p.eta || "--:--";
+                        }
+
                         if(p.is_complete) {
                             clearInterval(pollInterval);
-                            const b = await (await fetch(`/api/download?jobId=${currentJobId}`)).blob();
+                            const vidRes = await fetch(`/api/download?jobId=${currentJobId}`);
+                            if(!vidRes.ok) throw new Error("Download failed");
+                            const b = await vidRes.blob();
                             const u = URL.createObjectURL(b);
                             document.getElementById('player').src = u;
                             document.getElementById('dlLink').href = u;
+                            document.getElementById('dlLink').setAttribute('download', `Quran_${sSelect.value}_${startAyah.value}.mp4`);
+                            
                             document.getElementById('progArea').style.display='none';
                             document.getElementById('resArea').style.display='block';
                             document.getElementById('stopBtn').style.display='none';
@@ -470,15 +540,18 @@
                             h.unshift({t:`${sSelect.options[sSelect.selectedIndex].text} (${startAyah.value})`, u:u});
                             localStorage.setItem('q_hist', JSON.stringify(h.slice(0,5))); loadHistory();
                         }
-                    } catch(err) { 
-                        // If error happens (like backend stopped), clear loop and reset
+                    } catch(err) {
                         clearInterval(pollInterval);
-                        alert(err.message); 
-                        document.getElementById('stopBtn').style.display='none'; 
-                        document.getElementById('btn').style.display='flex'; 
+                        alert(err.message);
+                        document.getElementById('stopBtn').style.display = 'none';
+                        document.getElementById('btn').style.display = 'flex';
                     }
                 }, 1000);
-            } catch(err) { alert(err.message); document.getElementById('stopBtn').style.display='none'; document.getElementById('btn').style.display='flex'; }
+            } catch(err) { 
+                alert(err.message); 
+                document.getElementById('stopBtn').style.display = 'none'; 
+                document.getElementById('btn').style.display = 'flex'; 
+            }
         };
     </script>
 </body>
