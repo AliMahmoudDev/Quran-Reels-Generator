@@ -250,34 +250,38 @@ def wrap_text(text, per_line):
 
 def create_combined_overlay(surah, ayah, duration, target_w, target_h, scale_factor, use_glow, use_vignette, style_cfg):
     """
-    Creates a SINGLE image layer containing the vignette, Arabic text, and English text.
-    This forces MoviePy to do only 1 composition per frame instead of 3 or 4.
+    Renders text with independent Shadow and Outline settings for Arabic and English.
     """
-    # 1. Init Canvas (Transparent)
+    # 1. Init Canvas
     img = Image.new('RGBA', (target_w, target_h), (0,0,0,0))
     draw = ImageDraw.Draw(img)
 
-    # 2. Draw Vignette (If enabled)
+    # 2. Draw Vignette (Dark borders)
     if use_vignette:
-        # Create gradient mask manually with Pillow for speed
         overlay = Image.new('RGBA', (target_w, target_h), (0,0,0,0))
         v_draw = ImageDraw.Draw(overlay)
-        # Draw dark gradient at bottom for text contrast
         for i in range(int(target_h * 0.6), target_h, 2):
             alpha = int(180 * ((i - target_h * 0.6) / (target_h * 0.4)))
             v_draw.line([(0, i), (target_w, i)], fill=(0, 0, 0, alpha), width=2)
         img.alpha_composite(overlay)
 
-    # 3. Text Config
+    # 3. Parse Configs (Arabic)
     ar_color = style_cfg.get('arColor', '#ffffff')
-    en_color = style_cfg.get('enColor', '#FFD700')
     ar_scale = float(style_cfg.get('arSize', 1.0))
-    en_scale = float(style_cfg.get('enSize', 1.0))
-    use_stroke = style_cfg.get('useStroke', True)
-    stroke_c = style_cfg.get('strokeColor', '#000000')
-    stroke_w = int(float(style_cfg.get('strokeWidth', 4)) * scale_factor) if use_stroke else 0
+    ar_stroke_c = style_cfg.get('arOutC', '#000000')
+    ar_stroke_w = int(float(style_cfg.get('arOutW', 4)) * scale_factor)
+    ar_shadow_on = style_cfg.get('arShadow', False)
+    ar_shadow_c = style_cfg.get('arShadowC', '#000000')
 
-    # 4. Prepare Arabic Text
+    # 4. Parse Configs (English)
+    en_color = style_cfg.get('enColor', '#FFD700')
+    en_scale = float(style_cfg.get('enSize', 1.0))
+    en_stroke_c = style_cfg.get('enOutC', '#000000')
+    en_stroke_w = int(float(style_cfg.get('enOutW', 3)) * scale_factor)
+    en_shadow_on = style_cfg.get('enShadow', False)
+    en_shadow_c = style_cfg.get('enShadowC', '#000000')
+
+    # 5. Prepare Arabic Text
     ar_text = f"{get_text(surah, ayah)} ({ayah})"
     words = ar_text.split()
     wc = len(words)
@@ -290,54 +294,62 @@ def create_combined_overlay(surah, ayah, duration, target_w, target_h, scale_fac
     final_ar_fs = int(base_fs * scale_factor * ar_scale)
     ar_font = get_cached_font(FONT_PATH_ARABIC, final_ar_fs)
     
-    # Wrap Arabic
     wrapped_ar = wrap_text(ar_text, pl)
     ar_lines = wrapped_ar.split('\n')
     
-    # Calculate Arabic Dimensions
     line_metrics = []
     total_ar_h = 0
     GAP = 10 * scale_factor * ar_scale
     
     for l in ar_lines:
-        bbox = draw.textbbox((0, 0), l, font=ar_font, stroke_width=stroke_w)
+        bbox = draw.textbbox((0, 0), l, font=ar_font, stroke_width=ar_stroke_w)
         h = bbox[3] - bbox[1]
         line_metrics.append(h)
         total_ar_h += h + GAP
     
-    # 5. Prepare English Text
+    # 6. Prepare English Text
     en_text = get_en_text(surah, ayah)
     final_en_fs = int(30 * scale_factor * en_scale)
     en_font = get_cached_font(FONT_PATH_ENGLISH, final_en_fs)
     wrapped_en = wrap_text(en_text, 10)
     
-    # 6. Positioning (Center Vertical)
+    # 7. Positioning
     current_y = target_h * 0.35 
     
     # DRAW ARABIC
     for i, line in enumerate(ar_lines):
-        bbox = draw.textbbox((0, 0), line, font=ar_font, stroke_width=stroke_w)
+        bbox = draw.textbbox((0, 0), line, font=ar_font, stroke_width=ar_stroke_w)
         w = bbox[2] - bbox[0]
         x = (target_w - w) // 2
         
-        # Glow
+        # Shadow (Hard offset)
+        if ar_shadow_on:
+            offset = int(4 * scale_factor)
+            draw.text((x + offset, current_y + offset), line, font=ar_font, fill=ar_shadow_c)
+
+        # Glow (Optional, if enabled in global toggle)
         if use_glow:
             try: glow_rgb = hex_to_rgb(ar_color)
             except: glow_rgb = (255,255,255)
-            glow_rgba = glow_rgb + (50,) # Lighter alpha for speed
-            draw.text((x, current_y), line, font=ar_font, fill=glow_rgba, stroke_width=stroke_w+5, stroke_fill=glow_rgba)
+            glow_rgba = glow_rgb + (50,)
+            draw.text((x, current_y), line, font=ar_font, fill=glow_rgba, stroke_width=ar_stroke_w+5, stroke_fill=glow_rgba)
 
         # Main Text
-        draw.text((x, current_y), line, font=ar_font, fill=ar_color, stroke_width=stroke_w, stroke_fill=stroke_c)
+        draw.text((x, current_y), line, font=ar_font, fill=ar_color, stroke_width=ar_stroke_w, stroke_fill=ar_stroke_c)
         current_y += line_metrics[i] + GAP
 
-    # DRAW ENGLISH (Below Arabic)
-    current_y += (20 * scale_factor) # Spacing
+    # DRAW ENGLISH
+    current_y += (20 * scale_factor)
     
-    # Draw English centered
-    draw.multiline_text((target_w/2, current_y), wrapped_en, font=en_font, fill=en_color, align='center', anchor="ma", stroke_width=1, stroke_fill='black')
+    # Shadow for English
+    if en_shadow_on:
+        offset = int(3 * scale_factor)
+        # Multiline shadow is tricky, we draw it slightly offset
+        draw.multiline_text(((target_w/2) + offset, current_y + offset), wrapped_en, font=en_font, fill=en_shadow_c, align='center', anchor="ma")
 
-    # 7. Convert to MoviePy Clip
+    # Main English
+    draw.multiline_text((target_w/2, current_y), wrapped_en, font=en_font, fill=en_color, align='center', anchor="ma", stroke_width=en_stroke_w, stroke_fill=en_stroke_c)
+
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.2).fadeout(0.2)
 
 def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
@@ -527,3 +539,4 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
