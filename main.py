@@ -137,56 +137,40 @@ CORS(app)
 
 @lru_cache(maxsize=1)
 def check_available_encoders():
-    """
-    Checks FFmpeg for available hardware encoders.
-    Returns the best available codec and its specific optimization flags.
-    """
     try:
-        # Run ffmpeg -encoders to see what is supported
         cmd = [FFMPEG_EXE, "-encoders"]
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         output = result.stdout
 
-        # Priority 1: NVIDIA NVENC
+        # Priority 1: NVIDIA NVENC (With Legacy Compatibility)
         if "h264_nvenc" in output:
             print("🚀 NVIDIA GPU Detected: Using h264_nvenc")
             return "h264_nvenc", [
-                "-preset", "p1",       # p1 is fastest
-                "-cq", "20",           # Constant Quality
-                "-rc", "vbr",          # Variable bitrate
-                "-pix_fmt", "yuv420p"
+                "-preset", "fast",     # Changed from 'p1' to 'fast' for compatibility
+                "-cq", "22",           # Slightly relaxed quality for stability
+                "-pix_fmt", "yuv420p"  # Strict pixel format to prevent crashes
             ]
         
-        # Priority 2: Intel QSV (Quick Sync Video)
+        # Priority 2: Intel QSV
         elif "h264_qsv" in output:
             print("🚀 Intel QSV Detected: Using h264_qsv")
             return "h264_qsv", [
-                "-global_quality", "20",
-                "-preset", "veryfast",
+                "-global_quality", "25",
                 "-look_ahead", "0"
-            ]
-            
-        # Priority 3: AMD AMF
-        elif "h264_amf" in output:
-            print("🚀 AMD GPU Detected: Using h264_amf")
-            return "h264_amf", [
-                "-usage", "transcoding",
-                "-quality", "speed"
             ]
 
     except Exception as e:
-        print(f"Encoder check failed: {e}. Falling back to CPU.")
+        print(f"Encoder check failed: {e}")
 
     # Fallback: Optimized CPU
-    print("⚠️ No GPU Detected: Using Optimized CPU (libx264)")
+    print("⚠️ Using Optimized CPU (libx264)")
     return "libx264", [
-        "-preset", "ultrafast",  # The fastest CPU preset
-        "-crf", "23",            # Visually lossless balance
-        "-tune", "zerolatency",  # Optimizes for fast encoding start
-        "-movflags", "+faststart", # Web optimization
+        "-preset", "ultrafast",
+        "-crf", "23",
+        "-tune", "zerolatency",
+        "-movflags", "+faststart",
         "-pix_fmt", "yuv420p"
     ]
-
 # ==========================================
 # 🧠 Job Management
 # ==========================================
@@ -643,3 +627,4 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
