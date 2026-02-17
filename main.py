@@ -13,7 +13,7 @@ import gc
 import random
 import requests
 import json
-from functools import lru_cache  # ✅ Added for caching
+from functools import lru_cache
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 
@@ -169,6 +169,11 @@ def get_cached_font(font_path, size):
     except:
         return ImageFont.load_default()
 
+def hex_to_rgb(hex_color):
+    """Convert hex string (e.g., #ffffff) to RGB tuple."""
+    hex_color = hex_color.lstrip('#')
+    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
 def detect_silence(sound, thresh):
     t = 0
     while t < len(sound) and sound[t:t+10].dBFS < thresh: t += 10
@@ -248,34 +253,55 @@ def create_vignette_mask(w, h):
     mask_img[:, :, 3] = (mask * 255).astype(np.uint8)
     return ImageClip(mask_img, ismask=False)
 
-def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
+# ==========================================
+# 🎨 Text Rendering Engine (Updated)
+# ==========================================
+
+def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False, style_cfg=None):
+    # Defaults
+    fill_color = "white"
+    stroke_color = "black"
+    stroke_w = 2
+    font_scale_mult = 1.0
+
+    # Parse Config if exists
+    if style_cfg:
+        fill_color = style_cfg.get('arColor', '#ffffff')
+        font_scale_mult = float(style_cfg.get('arSize', 1.0))
+        if style_cfg.get('useStroke', True):
+            stroke_color = style_cfg.get('strokeColor', '#000000')
+            # Scale stroke with resolution and user scaling
+            stroke_w = int(float(style_cfg.get('strokeWidth', 4)) * scale_factor) 
+        else:
+            stroke_w = 0
+
     words = arabic.split()
     wc = len(words)
     
+    # Adaptive base font size based on text length
     if wc > 60: base_fs, pl = 30, 12
     elif wc > 40: base_fs, pl = 35, 10
     elif wc > 25: base_fs, pl = 41, 9
     elif wc > 15: base_fs, pl = 46, 8
     else: base_fs, pl = 48, 7
     
-    final_fs = int(base_fs * scale_factor)
+    final_fs = int(base_fs * scale_factor * font_scale_mult)
     
-    # ✅ Using Cached Font
+    # Use cached font loader
     font = get_cached_font(FONT_PATH_ARABIC, final_fs)
-
     wrapped_text = wrap_text(arabic, pl)
     lines = wrapped_text.split('\n')
     
-    # We calculate height first
+    # Calculate Texture Dimensions
     dummy = Image.new('RGBA', (target_w, 100))
     d = ImageDraw.Draw(dummy)
     
     line_metrics = []
     total_h = 0
-    GAP = 10 * scale_factor
+    GAP = 10 * scale_factor * font_scale_mult
     
     for l in lines:
-        bbox = d.textbbox((0, 0), l, font=font)
+        bbox = d.textbbox((0, 0), l, font=font, stroke_width=stroke_w)
         h = bbox[3] - bbox[1]
         line_metrics.append(h)
         total_h += h + GAP
@@ -287,25 +313,52 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     curr_y = 20
     
     for i, line in enumerate(lines):
-        w = draw.textbbox((0, 0), line, font=font)[2]
+        bbox = draw.textbbox((0, 0), line, font=font, stroke_width=stroke_w)
+        w = bbox[2] - bbox[0]
         x = (target_w - w) // 2
         
+        # Glow Effect (Optional)
         if glow: 
-            draw.text((x, curr_y), line, font=font, fill=(255,255,255,40), stroke_width=5, stroke_fill=(255,255,255,40))
+            # Parse hex to rgb for transparency
+            try:
+                glow_rgb = hex_to_rgb(fill_color)
+            except:
+                glow_rgb = (255, 255, 255)
+            glow_rgba = glow_rgb + (40,) # 40 is alpha
+            draw.text((x, curr_y), line, font=font, fill=glow_rgba, stroke_width=stroke_w+4, stroke_fill=glow_rgba)
         
-        draw.text((x+1, curr_y+1), line, font=font, fill=(0,0,0,180))
-        draw.text((x, curr_y), line, font=font, fill='white', stroke_width=2, stroke_fill='black')
+        # Legacy Shadow (only if no custom style is active to avoid clutter)
+        if not style_cfg:
+            draw.text((x+1, curr_y+1), line, font=font, fill=(0,0,0,180))
+            
+        # Main Text
+        draw.text((x, curr_y), line, font=font, fill=fill_color, stroke_width=stroke_w, stroke_fill=stroke_color)
         
         curr_y += line_metrics[i] + GAP
         
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.2).fadeout(0.2)
 
-def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
-    # ✅ Using Cached Font
-    font = get_cached_font(FONT_PATH_ENGLISH, int(30 * scale_factor))
-    img = Image.new('RGBA', (target_w, 200), (0,0,0,0))
+def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, style_cfg=None):
+    # Defaults
+    fill_color = "#FFD700"
+    font_scale_mult = 1.0
+    
+    if style_cfg:
+        fill_color = style_cfg.get('enColor', '#FFD700')
+        font_scale_mult = float(style_cfg.get('enSize', 1.0))
+
+    final_fs = int(30 * scale_factor * font_scale_mult)
+    font = get_cached_font(FONT_PATH_ENGLISH, final_fs)
+    
+    # Dynamic height
+    img_h = 200 + int((len(text)/50) * 50) 
+    
+    img = Image.new('RGBA', (target_w, img_h), (0,0,0,0))
     draw = ImageDraw.Draw(img)
-    draw.text((target_w/2, 20), wrap_text(text, 10), font=font, fill='#FFD700', align='center', anchor="ma", stroke_width=1, stroke_fill='black')
+    
+    # Slight stroke for readability
+    draw.text((target_w/2, 20), wrap_text(text, 10), font=font, fill=fill_color, align='center', anchor="ma", stroke_width=1, stroke_fill='black')
+    
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.2).fadeout(0.2)
 
 def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
@@ -348,7 +401,7 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
 # ==========================================
 # ⚡ Optimized Video Builder (Segmented)
 # ==========================================
-def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette):
+def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, style_cfg):
     job = get_job(job_id)
     workspace = job['workspace']
     target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
@@ -387,12 +440,16 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             ar_text = f"{get_text(surah, ayah)} ({ayah})"
             en_text = get_en_text(surah, ayah)
             
-            ac = create_text_clip(ar_text, duration, target_w, scale, use_glow)
-            ec = create_english_clip(en_text, duration, target_w, scale, use_glow)
+            # Pass style_cfg to rendering functions
+            ac = create_text_clip(ar_text, duration, target_w, scale, use_glow, style_cfg)
+            ec = create_english_clip(en_text, duration, target_w, scale, use_glow, style_cfg)
 
             # Positioning
             ar_y_pos = target_h * 0.32
-            en_y_pos = ar_y_pos + ac.h + (20 * scale)
+            
+            # Adjust gap based on Arabic text size setting
+            gap_mult = float(style_cfg.get('arSize', 1.0)) if style_cfg else 1.0
+            en_y_pos = ar_y_pos + ac.h + (20 * scale * gap_mult)
             
             ac = ac.set_position(('center', ar_y_pos))
             ec = ec.set_position(('center', en_y_pos))
@@ -461,7 +518,18 @@ def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "API Running
 def gen():
     d = request.json
     job_id = create_job()
-    threading.Thread(target=build_video_task, args=(job_id, d['pexelsKey'], d['reciter'], int(d['surah']), int(d['startAyah']), int(d.get('endAyah',0)), d.get('quality','720'), d.get('bgQuery',''), int(d.get('fps',20)), d.get('dynamicBg',False), d.get('useGlow',False), d.get('useVignette',False)), daemon=True).start()
+    
+    # Extract style config
+    style_cfg = d.get('style', {})
+
+    threading.Thread(target=build_video_task, args=(
+        job_id, d['pexelsKey'], d['reciter'], int(d['surah']), 
+        int(d['startAyah']), int(d.get('endAyah',0)), 
+        d.get('quality','720'), d.get('bgQuery',''), 
+        int(d.get('fps',20)), d.get('dynamicBg',False), 
+        d.get('useGlow',False), d.get('useVignette',False),
+        style_cfg # Pass style config to thread
+    ), daemon=True).start()
     return jsonify({'ok': True, 'jobId': job_id})
 
 @app.route('/api/progress')
@@ -505,4 +573,3 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
-
