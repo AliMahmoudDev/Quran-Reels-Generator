@@ -134,6 +134,7 @@
         .color-input::-webkit-color-swatch { border: 2px solid #555; border-radius: 50%; }
         
         .sm-slider { width: 80px; accent-color: var(--primary-gold); height: 4px; }
+        .audio-slider { width: 100%; accent-color: #2ecc71; height: 6px; margin-top:5px; }
 
         .modal-btns { display: flex; gap: 10px; margin-top: 10px; }
         .btn-save { background: var(--success-green); color: white; flex: 1; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
@@ -152,7 +153,7 @@
 
             <div class="ctrl-row">
                 <button type="button" class="btn-rand" onclick="smartRandomize()">🎲 اختيار عشوائي</button>
-                <button type="button" class="btn-gear" onclick="openSettings()">⚙️</button>
+                <button type="button" class="btn-gear" onclick="openSettings()">⚙️ تخصيص</button>
             </div>
 
             <div style="background: rgba(212, 175, 55, 0.05); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed var(--primary-gold);">
@@ -228,7 +229,6 @@
                 <div class="toggle-box" style="background: rgba(212, 175, 55, 0.1); border: 1px solid var(--border-glow);">
                     <div style="display:flex; flex-direction:column;">
                         <span style="font-size:0.9rem; color: var(--primary-gold);">✨ توهج النص (Glow)</span>
-                        <span style="font-size:0.65rem; color:#aaa;">(تأثير هالة خفيفة)</span>
                     </div>
                     <label class="switch"><input type="checkbox" id="useGlow" checked><span class="slider"></span></label>
                 </div>
@@ -286,6 +286,26 @@
                 <div id="prevEn" class="prev-text-en">In the name of Allah, the Entirely Merciful</div>
             </div>
 
+            <div class="set-section" style="border:1px solid #2ecc71; padding:10px; border-radius:8px; background:rgba(46, 204, 113, 0.05);">
+                <div class="set-header" style="color:#2ecc71;">🎚️ مهندس الصوت (Audio)</div>
+                <div class="ctrl-line" style="display:block; margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>🔊 الدفء (Warmth)</span>
+                        <span id="warmthVal" style="font-weight:bold;">50%</span>
+                    </div>
+                    <input type="range" id="audioWarmth" class="audio-slider" min="0" max="100" value="50" oninput="document.getElementById('warmthVal').innerText=this.value+'%'">
+                    <div style="font-size:0.7rem; color:#888;">يزيد من فخامة وهيبة الصوت</div>
+                </div>
+                <div class="ctrl-line" style="display:block;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>✨ النقاء (Clarity)</span>
+                        <span id="clarityVal" style="font-weight:bold;">50%</span>
+                    </div>
+                    <input type="range" id="audioClarity" class="audio-slider" min="0" max="100" value="50" oninput="document.getElementById('clarityVal').innerText=this.value+'%'">
+                    <div style="font-size:0.7rem; color:#888;">يزيد من وضوح الحروف والهمس</div>
+                </div>
+            </div>
+
             <div class="set-section">
                 <div class="set-header">اللغة العربية (Arabic)</div>
                 <div class="ctrl-line">
@@ -335,12 +355,13 @@
     <script>
         let COUNTS = {};
         let currentJobId = null;
-        let pollInterval = null; // Global poll var for Stop functionality
+        let pollInterval = null;
 
         // --- Settings Logic ---
         const defSet = {
             arColor: "#ffffff", arSize: "1.0", arOutC: "#000000", arOutW: "4", arShadow: false, arShadowC: "#000000",
-            enColor: "#FFD700", enSize: "1.0", enOutC: "#000000", enOutW: "3", enShadow: false, enShadowC: "#000000"
+            enColor: "#FFD700", enSize: "1.0", enOutC: "#000000", enOutW: "3", enShadow: false, enShadowC: "#000000",
+            audioWarmth: "50", audioClarity: "50" // Audio Defaults
         };
 
         function openSettings() { loadSettingsUI(); upd(); document.getElementById('settingsModal').style.display = 'flex'; }
@@ -379,11 +400,17 @@
 
         function saveSettings() {
             const s = {};
+            // Text Settings
             ['arColor','arSize','arOutC','arOutW','arShadowC',
              'enColor','enSize','enOutC','enOutW','enShadowC'].forEach(k => s[k] = document.getElementById(k).value);
             s.arShadow = document.getElementById('arShadow').checked;
             s.enShadow = document.getElementById('enShadow').checked;
-            localStorage.setItem('quran_app_styles_v2', JSON.stringify(s));
+            
+            // Audio Settings
+            s.audioWarmth = document.getElementById('audioWarmth').value;
+            s.audioClarity = document.getElementById('audioClarity').value;
+
+            localStorage.setItem('quran_app_styles_v3', JSON.stringify(s)); // v3 store
             document.getElementById('settingsModal').style.display='none';
             
             const btn = document.querySelector('.btn-gear');
@@ -391,18 +418,22 @@
         }
 
         function loadSettingsUI() {
-            const s = JSON.parse(localStorage.getItem('quran_app_styles_v2')) || defSet;
+            const s = JSON.parse(localStorage.getItem('quran_app_styles_v3')) || defSet;
             Object.keys(s).forEach(k => {
                 const el = document.getElementById(k);
                 if(el) {
                     if(el.type === 'checkbox') el.checked = s[k];
                     else el.value = s[k];
+
+                    // Update slider labels
+                    if(k === 'audioWarmth') document.getElementById('warmthVal').innerText = s[k] + '%';
+                    if(k === 'audioClarity') document.getElementById('clarityVal').innerText = s[k] + '%';
                 }
             });
         }
         
         function resetSettings() {
-            if(confirm('reset?')) { localStorage.removeItem('quran_app_styles_v2'); loadSettingsUI(); upd(); }
+            if(confirm('reset?')) { localStorage.removeItem('quran_app_styles_v3'); loadSettingsUI(); upd(); }
         }
 
         // --- Standard App Logic ---
@@ -419,7 +450,6 @@
 
         function toggleSearch() { document.getElementById('bgQuery').style.display = document.getElementById('useSearch').checked ? 'block' : 'none'; }
         
-        // FIXED STOP PROCESS
         async function stopProcess() { 
             if(currentJobId && confirm("إيقاف؟")) {
                 if(pollInterval) clearInterval(pollInterval);
@@ -470,7 +500,7 @@
             document.getElementById('resArea').style.display='none';
             document.getElementById('timerBadge').style.display = 'none';
 
-            const sty = JSON.parse(localStorage.getItem('quran_app_styles_v2')) || defSet;
+            const sty = JSON.parse(localStorage.getItem('quran_app_styles_v3')) || defSet;
 
             try {
                 const res = await fetch('/api/generate', {
@@ -483,7 +513,7 @@
                         dynamicBg: document.getElementById('dynamicBg').checked,
                         useGlow: document.getElementById('useGlow').checked,
                         useVignette: document.getElementById('useVignette').checked,
-                        style: sty
+                        style: sty // Sends Audio + Text Settings
                     })
                 });
                 const d = await res.json();
@@ -504,18 +534,15 @@
                         if(p.is_complete) {
                             clearInterval(pollInterval);
                             
-                            // 🟢 التعديل هنا: نغير النص وننتظر قليلاً قبل طلب الملف
+                            // 🟢 DOWNLOAD FIX
                             document.getElementById('statusTxt').innerText = "جاري جلب الفيديو...";
                             
-                            // ننتظر 1500 ملي ثانية (ثانية ونصف) لضمان حفظ الملف
                             setTimeout(async () => {
                                 try {
                                     const vidRes = await fetch(`/api/download?jobId=${currentJobId}`);
-                                    if(!vidRes.ok) throw new Error("تأخر الملف قليلاً، حاول مجدداً");
-                                    
+                                    if(!vidRes.ok) throw new Error("Download failed");
                                     const b = await vidRes.blob();
                                     const u = URL.createObjectURL(b);
-                                    
                                     document.getElementById('player').src = u;
                                     document.getElementById('dlLink').href = u;
                                     document.getElementById('dlLink').setAttribute('download', `Quran_${sSelect.value}_${startAyah.value}.mp4`);
@@ -529,10 +556,10 @@
                                     h.unshift({t:`${sSelect.options[sSelect.selectedIndex].text} (${startAyah.value})`, u:u});
                                     localStorage.setItem('q_hist', JSON.stringify(h.slice(0,5))); loadHistory();
                                 } catch (innerErr) {
-                                    alert("حدث خطأ أثناء جلب الملف: " + innerErr.message);
+                                    alert(innerErr.message);
                                     document.getElementById('btn').style.display='flex';
                                 }
-                            }, 1500); // ⏳ الانتظار هنا
+                            }, 1500); // 1.5s Delay
                         }
                     } catch(err) {
                         clearInterval(pollInterval);
@@ -550,4 +577,3 @@
     </script>
 </body>
 </html>
-
