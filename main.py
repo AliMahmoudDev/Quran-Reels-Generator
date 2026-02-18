@@ -441,16 +441,17 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         
         out_p = os.path.join(workspace, f"out_{job_id}.mp4")
         
-        # 6. Render (Fixed)
+        # 6. Render (Mastered Audio)
+        # ⚠️ IMPORTANT: audio_codec MUST be 'aac' (NOT 'copy') for filters to work
         final_video.write_videofile(
             out_p, 
             fps=fps, 
-            codec='libx264',             # Video Codec (Re-encode video)
-            audio_codec='aac',           # 🚨 IMPORTANT: Must be 'aac' (not 'copy')
-            audio_bitrate='192k',        # Higher quality for the reverb
-            preset='ultrafast', 
+            codec='libx264',             # Re-encode video
+            audio_codec='aac',           # 🚨 FORCE RE-ENCODE (Fixes the error)
+            audio_bitrate='192k',        # High quality audio
+            preset='ultrafast',          # Fast render speed
             threads=os.cpu_count() or 4,
-            ffmpeg_params=['-af', ETHEREAL_AUDIO_FILTER], # Apply the filters
+            ffmpeg_params=['-af', ETHEREAL_AUDIO_FILTER], # Apply the Trend Filter
             logger=ScopedQuranLogger(job_id)
         )
         
@@ -521,6 +522,7 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
 
 
