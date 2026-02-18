@@ -88,8 +88,8 @@ SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'النسا�
 
 # 🚀 Reciters Config
 NEW_RECITERS_CONFIG = {
-    'Wadeea Al-Yamani': (219, "https://server6.mp3quran.net/wdee3/"),
-    'Bandar Balilah': (217, "https://server6.mp3quran.net/balilah/"),
+    'وديع اليماني': (219, "https://server6.mp3quran.net/wdee3/"),
+    'بندر بليلة': (217, "https://server6.mp3quran.net/balilah/"),
      'ادريس أبكر': (12, "https://server6.mp3quran.net/abkr/"),
     'منصور السالمي': (245, "https://server14.mp3quran.net/mansor/"),
     'رعد الكردي': (221, "https://server6.mp3quran.net/kurdi/"),
@@ -98,10 +98,10 @@ NEW_RECITERS_CONFIG = {
 OLD_RECITERS_MAP = {
     'أبو بكر الشاطري':'Abu_Bakr_Ash-Shaatree_128kbps',
     'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 
-    'الشيخ عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 
-    'الشيخ ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 
-    'الشيخ سعود الشريم': 'Saood_ash-Shuraym_64kbps', 
-    'الشيخ مشاري العفاسي': 'Alafasy_64kbps',
+    ' عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 
+    ' ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 
+    ' سعود الشريم': 'Saood_ash-Shuraym_64kbps', 
+    ' مشاري العفاسي': 'Alafasy_64kbps',
     'ناصر القطامي':'Nasser_Alqatami_128kbps', 
 }
 
@@ -441,16 +441,16 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         
         out_p = os.path.join(workspace, f"out_{job_id}.mp4")
         
-        # 6. Render (Optimized with Audio Mastering)
+        # 6. Render (Fixed)
         final_video.write_videofile(
             out_p, 
             fps=fps, 
-            codec='libx264', 
-            audio_codec='aac', 
-            audio_bitrate='192k',  # ✅ Increased bitrate for quality
+            codec='libx264',             # Video Codec (Re-encode video)
+            audio_codec='aac',           # 🚨 IMPORTANT: Must be 'aac' (not 'copy')
+            audio_bitrate='192k',        # Higher quality for the reverb
             preset='ultrafast', 
             threads=os.cpu_count() or 4,
-            ffmpeg_params=['-af', ETHEREAL_AUDIO_FILTER], # ✅ INJECTS THE EFFECT
+            ffmpeg_params=['-af', ETHEREAL_AUDIO_FILTER], # Apply the filters
             logger=ScopedQuranLogger(job_id)
         )
         
@@ -521,5 +521,6 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
 
