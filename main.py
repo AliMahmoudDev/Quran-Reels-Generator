@@ -206,6 +206,7 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     full_audio_path = os.path.join(cache_dir, f"{surah:03d}.mp3")
     timings_path = os.path.join(cache_dir, f"{surah:03d}.json")
 
+    # [Download Logic Remains the Same...]
     if not os.path.exists(full_audio_path) or not os.path.exists(timings_path):
         smart_download(f"{server_url}{surah:03d}.mp3", full_audio_path, job_id)
         check_stop(job_id)
@@ -217,10 +218,53 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
         t = json.load(f)[str(ayah)]
     
     check_stop(job_id)
+    
+    # 1. Load the raw segment based on API timestamps
     seg = AudioSegment.from_file(full_audio_path)[t['start']:t['end']]
+    
+    # ---------------------------------------------------------
+    # 🚀 NEW: SILENCE REMOVAL LOGIC
+    # ---------------------------------------------------------
+    
+    # Dynamic threshold: 16dB quieter than the peak of this specific clip
+    silence_thresh = seg.dBFS - 16 
+
+    # Find where the sound actually starts
+    start_trim = detect_leading_silence(seg, silence_threshold=silence_thresh)
+    
+    # Find where the sound actually ends (by reversing audio)
+    end_trim = detect_leading_silence(seg.reverse(), silence_threshold=silence_thresh)
+    
+    # Calculate duration
+    duration = len(seg)
+    
+    # Safety check: prevent trimming the whole file if it's very short or quiet
+    if duration - start_trim - end_trim > 200: 
+        seg = seg[start_trim:duration-end_trim]
+    
+    # Add a tighter fade to ensure smoothness without gaps
+    # Reduced fade from 50ms to 20ms to keep it snappy
+    seg = seg.fade_in(20).fade_out(20) 
+    
+    # ---------------------------------------------------------
+
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
-    seg.fade_in(50).fade_out(50).export(out, format="mp3")
+    seg.export(out, format="mp3")
     return out
+
+def detect_leading_silence(sound, silence_threshold=-50.0, chunk_size=10):
+    '''
+    sound is a pydub.AudioSegment
+    silence_threshold in dB
+    chunk_size in ms
+    iterate over chunks until you find the first one with sound
+    '''
+    trim_ms = 0 # ms
+    assert chunk_size > 0 # to avoid infinite loop
+    while trim_ms < len(sound) and sound[trim_ms:trim_ms+chunk_size].dBFS < silence_threshold:
+        trim_ms += chunk_size
+
+    return trim_ms
 
 def download_audio(reciter_key, surah, ayah, idx, workspace_dir, job_id):
     if reciter_key in NEW_RECITERS_CONFIG:
@@ -668,6 +712,7 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
 
 
