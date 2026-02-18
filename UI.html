@@ -503,22 +503,36 @@
 
                         if(p.is_complete) {
                             clearInterval(pollInterval);
-                            const vidRes = await fetch(`/api/download?jobId=${currentJobId}`);
-                            if(!vidRes.ok) throw new Error("Download failed");
-                            const b = await vidRes.blob();
-                            const u = URL.createObjectURL(b);
-                            document.getElementById('player').src = u;
-                            document.getElementById('dlLink').href = u;
-                            document.getElementById('dlLink').setAttribute('download', `Quran_${sSelect.value}_${startAyah.value}.mp4`);
                             
-                            document.getElementById('progArea').style.display='none';
-                            document.getElementById('resArea').style.display='block';
-                            document.getElementById('stopBtn').style.display='none';
-                            document.getElementById('btn').style.display='flex';
+                            // 🟢 التعديل هنا: نغير النص وننتظر قليلاً قبل طلب الملف
+                            document.getElementById('statusTxt').innerText = "جاري جلب الفيديو...";
                             
-                            const h = JSON.parse(localStorage.getItem('q_hist')||'[]');
-                            h.unshift({t:`${sSelect.options[sSelect.selectedIndex].text} (${startAyah.value})`, u:u});
-                            localStorage.setItem('q_hist', JSON.stringify(h.slice(0,5))); loadHistory();
+                            // ننتظر 1500 ملي ثانية (ثانية ونصف) لضمان حفظ الملف
+                            setTimeout(async () => {
+                                try {
+                                    const vidRes = await fetch(`/api/download?jobId=${currentJobId}`);
+                                    if(!vidRes.ok) throw new Error("تأخر الملف قليلاً، حاول مجدداً");
+                                    
+                                    const b = await vidRes.blob();
+                                    const u = URL.createObjectURL(b);
+                                    
+                                    document.getElementById('player').src = u;
+                                    document.getElementById('dlLink').href = u;
+                                    document.getElementById('dlLink').setAttribute('download', `Quran_${sSelect.value}_${startAyah.value}.mp4`);
+                                    
+                                    document.getElementById('progArea').style.display='none';
+                                    document.getElementById('resArea').style.display='block';
+                                    document.getElementById('stopBtn').style.display='none';
+                                    document.getElementById('btn').style.display='flex';
+                                    
+                                    const h = JSON.parse(localStorage.getItem('q_hist')||'[]');
+                                    h.unshift({t:`${sSelect.options[sSelect.selectedIndex].text} (${startAyah.value})`, u:u});
+                                    localStorage.setItem('q_hist', JSON.stringify(h.slice(0,5))); loadHistory();
+                                } catch (innerErr) {
+                                    alert("حدث خطأ أثناء جلب الملف: " + innerErr.message);
+                                    document.getElementById('btn').style.display='flex';
+                                }
+                            }, 1500); // ⏳ الانتظار هنا
                         }
                     } catch(err) {
                         clearInterval(pollInterval);
@@ -536,3 +550,4 @@
     </script>
 </body>
 </html>
+
