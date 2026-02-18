@@ -442,26 +442,25 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         out_p = os.path.join(workspace, f"out_{job_id}.mp4")
         
         # ==========================================
-        # 6. The "Golden Standard" Workflow (Render -> Master)
+        # 6. The "Studio Dry" Workflow (Clean & Crisp)
         # ==========================================
 
-        # الفلتر المعتدل الثابت (بدون تحكم المستخدم)
-        # Warmth: g=3 (فخامة) | Clarity: g=2 (نقاء ناعم جداً) | Reverb: Mosque Style
-        MODERATE_AUDIO_FILTER = (
-            "highpass=f=80, "
-            "equalizer=f=200:width_type=h:width=200:g=3, "   # دفء معتدل
-            "equalizer=f=8000:width_type=h:width=1000:g=2, " # نقاء ناعم (تم خفضه)
-            "acompressor=threshold=-21dB:ratio=4:attack=200:release=1000, "
-            "aecho=0.8:0.9:60|1000:0.4|0.2, " 
-            "extrastereo=m=1.3, "
-            "loudnorm=I=-16:TP=-1.5:LRA=11"
+        # فلتر "استوديو خام" - نقي جداً وبدون صدى
+        # Highpass: إزالة التشويش | Compressor: توحيد الصوت | EQ: تحسين الخامة
+        # تمت إزالة (aecho) نهائياً ❌
+        STUDIO_DRY_FILTER = (
+            "highpass=f=80, "                                 # تنظيف الضوضاء المنخفضة
+            "equalizer=f=200:width_type=h:width=200:g=3, "    # إضافة فخامة (Warmth)
+            "equalizer=f=8000:width_type=h:width=1000:g=2, "  # إضافة وضوح (Clarity)
+            "acompressor=threshold=-21dB:ratio=4:attack=200:release=1000, " # توحيد ارتفاع الصوت
+            "extrastereo=m=1.3, "                             # توزيع الصوت يمين ويسار قليلاً
+            "loudnorm=I=-16:TP=-1.5:LRA=11"                   # ضبط المعايير العالمية (Loudness)
         )
         
         # --- A. Render Clean Video (Mix) ---
         temp_mix_path = os.path.join(workspace, f"temp_mix_{job_id}.mp4")
         update_job_status(job_id, 90, "Rendering Video (Mixing)...")
         
-        # نستخدم الإعدادات القياسية للفيديو
         final_video.write_videofile(
             temp_mix_path, 
             fps=fps, 
@@ -472,6 +471,24 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             threads=os.cpu_count() or 4,
             logger=ScopedQuranLogger(job_id)
         )
+
+        # --- B. Apply Dry Mastering ---
+        update_job_status(job_id, 95, "Mastering Audio (Dry Studio)...")
+        
+        cmd = (
+            f'ffmpeg -y -i "{temp_mix_path}" '
+            f'-af "{STUDIO_DRY_FILTER}" '
+            f'-c:v copy '
+            f'-c:a aac -b:a 192k '
+            f'"{out_p}"'
+        )
+        
+        if os.system(cmd) != 0: raise Exception("FFmpeg Mastering Failed")
+
+        if os.path.exists(temp_mix_path): os.remove(temp_mix_path)
+
+        with JOBS_LOCK: 
+            JOBS[job_id].update({'output_path': out_p, 'is_complete': True, 'is_running': False, 'percent': 100, 'status': "Done!"})
 
         # --- B. Apply The Golden Mastering ---
         update_job_status(job_id, 95, "Mastering Audio (Golden Preset)...")
@@ -600,6 +617,7 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
 
 
