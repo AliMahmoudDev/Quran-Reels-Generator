@@ -500,7 +500,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         # Highpass: إزالة التشويش | Compressor: توحيد الصوت | EQ: تحسين الخامة
         # تمت إزالة (aecho) نهائياً ❌
         STUDIO_DRY_FILTER = (
-            "highpass=f=80, "                                 # تنظيف الضوضاء المنخفضة
+            "highpass=f=60, "                                 # تنظيف الضوضاء المنخفضة
             "equalizer=f=200:width_type=h:width=200:g=3, "    # إضافة فخامة (Warmth)
             "equalizer=f=8000:width_type=h:width=1000:g=2, "  # إضافة وضوح (Clarity)
             "acompressor=threshold=-21dB:ratio=4:attack=200:release=1000, " # توحيد ارتفاع الصوت
@@ -668,6 +668,7 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
 
 
