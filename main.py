@@ -260,8 +260,23 @@ def create_vignette_mask(w, h):
     mask_img[:, :, 3] = (mask * 255).astype(np.uint8)
     return ImageClip(mask_img, ismask=False)
 
-def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
-    words = arabic.split()
+# ==========================================
+# 🎨 Updated Text Drawing Functions (Supports Custom Styles)
+# ==========================================
+
+def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, style=None):
+    # 1. Setup Defaults if style is missing
+    if style is None: style = {}
+    
+    color = style.get('arColor', '#ffffff')
+    size_mult = float(style.get('arSize', '1.0'))
+    stroke_c = style.get('arOutC', '#000000')
+    stroke_w = int(style.get('arOutW', '4'))
+    has_shadow = style.get('arShadow', False)
+    shadow_c = style.get('arShadowC', '#000000')
+
+    # 2. Font Sizing
+    words = text.split()
     wc = len(words)
     
     if wc > 60: base_fs, pl = 30, 12
@@ -270,56 +285,84 @@ def create_text_clip(arabic, duration, target_w, scale_factor=1.0, glow=False):
     elif wc > 15: base_fs, pl = 46, 8
     else: base_fs, pl = 48, 7
     
-    final_fs = int(base_fs * scale_factor)
-    
-    # ✅ Using Cached Font
+    # Apply user size multiplier
+    final_fs = int(base_fs * scale_factor * size_mult)
     font = get_cached_font(FONT_PATH_ARABIC, final_fs)
 
-    wrapped_text = wrap_text(arabic, pl)
+    wrapped_text = wrap_text(text, pl)
     lines = wrapped_text.split('\n')
     
-    # We calculate height first
+    # 3. Measure Text
     dummy = Image.new('RGBA', (target_w, 100))
     d = ImageDraw.Draw(dummy)
-    
     line_metrics = []
     total_h = 0
-    GAP = 10 * scale_factor
+    GAP = 15 * scale_factor * size_mult # Dynamic Gap
     
     for l in lines:
-        bbox = d.textbbox((0, 0), l, font=font)
+        bbox = d.textbbox((0, 0), l, font=font, stroke_width=stroke_w)
         h = bbox[3] - bbox[1]
         line_metrics.append(h)
         total_h += h + GAP
         
     total_h += 40 
     
+    # 4. Draw
     img = Image.new('RGBA', (target_w, int(total_h)), (0,0,0,0))
     draw = ImageDraw.Draw(img)
     curr_y = 20
     
     for i, line in enumerate(lines):
-        w = draw.textbbox((0, 0), line, font=font)[2]
+        w = draw.textbbox((0, 0), line, font=font, stroke_width=stroke_w)[2]
         x = (target_w - w) // 2
         
+        # A. Shadow (Optional)
+        if has_shadow:
+            draw.text((x+4, curr_y+4), line, font=font, fill=shadow_c)
+
+        # B. Glow (Optional)
         if glow: 
-            draw.text((x, curr_y), line, font=font, fill=(255,255,255,40), stroke_width=5, stroke_fill=(255,255,255,40))
+            draw.text((x, curr_y), line, font=font, fill=(255,255,255,40), stroke_width=stroke_w+4, stroke_fill=(255,255,255,20))
         
-        draw.text((x+1, curr_y+1), line, font=font, fill=(0,0,0,180))
-        draw.text((x, curr_y), line, font=font, fill='white', stroke_width=2, stroke_fill='black')
+        # C. Main Text with Stroke
+        draw.text((x, curr_y), line, font=font, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
         
         curr_y += line_metrics[i] + GAP
         
     return ImageClip(np.array(img)).set_duration(duration).fadein(0.2).fadeout(0.2)
 
-def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False):
-    # ✅ Using Cached Font
-    font = get_cached_font(FONT_PATH_ENGLISH, int(30 * scale_factor))
-    img = Image.new('RGBA', (target_w, 200), (0,0,0,0))
-    draw = ImageDraw.Draw(img)
-    draw.text((target_w/2, 20), wrap_text(text, 10), font=font, fill='#FFD700', align='center', anchor="ma", stroke_width=1, stroke_fill='black')
-    return ImageClip(np.array(img)).set_duration(duration).fadein(0.2).fadeout(0.2)
+def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, style=None):
+    if style is None: style = {}
+    
+    color = style.get('enColor', '#FFD700')
+    size_mult = float(style.get('enSize', '1.0'))
+    stroke_c = style.get('enOutC', '#000000')
+    stroke_w = int(style.get('enOutW', '3'))
+    has_shadow = style.get('enShadow', False)
+    shadow_c = style.get('enShadowC', '#000000')
 
+    final_fs = int(30 * scale_factor * size_mult)
+    font = get_cached_font(FONT_PATH_ENGLISH, final_fs)
+    
+    # Estimated height based on font size (approx 3 lines max)
+    h = int(250 * size_mult)
+    img = Image.new('RGBA', (target_w, h), (0,0,0,0))
+    draw = ImageDraw.Draw(img)
+    
+    wrapped = wrap_text(text, 10)
+    
+    # Center text roughly
+    y_pos = 20
+    
+    # Shadow
+    if has_shadow:
+        draw.text((target_w/2 + 2, y_pos + 2), wrapped, font=font, fill=shadow_c, align='center', anchor="ma")
+
+    # Main Text
+    draw.text((target_w/2, y_pos), wrapped, font=font, fill=color, align='center', anchor="ma", stroke_width=stroke_w, stroke_fill=stroke_c)
+    
+    return ImageClip(np.array(img)).set_duration(duration).fadein(0.2).fadeout(0.2)
+    
 def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     pool = []
     
@@ -395,16 +438,24 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             audioclip = AudioFileClip(ap)
             duration = audioclip.duration
 
-            # B. Text
+            # B. Text (Updated to use Style)
             ar_text = f"{get_text(surah, ayah)} ({ayah})"
             en_text = get_en_text(surah, ayah)
             
-            ac = create_text_clip(ar_text, duration, target_w, scale, use_glow)
-            ec = create_english_clip(en_text, duration, target_w, scale, use_glow)
+            # 🚨 تمرير الـ style هنا هو السر!
+            ac = create_text_clip(ar_text, duration, target_w, scale, use_glow, style=style)
+            ec = create_english_clip(en_text, duration, target_w, scale, use_glow, style=style)
 
-            # Positioning
-            ar_y_pos = target_h * 0.32
-            en_y_pos = ar_y_pos + ac.h + (20 * scale)
+            # Positioning (Dynamic based on size)
+            # نقوم بحساب المكان بناءً على حجم الخط المختار لضمان التناسق
+            ar_size_mult = float(style.get('arSize', '1.0'))
+            
+            # نرفع النص العربي قليلاً إذا كان الخط كبيراً جداً
+            base_y = 0.32
+            if ar_size_mult > 1.2: base_y = 0.28 
+            
+            ar_y_pos = target_h * base_y
+            en_y_pos = ar_y_pos + ac.h + (10 * scale)
             
             ac = ac.set_position(('center', ar_y_pos))
             ec = ec.set_position(('center', en_y_pos))
@@ -617,6 +668,7 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
 
 
