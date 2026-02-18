@@ -441,21 +441,53 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         
         out_p = os.path.join(workspace, f"out_{job_id}.mp4")
         
-        # 6. Render (Mastered Audio)
-        # ⚠️ IMPORTANT: audio_codec MUST be 'aac' (NOT 'copy') for filters to work
+        # ==========================================
+        # 6. The "Studio" Workflow (Render -> Master)
+        # ==========================================
+        
+        # Step A: Render the clean video first (The Mix)
+        # We use a temporary filename for this un-mastered version
+        temp_mix_path = os.path.join(workspace, f"temp_mix_{job_id}.mp4")
+        
+        update_job_status(job_id, 90, "Rendering Video (Mixing)...")
+        
         final_video.write_videofile(
-            out_p, 
+            temp_mix_path, 
             fps=fps, 
-            codec='libx264',             # Re-encode video
-            audio_codec='aac',           # 🚨 FORCE RE-ENCODE (Fixes the error)
-            audio_bitrate='192k',        # High quality audio
-            preset='ultrafast',          # Fast render speed
+            codec='libx264', 
+            audio_codec='aac',      # Standard clean audio
+            audio_bitrate='192k',
+            preset='ultrafast', 
             threads=os.cpu_count() or 4,
-            ffmpeg_params=['-af', ETHEREAL_AUDIO_FILTER], # Apply the Trend Filter
-            logger=ScopedQuranLogger(job_id)
+            logger=ScopedQuranLogger(job_id) # Uses your logger
+        )
+
+        # Step B: Apply the "Ethereal" Audio Filters (The Master)
+        # We use raw FFmpeg here because it is much faster and more stable than MoviePy for audio DSP
+        update_job_status(job_id, 95, "Mastering Audio (Reverb & FX)...")
+        
+        # This command takes the video stream (copy) and re-processes ONLY the audio
+        # -c:v copy : Don't re-render video (Instant speed)
+        # -af ...   : Apply the Mansour Al-Salemi filter chain
+        cmd = (
+            f'ffmpeg -y -i "{temp_mix_path}" '
+            f'-af "{ETHEREAL_AUDIO_FILTER}" '
+            f'-c:v copy '
+            f'-c:a aac -b:a 192k '
+            f'"{out_p}"'
         )
         
-        with JOBS_LOCK: JOBS[job_id].update({'output_path': out_p, 'is_complete': True, 'is_running': False, 'percent': 100, 'status': "Done!"})
+        # Execute the mastering command
+        if os.system(cmd) != 0:
+            raise Exception("FFmpeg Mastering Failed")
+
+        # Step C: Cleanup
+        # Remove the un-mastered temp file to save space
+        if os.path.exists(temp_mix_path):
+            os.remove(temp_mix_path)
+
+        with JOBS_LOCK: 
+            JOBS[job_id].update({'output_path': out_p, 'is_complete': True, 'is_running': False, 'percent': 100, 'status': "Done!"})
     
     except Exception as e:
         msg = str(e)
@@ -522,6 +554,7 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
 
 
