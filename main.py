@@ -44,7 +44,7 @@ ETHEREAL_AUDIO_FILTER = (
     "equalizer=f=200:width_type=h:width=200:g=3, "
     "equalizer=f=8000:width_type=h:width=1000:g=4, "
     "acompressor=threshold=-21dB:ratio=4:attack=200:release=1000, "
-    "aecho=0.8:0.9:60:0.4:1000:0.2, "
+    "aecho=0.8:0.9:60|1000:0.4|0.2, "  # 🚨 FIXED: Used '|' instead of ':'
     "extrastereo=m=1.3, "
     "loudnorm=I=-16:TP=-1.5:LRA=11"
 )
@@ -554,6 +554,7 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
 
 
