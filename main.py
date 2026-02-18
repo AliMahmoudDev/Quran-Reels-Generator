@@ -39,6 +39,16 @@ from deep_translator import GoogleTranslator
 # ⚙️ Configuration & Setup
 # ==========================================
 
+ETHEREAL_AUDIO_FILTER = (
+    "highpass=f=80, "
+    "equalizer=f=200:width_type=h:width=200:g=3, "
+    "equalizer=f=8000:width_type=h:width=1000:g=4, "
+    "acompressor=threshold=-21dB:ratio=4:attack=200:release=1000, "
+    "aecho=0.8:0.9:60:0.4:1000:0.2, "
+    "extrastereo=m=1.3, "
+    "loudnorm=I=-16:TP=-1.5:LRA=11"
+)
+
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
@@ -420,6 +430,8 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             segment_overlays = [o.set_duration(duration) for o in overlays_static]
             
             # D. Compose Segment
+            # Add a tiny fade out to prevent "pops" between verses
+            audioclip = audioclip.audio_fadeout(0.1) 
             segment = CompositeVideoClip([bg_clip] + segment_overlays + [ac, ec]).set_audio(audioclip)
             segments.append(segment)
 
@@ -429,14 +441,16 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         
         out_p = os.path.join(workspace, f"out_{job_id}.mp4")
         
-        # 6. Render (Optimized)
+        # 6. Render (Optimized with Audio Mastering)
         final_video.write_videofile(
             out_p, 
             fps=fps, 
             codec='libx264', 
             audio_codec='aac', 
-            preset='ultrafast',  # 🚀 Critical Speed Fix
+            audio_bitrate='192k',  # ✅ Increased bitrate for quality
+            preset='ultrafast', 
             threads=os.cpu_count() or 4,
+            ffmpeg_params=['-af', ETHEREAL_AUDIO_FILTER], # ✅ INJECTS THE EFFECT
             logger=ScopedQuranLogger(job_id)
         )
         
@@ -507,4 +521,5 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
