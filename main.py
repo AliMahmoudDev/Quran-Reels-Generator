@@ -461,7 +461,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         
         # 2. Prepare Base Background (Load once)
         if not vpool:
-            base_bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35))
+            base_bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35)).set_duration(1)
         else:
             base_bg_clip = VideoFileClip(vpool[0]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
 
@@ -471,6 +471,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             overlays_static.append(create_vignette_mask(target_w, target_h))
 
         segments = []
+        current_bg_time = 0.0
         
         # 4. Sequential Processing (Ayah by Ayah)
         for i, ayah in enumerate(range(start, last+1)):
@@ -506,27 +507,31 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 
             # C. Background Slice
             if dynamic_bg and i < len(vpool):
+                # 🔄 حالة الخلفية المتغيرة: نستخدم فيديو جديد ونعمله Fade
                 bg_clip = VideoFileClip(vpool[i]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
+                
+                if bg_clip.duration < duration:
+                    bg_clip = bg_clip.loop(duration=duration)
+                else:
+                    max_start = max(0, bg_clip.duration - duration)
+                    start_t = random.uniform(0, max_start)
+                    bg_clip = bg_clip.subclip(start_t, start_t + duration)
+                
+                # الـ Fade يطبق هنا فقط لأنها خلفية متغيرة
+                bg_clip = bg_clip.set_duration(duration).fadein(0.5).fadeout(0.5)
+                
             else:
-                bg_clip = base_bg_clip
-            
-            # Smart Looping/Slicing
-            if bg_clip.duration < duration:
-                bg_clip = bg_clip.loop(duration=duration)
-            else:
-                # Random offset for variety if reusing static BG
-                max_start = max(0, bg_clip.duration - duration)
-                start_t = random.uniform(0, max_start)
-                bg_clip = bg_clip.subclip(start_t, start_t + duration)
-
-            bg_clip = bg_clip.set_duration(duration).fadein(0.5).fadeout(0.5)
+                # 🚀 حالة الخلفية الثابتة: استمرار الفيديو كقطعة واحدة بدون أي Fade أو تقطيع عشوائي
+                bg_clip = base_bg_clip.loop().subclip(current_bg_time, current_bg_time + duration)
+                current_bg_time += duration  # نزود الوقت عشان الآية الجاية تكمل من مكان ما دي وقفت
+                bg_clip = bg_clip.set_duration(duration)
+                # ❌ لا يوجد fadein أو fadeout هنا إطلاقاً!
             
             # Apply overlays to this segment
             segment_overlays = [o.set_duration(duration) for o in overlays_static]
             
             # D. Compose Segment
-            # Add a tiny fade out to prevent "pops" between verses
-            audioclip = audioclip.audio_fadeout(0.1) 
+            # 🚀 تم إزالة الـ fadeout الخارجي لضمان تواصل التلاوة (النَفَس) بدون سكون بين الآيات
             segment = CompositeVideoClip([bg_clip] + segment_overlays + [ac, ec]).set_audio(audioclip)
             segments.append(segment)
 
@@ -712,7 +717,6 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
-
 
 
 
