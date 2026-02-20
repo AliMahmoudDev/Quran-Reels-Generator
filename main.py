@@ -468,29 +468,51 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
                 # الكلمة أمان، استخدمها
                 q = f"{q_trans} landscape scenery atmospheric no people"
             else:
-                # الكلمة مش في القائمة (حتى لو مش عيب، زي "عربيات" مثلاً)، تجاهلها!
+def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
+    pool = []
+    
+    # 1. تحديد المفتاح
+    if user_key and len(user_key) > 10:
+        active_key = user_key
+    else:
+        active_key = random.choice(PEXELS_API_KEYS) if PEXELS_API_KEYS else ""
+    
+    # 2. نظام القائمة البيضاء (الصارم) 🛡️
+    SAFE_WHITELIST = [
+        'nature', 'sky', 'sea', 'ocean', 'water', 'rain', 'cloud', 'mountain',
+        'forest', 'tree', 'desert', 'sand', 'star', 'galaxy', 'space', 'moon',
+        'sun', 'sunset', 'sunrise', 'mosque', 'islam', 'kaaba', 'makkah',
+        'snow', 'winter', 'landscape', 'river', 'fog', 'mist', 'earth', 'bird'
+    ]
+
+    safe_topics = [
+        'sky clouds timelapse', 'galaxy stars space', 'ocean waves slow motion', 
+        'forest trees drone', 'desert sand dunes', 'waterfall nature', 
+        'mountains fog', 'mosque architecture', 'islamic pattern'
+    ]
+
+    # 3. معالجة كلمة البحث
+    if custom_query and len(custom_query) > 2:
+        try: 
+            q_trans = GoogleTranslator(source='auto', target='en').translate(custom_query.strip()).lower()
+            is_safe = any(safe_word in q_trans for safe_word in SAFE_WHITELIST)
+            
+            if is_safe:
+                q = f"{q_trans} landscape scenery atmospheric no people"
+            else:
                 print(f"🚫 تم رفض كلمة البحث ({q_trans}) لأنها خارج القائمة البيضاء.")
                 q = f"{random.choice(safe_topics)} no people"
         except: 
             q = f"{random.choice(safe_topics)} no people"
     else:
         q = f"{random.choice(safe_topics)} no people"
-    else:
-        # مواضيع آمنة بنسبة 99%
-        safe_topics = [
-            'sky clouds timelapse', 'galaxy stars space', 'ocean waves slow motion', 
-            'forest trees drone', 'desert sand dunes', 'waterfall nature', 
-            'mountains fog', 'mosque architecture', 'islamic pattern',
-            'flowers macro', 'rain window', 'underwater sea'
-        ]
-        q = f"{random.choice(safe_topics)} no people"
 
+    # 4. محاولة الجلب من Pexels API
     if active_key:
         try:
             check_stop(job_id)
-            # بنطلب فيديوهات أكتر (20) عشان لو فلترنا نلاقي بديل
-            random_page = random.randint(1, 5)
-            url = f"https://api.pexels.com/videos/search?query={q}&per_page=20&page={random_page}&orientation=portrait"
+            random_page = random.randint(1, 10)
+            url = f"https://api.pexels.com/videos/search?query={q}&per_page={count+5}&page={random_page}&orientation=portrait"
             
             r = requests.get(url, headers={'Authorization': active_key}, timeout=10)
             
@@ -500,23 +522,8 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
                 
                 for vid in vids:
                     if len(pool) >= count: break
-                    
-                    # 🛑 الفلتر الأخلاقي (Safety Check)
-                    # بنجيب كل التاجات والوصف ونحولهم لحروف صغيرة
-                    video_tags = [t.lower() for t in vid.get('tags', [])]
-                    video_url = vid.get('url', '').lower()
-                    
-                    # لو لقينا أي كلمة ممنوعة في التاجات أو الرابط -> ارمي الفيديو
-                    is_unsafe = False
-                    for bad_word in FORBIDDEN_TAGS:
-                        if bad_word in video_url or any(bad_word in tag for tag in video_tags):
-                            is_unsafe = True
-                            print(f"🚫 Blocked Video (Contains {bad_word}): {vid['id']}")
-                            break
-                    
-                    if is_unsafe: continue # فوت الفيديو ده وشوف اللي بعده
-
                     check_stop(job_id)
+                    
                     f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), None)
                     if not f and vid['video_files']: f = vid['video_files'][0]
                     
@@ -530,17 +537,17 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
         except Exception as e:
             print(f"⚠️ Fetch Error: {e}")
 
-    # Fallback Mechanism
+    # 5. نظام الطوارئ (Local Fallback)
     if not pool:
         print("🔄 Switching to Local Fallback...")
         try:
-            local_files = [os.path.join(LOCAL_BGS_DIR, f) for f in os.listdir(LOCAL_BGS_DIR) if f.lower().endswith(('.mp4', '.mov'))]
+            local_files = [os.path.join(LOCAL_BGS_DIR, f) for f in os.listdir(LOCAL_BGS_DIR) if f.lower().endswith(('.mp4', '.mov', '.mkv'))]
             if local_files:
                 pool = random.choices(local_files, k=count)
-        except: pass
+        except Exception as e:
+            print(f"❌ Local Fallback Error: {e}")
             
     return pool
-
 # ==========================================
 # ⚡ Optimized Video Builder (Segmented)
 # ==========================================
@@ -814,6 +821,7 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
 
 
