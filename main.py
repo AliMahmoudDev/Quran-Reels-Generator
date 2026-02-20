@@ -55,6 +55,15 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 # ==========================================
 # 🚀 API Keys & Local Fallback Setup
 # ==========================================
+
+
+def app_dir():
+    if getattr(sys, "frozen", False): return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+EXEC_DIR = app_dir()
+BUNDLE_DIR = EXEC_DIR 
+
 PEXELS_API_KEYS = [
     "AmAgE0J5AuBbsvR6dmG7qQLIc5uYZvDim2Vx250F5QoHNKnGdCofFerx",
     "Fv0qzUGYwbGr6yHsauaXuNKiNR9L7OE7VLr5Wq6SngcLjavmkCEAskb2",
@@ -66,13 +75,6 @@ PEXELS_API_KEYS = [
 LOCAL_BGS_DIR = os.path.join(BUNDLE_DIR, "local_bgs")
 os.makedirs(LOCAL_BGS_DIR, exist_ok=True)
 # 💡 ملحوظة: ابقى اعمل فولدر اسمه local_bgs وحط فيه كام فيديو خلفية للطوارئ
-
-def app_dir():
-    if getattr(sys, "frozen", False): return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
-
-EXEC_DIR = app_dir()
-BUNDLE_DIR = EXEC_DIR 
 
 FFMPEG_EXE = "ffmpeg"
 os.environ["FFMPEG_BINARY"] = FFMPEG_EXE
