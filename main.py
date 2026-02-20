@@ -374,7 +374,7 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
         curr_y += line_metrics[i] + GAP
         
     # 🚀 استخدمنا crossfade عشان نتحكم في الشفافية (Alpha) مش اللون الأسود
-    return ImageClip(np.array(img)).set_duration(duration).crossfadein(0.2).crossfadeout(0.2)
+    return ImageClip(np.array(img)).set_duration(duration).crossfadein(0.35).crossfadeout(0.35)
 
 def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, style=None):
     if style is None: style = {}
@@ -407,7 +407,7 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, 
     draw.text((target_w/2, y_pos), wrapped, font=font, fill=color, align='center', anchor="ma", stroke_width=stroke_w, stroke_fill=stroke_c)
     
     # 🚀 نفس الكلام هنا للترجمة
-    return ImageClip(np.array(img)).set_duration(duration).crossfadein(0.2).crossfadeout(0.2)
+    return ImageClip(np.array(img)).set_duration(duration).crossfadein(0.35).crossfadeout(0.35)
     
 def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     pool = []
