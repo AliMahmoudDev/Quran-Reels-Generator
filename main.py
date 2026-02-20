@@ -429,51 +429,88 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, 
 def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     pool = []
     
-    # 1. نظام تدوير المفاتيح: لو المستخدم مش حاطط مفتاح، اختار واحد عشوائي من بتوعك
-    active_key = user_key if user_key and len(user_key) > 10 else random.choice(PEXELS_API_KEYS)
-    
-    if custom_query and len(custom_query) > 2:
-        try: q_base = GoogleTranslator(source='auto', target='en').translate(custom_query.strip())
-        except: q_base = "nature landscape"
+    # 1. قائمة الممنوعات (الكلمات اللي لو ظهرت في وصف الفيديو نرفضه)
+    FORBIDDEN_TAGS = [
+        'woman', 'girl', 'female', 'lady', 'model', 'face', 'people', 'person', 
+        'man', 'boy', 'couple', 'fashion', 'dance', 'yoga', 'fitness', 'body',
+        'portrait', 'smile', 'happy', 'human', 'crowd', 'street', 'walking'
+    ]
+
+    # 2. تحديد المفتاح
+    if user_key and len(user_key) > 10:
+        active_key = user_key
     else:
-        safe_topics = ['nature landscape', 'mosque architecture', 'sky clouds', 'galaxy stars', 'ocean waves', 'forest trees', 'desert dunes', 'waterfall', 'mountains']
-        q_base = random.choice(safe_topics)
+        active_key = random.choice(PEXELS_API_KEYS) if PEXELS_API_KEYS else ""
+    
+    # 3. تحسين جملة البحث (إجبار المحرك على الطبيعة الصامتة)
+    if custom_query and len(custom_query) > 2:
+        try: q_trans = GoogleTranslator(source='auto', target='en').translate(custom_query.strip())
+        except: q_trans = "nature"
+        # بنزود كلمات مفتاحية تجبره يجيب جماد أو طبيعة
+        q = f"{q_trans} landscape scenery atmospheric no people"
+    else:
+        # مواضيع آمنة بنسبة 99%
+        safe_topics = [
+            'sky clouds timelapse', 'galaxy stars space', 'ocean waves slow motion', 
+            'forest trees drone', 'desert sand dunes', 'waterfall nature', 
+            'mountains fog', 'mosque architecture', 'islamic pattern',
+            'flowers macro', 'rain window', 'underwater sea'
+        ]
+        q = f"{random.choice(safe_topics)} no people"
 
-    q = f"{q_base} no people"
-
-    try:
-        check_stop(job_id)
-        random_page = random.randint(1, 10)
-        url = f"https://api.pexels.com/videos/search?query={q}&per_page={count+5}&page={random_page}&orientation=portrait"
-        
-        r = requests.get(url, headers={'Authorization': active_key}, timeout=15)
-        if r.status_code == 200:
-            vids = r.json().get('videos', [])
-            random.shuffle(vids)
+    if active_key:
+        try:
+            check_stop(job_id)
+            # بنطلب فيديوهات أكتر (20) عشان لو فلترنا نلاقي بديل
+            random_page = random.randint(1, 5)
+            url = f"https://api.pexels.com/videos/search?query={q}&per_page=20&page={random_page}&orientation=portrait"
             
-            for vid in vids:
-                if len(pool) >= count: break
-                check_stop(job_id)
-                f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), None)
-                if not f: 
-                     if vid['video_files']: f = vid['video_files'][0]
+            r = requests.get(url, headers={'Authorization': active_key}, timeout=10)
+            
+            if r.status_code == 200:
+                vids = r.json().get('videos', [])
+                random.shuffle(vids)
                 
-                if f:
-                    path = os.path.join(VISION_DIR, f"bg_{vid['id']}.mp4")
-                    if not os.path.exists(path):
-                        smart_download(f['link'], path, job_id)
-                    pool.append(path)
-        else:
-            print(f"Pexels API Error: {r.status_code} - Switching to Fallback")
-    except Exception as e: 
-        print(f"Fetch Error: {e}")
+                for vid in vids:
+                    if len(pool) >= count: break
+                    
+                    # 🛑 الفلتر الأخلاقي (Safety Check)
+                    # بنجيب كل التاجات والوصف ونحولهم لحروف صغيرة
+                    video_tags = [t.lower() for t in vid.get('tags', [])]
+                    video_url = vid.get('url', '').lower()
+                    
+                    # لو لقينا أي كلمة ممنوعة في التاجات أو الرابط -> ارمي الفيديو
+                    is_unsafe = False
+                    for bad_word in FORBIDDEN_TAGS:
+                        if bad_word in video_url or any(bad_word in tag for tag in video_tags):
+                            is_unsafe = True
+                            print(f"🚫 Blocked Video (Contains {bad_word}): {vid['id']}")
+                            break
+                    
+                    if is_unsafe: continue # فوت الفيديو ده وشوف اللي بعده
 
-    # 2. نظام الطوارئ (Local Fallback): لو النت فصل أو الكوتة خلصت
+                    check_stop(job_id)
+                    f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), None)
+                    if not f and vid['video_files']: f = vid['video_files'][0]
+                    
+                    if f:
+                        path = os.path.join(VISION_DIR, f"bg_{vid['id']}.mp4")
+                        if not os.path.exists(path):
+                            smart_download(f['link'], path, job_id)
+                        pool.append(path)
+            else:
+                print(f"⚠️ Pexels API Error: {r.status_code}")
+        except Exception as e:
+            print(f"⚠️ Fetch Error: {e}")
+
+    # Fallback Mechanism
     if not pool:
-        local_files = [os.path.join(LOCAL_BGS_DIR, f) for f in os.listdir(LOCAL_BGS_DIR) if f.endswith(('.mp4', '.mov'))]
-        if local_files:
-            # لو طالب كذا فيديو للخلفية المتغيرة، هنجيب عشوائي من الفولدر
-            pool = random.choices(local_files, k=count)
+        print("🔄 Switching to Local Fallback...")
+        try:
+            local_files = [os.path.join(LOCAL_BGS_DIR, f) for f in os.listdir(LOCAL_BGS_DIR) if f.lower().endswith(('.mp4', '.mov'))]
+            if local_files:
+                pool = random.choices(local_files, k=count)
+        except: pass
             
     return pool
 
@@ -750,6 +787,7 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
 
 
