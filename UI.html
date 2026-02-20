@@ -155,16 +155,6 @@
                 <button type="button" class="btn-gear" onclick="openSettings()">⚙️</button>
             </div>
 
-            <div style="background: rgba(212, 175, 55, 0.05); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed var(--primary-gold);">
-                <label class="label">🔑 مفتاح Pexels (للخلفيات)</label>
-                <input type="text" id="pexelsKey" class="input-box" placeholder="الصق الـ API Key هنا">
-                <div style="text-align:center; margin-top:10px;">
-                    <a href="https://www.pexels.com/api/" target="_blank" style="color: #4ade80; text-decoration: underline; font-weight: bold; font-size: 0.95rem;">
-                        👉 اضغط هنا للحصول على مفتاح مجاني
-                    </a>
-                </div>
-            </div>
-
             <form id="vForm">
                 <div class="form-group">
                     <label class="label">القارئ</label>
@@ -324,6 +314,14 @@
                 </div>
             </div>
 
+            <div class="set-section" style="border:none;">
+                <div class="set-header">⚡ إعدادات متقدمة (اختياري)</div>
+                <div class="ctrl-line" style="flex-direction:column; align-items:flex-start; gap:5px;">
+                    <span style="font-size:0.8rem; color:#aaa;">مفتاح Pexels خاص (لو معاك):</span>
+                    <input type="text" id="pexelsKey" class="input-box" style="height:35px; font-size:0.8rem; background:#222;" placeholder="اتركه فارغاً لاستخدام سيرفر التطبيق">
+                </div>
+            </div>
+
             <div class="modal-btns">
                 <button class="btn-cancel" onclick="document.getElementById('settingsModal').style.display='none'">إلغاء</button>
                 <button class="btn-save" onclick="saveSettings()">💾 حفظ</button>
@@ -335,7 +333,7 @@
     <script>
         let COUNTS = {};
         let currentJobId = null;
-        let pollInterval = null; // Global poll var for Stop functionality
+        let pollInterval = null; 
 
         // --- Settings Logic ---
         const defSet = {
@@ -384,6 +382,12 @@
             s.arShadow = document.getElementById('arShadow').checked;
             s.enShadow = document.getElementById('enShadow').checked;
             localStorage.setItem('quran_app_styles_v2', JSON.stringify(s));
+            
+            // Save API Key separately
+            const pkVal = document.getElementById('pexelsKey').value;
+            if(pkVal) localStorage.setItem('user_pexels_key', pkVal);
+            else localStorage.removeItem('user_pexels_key');
+
             document.getElementById('settingsModal').style.display='none';
             
             const btn = document.querySelector('.btn-gear');
@@ -399,15 +403,22 @@
                     else el.value = s[k];
                 }
             });
+            // Load API Key
+            const savedKey = localStorage.getItem('user_pexels_key');
+            if(savedKey) document.getElementById('pexelsKey').value = savedKey;
         }
         
         function resetSettings() {
-            if(confirm('reset?')) { localStorage.removeItem('quran_app_styles_v2'); loadSettingsUI(); upd(); }
+            if(confirm('reset?')) { 
+                localStorage.removeItem('quran_app_styles_v2'); 
+                localStorage.removeItem('user_pexels_key');
+                document.getElementById('pexelsKey').value = "";
+                loadSettingsUI(); upd(); 
+            }
         }
 
         // --- Standard App Logic ---
         window.onload = async () => {
-            if(localStorage.getItem('user_pexels_key')) document.getElementById('pexelsKey').value = localStorage.getItem('user_pexels_key');
             loadHistory(); loadSettingsUI();
             try {
                 const d = await (await fetch(`/api/config`)).json();
@@ -419,7 +430,6 @@
 
         function toggleSearch() { document.getElementById('bgQuery').style.display = document.getElementById('useSearch').checked ? 'block' : 'none'; }
         
-        // FIXED STOP PROCESS
         async function stopProcess() { 
             if(currentJobId && confirm("إيقاف؟")) {
                 if(pollInterval) clearInterval(pollInterval);
@@ -460,10 +470,14 @@
 
         document.getElementById('vForm').onsubmit = async (e) => {
             e.preventDefault();
-            const pk = document.getElementById('pexelsKey').value;
-            if(!pk) return alert('Pexels Key Required');
-            localStorage.setItem('user_pexels_key', pk);
             
+            // 🚀 التعديل الأهم: بناخد المفتاح من الإعدادات، ولو فاضي بنمشيه عادي
+            const pkElement = document.getElementById('pexelsKey');
+            const pk = pkElement ? pkElement.value : "";
+            
+            // حفظنا المفتاح لو المستخدم كتبه عشان ميكتبوش تاني
+            if(pk) localStorage.setItem('user_pexels_key', pk);
+
             document.getElementById('btn').style.display='none';
             document.getElementById('stopBtn').style.display = 'flex';
             document.getElementById('progArea').style.display='block';
@@ -504,10 +518,8 @@
                         if(p.is_complete) {
                             clearInterval(pollInterval);
                             
-                            // 🟢 التعديل هنا: نغير النص وننتظر قليلاً قبل طلب الملف
                             document.getElementById('statusTxt').innerText = "جاري جلب الفيديو...";
                             
-                            // ننتظر 1500 ملي ثانية (ثانية ونصف) لضمان حفظ الملف
                             setTimeout(async () => {
                                 try {
                                     const vidRes = await fetch(`/api/download?jobId=${currentJobId}`);
@@ -532,7 +544,7 @@
                                     alert("حدث خطأ أثناء جلب الملف: " + innerErr.message);
                                     document.getElementById('btn').style.display='flex';
                                 }
-                            }, 1500); // ⏳ الانتظار هنا
+                            }, 1500);
                         }
                     } catch(err) {
                         clearInterval(pollInterval);
