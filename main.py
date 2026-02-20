@@ -425,49 +425,7 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, 
     
     # 🚀 نفس الكلام هنا للترجمة
     return ImageClip(np.array(img)).set_duration(duration).crossfadein(0.35).crossfadeout(0.35)
-    
-def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
-    pool = []
-    
-    # 1. قائمة الممنوعات (الكلمات اللي لو ظهرت في وصف الفيديو نرفضه)
-    FORBIDDEN_TAGS = [
-        'woman', 'girl', 'female', 'lady', 'model', 'face', 'people', 'person', 
-        'man', 'boy', 'couple', 'fashion', 'dance', 'yoga', 'fitness', 'body',
-        'portrait', 'smile', 'happy', 'human', 'crowd', 'street', 'walking'
-    ]
 
-    # 2. تحديد المفتاح
-    if user_key and len(user_key) > 10:
-        active_key = user_key
-    else:
-        active_key = random.choice(PEXELS_API_KEYS) if PEXELS_API_KEYS else ""
-    
-    # 3. نظام القائمة البيضاء (الصارم) 🛡️
-    SAFE_WHITELIST = [
-        'nature', 'sky', 'sea', 'ocean', 'water', 'rain', 'cloud', 'mountain',
-        'forest', 'tree', 'desert', 'sand', 'star', 'galaxy', 'space', 'moon',
-        'sun', 'sunset', 'sunrise', 'mosque', 'islam', 'kaaba', 'makkah',
-        'snow', 'winter', 'landscape', 'river', 'fog', 'mist', 'earth', 'bird'
-    ]
-
-    safe_topics = [
-        'sky clouds timelapse', 'galaxy stars space', 'ocean waves slow motion', 
-        'forest trees drone', 'desert sand dunes', 'waterfall nature', 
-        'mountains fog', 'mosque architecture', 'islamic pattern'
-    ]
-
-    if custom_query and len(custom_query) > 2:
-        try: 
-            # بنترجم كلمة المستخدم للإنجليزي ونخليها حروف صغيرة
-            q_trans = GoogleTranslator(source='auto', target='en').translate(custom_query.strip()).lower()
-            
-            # 🛑 الفحص: هل كلمته موجودة في القائمة البيضاء؟
-            is_safe = any(safe_word in q_trans for safe_word in SAFE_WHITELIST)
-            
-            if is_safe:
-                # الكلمة أمان، استخدمها
-                q = f"{q_trans} landscape scenery atmospheric no people"
-            else:
 def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     pool = []
     
@@ -821,7 +779,6 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
-
 
 
 
