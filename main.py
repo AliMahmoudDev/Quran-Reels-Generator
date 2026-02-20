@@ -52,6 +52,21 @@ ETHEREAL_AUDIO_FILTER = (
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
+# ==========================================
+# 🚀 API Keys & Local Fallback Setup
+# ==========================================
+PEXELS_API_KEYS = [
+    "AmAgE0J5AuBbsvR6dmG7qQLIc5uYZvDim2Vx250F5QoHNKnGdCofFerx",
+    "Fv0qzUGYwbGr6yHsauaXuNKiNR9L7OE7VLr5Wq6SngcLjavmkCEAskb2",
+    "1NK8BaBXGsXm4Uxzcesxm0Jxh2yCILOwqqsj4GiM57dXcb7b8bbDYyOu",
+    
+ "C9KJNtJET2wAnmD42Gbu0OolTlmhoT02CX7fyst3kKEvnjRRWLiAqQ9t" 
+]
+
+LOCAL_BGS_DIR = os.path.join(BUNDLE_DIR, "local_bgs")
+os.makedirs(LOCAL_BGS_DIR, exist_ok=True)
+# 💡 ملحوظة: ابقى اعمل فولدر اسمه local_bgs وحط فيه كام فيديو خلفية للطوارئ
+
 def app_dir():
     if getattr(sys, "frozen", False): return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
@@ -412,6 +427,9 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, 
 def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     pool = []
     
+    # 1. نظام تدوير المفاتيح: لو المستخدم مش حاطط مفتاح، اختار واحد عشوائي من بتوعك
+    active_key = user_key if user_key and len(user_key) > 10 else random.choice(PEXELS_API_KEYS)
+    
     if custom_query and len(custom_query) > 2:
         try: q_base = GoogleTranslator(source='auto', target='en').translate(custom_query.strip())
         except: q_base = "nature landscape"
@@ -426,7 +444,7 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
         random_page = random.randint(1, 10)
         url = f"https://api.pexels.com/videos/search?query={q}&per_page={count+5}&page={random_page}&orientation=portrait"
         
-        r = requests.get(url, headers={'Authorization': user_key}, timeout=15)
+        r = requests.get(url, headers={'Authorization': active_key}, timeout=15)
         if r.status_code == 200:
             vids = r.json().get('videos', [])
             random.shuffle(vids)
@@ -443,7 +461,18 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
                     if not os.path.exists(path):
                         smart_download(f['link'], path, job_id)
                     pool.append(path)
-    except Exception as e: print(f"Fetch Error: {e}")
+        else:
+            print(f"Pexels API Error: {r.status_code} - Switching to Fallback")
+    except Exception as e: 
+        print(f"Fetch Error: {e}")
+
+    # 2. نظام الطوارئ (Local Fallback): لو النت فصل أو الكوتة خلصت
+    if not pool:
+        local_files = [os.path.join(LOCAL_BGS_DIR, f) for f in os.listdir(LOCAL_BGS_DIR) if f.endswith(('.mp4', '.mov'))]
+        if local_files:
+            # لو طالب كذا فيديو للخلفية المتغيرة، هنجيب عشوائي من الفولدر
+            pool = random.choices(local_files, k=count)
+            
     return pool
 
 # ==========================================
