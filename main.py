@@ -225,6 +225,7 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     full_audio_path = os.path.join(cache_dir, f"{surah:03d}.mp3")
     timings_path = os.path.join(cache_dir, f"{surah:03d}.json")
 
+    # [Download Logic Remains the Same...]
     if not os.path.exists(full_audio_path) or not os.path.exists(timings_path):
         smart_download(f"{server_url}{surah:03d}.mp3", full_audio_path, job_id)
         check_stop(job_id)
@@ -237,22 +238,32 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     
     check_stop(job_id)
     
-    # تحميل الجزء المطلوب بناءً على التوقيتات
+    # 1. Load the raw segment based on API timestamps
     seg = AudioSegment.from_file(full_audio_path)[t['start']:t['end']]
     
     # ---------------------------------------------------------
-    # 🚀 الحل: إلغاء تقطيع الصمت الصارم
+    # 🚀 NEW: SILENCE REMOVAL LOGIC
     # ---------------------------------------------------------
-    # بدلاً من البحث عن الصمت وقصه، سنكتفي بإضافة "نَفَس" بسيط 
-    # لضمان عدم حدوث تداخل أو قطع مفاجئ
     
-    # إضافة هامش صمت بسيط جداً (50 مللي ثانية) في البداية والنهاية
-    # ده بيخلي الصوت "يرتاح" وميتقطعش
-    padding = AudioSegment.silent(duration=50)
-    seg = padding + seg + padding
+    # Dynamic threshold: 16dB quieter than the peak of this specific clip
+    silence_thresh = seg.dBFS - 16 
 
-    # عمل Fade خفيف جداً لمنع صوت الـ "تكة" (Click) عند بداية ونهاية المقطع
-    seg = seg.fade_in(30).fade_out(30) 
+    # Find where the sound actually starts
+    start_trim = detect_leading_silence(seg, silence_threshold=silence_thresh)
+    
+    # Find where the sound actually ends (by reversing audio)
+    end_trim = detect_leading_silence(seg.reverse(), silence_threshold=silence_thresh)
+    
+    # Calculate duration
+    duration = len(seg)
+    
+    # Safety check: prevent trimming the whole file if it's very short or quiet
+    if duration - start_trim - end_trim > 200: 
+        seg = seg[start_trim:duration-end_trim]
+    
+    # Add a tighter fade to ensure smoothness without gaps
+    # Reduced fade from 50ms to 20ms to keep it snappy
+    seg = seg.fade_in(20).fade_out(20) 
     
     # ---------------------------------------------------------
 
