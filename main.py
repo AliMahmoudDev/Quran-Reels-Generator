@@ -105,9 +105,7 @@ SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'النسا�
 
 # 🚀 Reciters Config
 NEW_RECITERS_CONFIG = {
-    'هيثم الدخين': (273, "https://server16.mp3quran.net/h_dukhain/Rewayat-Hafs-A-n-Assem/"),
-    'أحمد النفيس': (259, "https://server16.mp3quran.net/nufais/Rewayat-Hafs-A-n-Assem/"),
-    'وديع اليمني': (219, "https://server6.mp3quran.net/wdee3/"),
+    'وديع اليماني': (219, "https://server6.mp3quran.net/wdee3/"),
     'بندر بليلة': (217, "https://server6.mp3quran.net/balilah/"),
      'ادريس أبكر': (12, "https://server6.mp3quran.net/abkr/"),
     'منصور السالمي': (245, "https://server14.mp3quran.net/mansor/"),
@@ -263,7 +261,7 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     
     # Add a tighter fade to ensure smoothness without gaps
     # Reduced fade from 50ms to 20ms to keep it snappy
-    seg = seg.fade_in(50).fade_out(50) 
+    seg = seg.fade_in(20).fade_out(20) 
     
     # ---------------------------------------------------------
 
@@ -781,8 +779,6 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
-
-
 
 
 
