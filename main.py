@@ -105,7 +105,8 @@ SURAH_NAMES = ['الفاتحة', 'البقرة', 'آل عمران', 'النسا�
 
 # 🚀 Reciters Config
 NEW_RECITERS_CONFIG = {
-    'وديع اليماني': (219, "https://server6.mp3quran.net/wdee3/"),
+    'أحمد النفيس': (259, "https://server16.mp3quran.net/nufais/"),
+    'وديع اليمني': (219, "https://server6.mp3quran.net/wdee3/"),
     'بندر بليلة': (217, "https://server6.mp3quran.net/balilah/"),
      'ادريس أبكر': (12, "https://server6.mp3quran.net/abkr/"),
     'منصور السالمي': (245, "https://server14.mp3quran.net/mansor/"),
@@ -779,6 +780,7 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
 
 
