@@ -246,7 +246,7 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     # ---------------------------------------------------------
     
     # Dynamic threshold: 16dB quieter than the peak of this specific clip
-    silence_thresh = seg.dBFS - 16 
+    silence_thresh = seg.dBFS - 5
 
     # Find where the sound actually starts
     start_trim = detect_leading_silence(seg, silence_threshold=silence_thresh)
@@ -781,6 +781,7 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
 
 
