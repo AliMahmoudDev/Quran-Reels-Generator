@@ -246,7 +246,7 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     # ---------------------------------------------------------
     
     # Dynamic threshold: 16dB quieter than the peak of this specific clip
-    silence_thresh = seg.dBFS - 16
+    silence_thresh = seg.dBFS - 16 
 
     # Find where the sound actually starts
     start_trim = detect_leading_silence(seg, silence_threshold=silence_thresh)
@@ -263,7 +263,7 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     
     # Add a tighter fade to ensure smoothness without gaps
     # Reduced fade from 50ms to 20ms to keep it snappy
-    seg = seg.fade_in(50).fade_out(50)
+    seg = seg.fade_in(50).fade_out(50) 
     
     # ---------------------------------------------------------
 
@@ -781,9 +781,6 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
-
-
-
 
 
 
