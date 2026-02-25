@@ -263,7 +263,7 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     
     # Add a tighter fade to ensure smoothness without gaps
     # Reduced fade from 50ms to 20ms to keep it snappy
-    seg = seg.fade_in(20).fade_out(20) 
+    seg = seg.fade_in(50).fade_out(50)
     
     # ---------------------------------------------------------
 
@@ -781,6 +781,7 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
 
 
