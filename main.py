@@ -604,15 +604,134 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                         bg_slice = base_bg_clip.set_duration(chunk_duration)
                     current_bg_time += chunk_duration
                 
+# ==========================================
+# ⚡ Optimized Video Builder (Segmented & Translated)
+# ==========================================
+def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, style):
+    job = get_job(job_id)
+    workspace = job['workspace']
+    target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
+    scale = 1.0 if quality == '1080' else 0.67
+    last = min(end if end else start+9, VERSE_COUNTS.get(surah, 286))
+    total_ayahs = (last - start) + 1
+    
+    try:
+        # 1. Fetch Backgrounds
+        vpool = fetch_video_pool(user_pexels_key, bg_query, count=total_ayahs + 2, job_id=job_id)
+        
+        # 2. Prepare Base Background
+        if not vpool:
+            base_bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35))
+            bg_is_video = False
+        else:
+            base_bg_clip = VideoFileClip(vpool[0]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
+            bg_is_video = True
+
+        # 3. Prepare Static Overlays
+        overlays_static = [ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.3)]
+        if use_vignette:
+            overlays_static.append(create_vignette_mask(target_w, target_h))
+
+        final_segments = []
+        current_bg_time = 0.0
+        bg_index = 0
+        
+        # قائمة لملفات الصوت التي يجب إغلاقها لاحقاً
+        audio_clips_to_close = [] 
+
+        # 4. Sequential Processing (Ayah by Ayah)
+        for i, ayah in enumerate(range(start, last+1)):
+            check_stop(job_id)
+            update_job_status(job_id, int((i / total_ayahs) * 70), f'Processing Ayah {ayah}...')
+
+            # A. Get Full Verse Data (Audio & Text)
+            full_audio_path = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
+            full_audioclip = AudioFileClip(full_audio_path)
+            # نضيف الملف للقائمة ليتم إغلاقه في النهاية
+            audio_clips_to_close.append(full_audioclip)
+
+            full_ar_text = get_text(surah, ayah)
+            clean_ar_text = full_ar_text.replace(f" ({ayah})", "")
+            
+            # 🆕 جلب الترجمة الإنجليزية الكاملة هنا
+            full_en_text = get_en_text(surah, ayah)
+            
+            # B. Split Text into Chunks (4-5 words max)
+            ar_chunks = chunk_text_by_words(clean_ar_text, max_words=5)
+            
+            # C. Calculate Timing Proportions
+            total_chars = len(clean_ar_text.replace(" ", ""))
+            if total_chars == 0: total_chars = 1
+
+            current_audio_start = 0.0
+            ayah_sub_segments = []
+
+            for chunk_idx, chunk_text in enumerate(ar_chunks):
+                # 1. Calculate Chunk Duration
+                chunk_chars = len(chunk_text.replace(" ", ""))
+                
+                if chunk_idx == len(ar_chunks) - 1:
+                    chunk_duration = full_audioclip.duration - current_audio_start
+                else:
+                    chunk_duration = (chunk_chars / total_chars) * full_audioclip.duration
+                
+                if chunk_duration <= 0.1: chunk_duration = 0.1
+
+                # 2. Slice Audio
+                chunk_audioclip = full_audioclip.subclip(current_audio_start, current_audio_start + chunk_duration)
+                current_audio_start += chunk_duration
+
+                # 3. Create Text Clips
+                # العربي المقسم
+                display_text = chunk_text
+                if chunk_idx == len(ar_chunks) - 1:
+                     display_text += f" ({ayah})"
+
+                ac_chunk = create_text_clip(display_text, chunk_duration, target_w, scale, use_glow, style=style, force_single_line=True)
+                
+                # 🆕 الإنجليزي الكامل (نستخدم النص الكامل في كل جزء ليظهر ثابتاً)
+                ec_chunk = create_english_clip(full_en_text, chunk_duration, target_w, scale, use_glow, style=style)
+
+                # Positioning
+                ar_size_mult = float(style.get('arSize', '1.0'))
+                base_y = 0.35
+                ar_y_pos = target_h * base_y
+                ac_chunk = ac_chunk.set_position(('center', ar_y_pos))
+                
+                # تحديد مكان الترجمة أسفل العربي
+                en_y_pos = ar_y_pos + ac_chunk.h + (20 * scale)
+                ec_chunk = ec_chunk.set_position(('center', en_y_pos))
+
+
+                # 4. Handle Background Slice
+                if dynamic_bg and bg_is_video and bg_index < len(vpool):
+                    if chunk_idx == 0:
+                         current_bg_clip = VideoFileClip(vpool[bg_index]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
+                         if current_bg_clip.duration < full_audioclip.duration: current_bg_clip = current_bg_clip.loop(duration=full_audioclip.duration)
+                         bg_slice_start = 0.0
+                    
+                    bg_slice = current_bg_clip.subclip(bg_slice_start, bg_slice_start + chunk_duration).set_duration(chunk_duration)
+                    bg_slice_start += chunk_duration
+                    
+                    if chunk_idx == 0: bg_slice = bg_slice.fadein(0.5)
+                    if chunk_idx == len(ar_chunks) -1: bg_index += 1
+
+                else:
+                    if bg_is_video:
+                        bg_slice = base_bg_clip.loop().subclip(current_bg_time, current_bg_time + chunk_duration).set_duration(chunk_duration)
+                    else:
+                        bg_slice = base_bg_clip.set_duration(chunk_duration)
+                    current_bg_time += chunk_duration
+                
                 # 5. Compose Chunk Segment
                 segment_overlays = [o.set_duration(chunk_duration) for o in overlays_static]
                 chunk_segment = CompositeVideoClip([bg_slice] + segment_overlays + [ac_chunk, ec_chunk]).set_audio(chunk_audioclip)
                 ayah_sub_segments.append(chunk_segment)
             
-            # تجميع أجزاء الآية الواحدة
             if ayah_sub_segments:
                 final_segments.extend(ayah_sub_segments)
             
+            gc.collect()
 
         # 5. Concatenate All Segments
         update_job_status(job_id, 85, "Merging Clips...")
@@ -638,20 +757,16 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             temp_mix_path, fps=fps, codec='libx264', audio_codec='aac', audio_bitrate='192k',
             preset='ultrafast', threads=os.cpu_count() or 4, logger=ScopedQuranLogger(job_id)
         )
-        
-        # 🆕 أضف هذا الكود هنا لإغلاق جميع الملفات دفعة واحدة
+
+        # ✅ إغلاق ملفات الصوت الأصلية هنا بعد الانتهاء من الريندر
         for ac in audio_clips_to_close:
-            try:
-                ac.close()
-            except:
-                pass
+            try: ac.close()
+            except: pass
         audio_clips_to_close = []
 
         update_job_status(job_id, 98, "Mastering Audio...")
-
         cmd = (f'ffmpeg -y -i "{temp_mix_path}" -af "{STUDIO_DRY_FILTER}" -c:v copy -c:a aac -b:a 192k "{out_p}"')
         if os.system(cmd) != 0: 
-            # في حال فشل الفلتر، استخدم الملف الأصلي
             shutil.move(temp_mix_path, out_p)
         else:
              if os.path.exists(temp_mix_path): os.remove(temp_mix_path)
@@ -666,7 +781,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         with JOBS_LOCK: JOBS[job_id].update({'error': msg, 'status': status, 'is_running': False})
     
     finally:
-        # تنظيف شامل للموارد
         try:
             if 'final_video' in locals() and final_video: final_video.close()
             if 'base_bg_clip' in locals() and base_bg_clip: base_bg_clip.close()
@@ -677,8 +791,13 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             for s in final_segments: 
                 try: s.close() 
                 except: pass
+            # تنظيف إضافي في حال حدوث خطأ قبل الوصول لمرحلة الإغلاق الطبيعية
+            for ac in audio_clips_to_close:
+                try: ac.close()
+                except: pass
         except: pass
         gc.collect()
+
 
 @app.route('/')
 def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "API Running"
@@ -748,5 +867,6 @@ if __name__ == "__main__":
         print(f"⚠️ Warning: UI file not found at {UI_PATH}")
         
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
 
