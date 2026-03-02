@@ -509,6 +509,9 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         current_bg_time = 0.0
         bg_index = 0
 
+        # 🆕 أضف هذا السطر الجديد هنا
+        audio_clips_to_close = [] 
+
         # 4. Sequential Processing (Ayah by Ayah)
         for i, ayah in enumerate(range(start, last+1)):
             check_stop(job_id)
@@ -517,6 +520,10 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             # A. Get Full Verse Data (Audio & Text)
             full_audio_path = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
             full_audioclip = AudioFileClip(full_audio_path)
+
+            # 🆕 أضف هذا السطر هنا
+            audio_clips_to_close.append(full_audioclip)
+
             
             full_ar_text = get_text(surah, ayah)
             # تنظيف النص من رقم الآية للتقسيم
@@ -606,10 +613,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             if ayah_sub_segments:
                 final_segments.extend(ayah_sub_segments)
             
-            # تنظيف الذاكرة بعد كل آية
-            full_audioclip.close()
-            del full_audioclip
-            gc.collect()
 
         # 5. Concatenate All Segments
         update_job_status(job_id, 85, "Merging Clips...")
@@ -635,8 +638,17 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             temp_mix_path, fps=fps, codec='libx264', audio_codec='aac', audio_bitrate='192k',
             preset='ultrafast', threads=os.cpu_count() or 4, logger=ScopedQuranLogger(job_id)
         )
+        
+        # 🆕 أضف هذا الكود هنا لإغلاق جميع الملفات دفعة واحدة
+        for ac in audio_clips_to_close:
+            try:
+                ac.close()
+            except:
+                pass
+        audio_clips_to_close = []
 
         update_job_status(job_id, 98, "Mastering Audio...")
+
         cmd = (f'ffmpeg -y -i "{temp_mix_path}" -af "{STUDIO_DRY_FILTER}" -c:v copy -c:a aac -b:a 192k "{out_p}"')
         if os.system(cmd) != 0: 
             # في حال فشل الفلتر، استخدم الملف الأصلي
@@ -736,4 +748,5 @@ if __name__ == "__main__":
         print(f"⚠️ Warning: UI file not found at {UI_PATH}")
         
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
