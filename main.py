@@ -93,7 +93,7 @@ FONT_DIR = os.path.join(EXEC_DIR, "fonts")
 FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Arabic.ttf") 
 FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
 VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
-UI_PATH = os.path.join(BUNDLE_DIR, "index.html") # تم تعديل الاسم ليتطابق مع ملفك
+UI_PATH = os.path.join(BUNDLE_DIR, "UI.html") # تم تعديل الاسم ليتطابق مع ملفك
 
 # Master Temp Directory
 BASE_TEMP_DIR = os.path.join(EXEC_DIR, "temp_workspaces")
@@ -736,3 +736,4 @@ if __name__ == "__main__":
         print(f"⚠️ Warning: UI file not found at {UI_PATH}")
         
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
