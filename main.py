@@ -351,7 +351,7 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
     final_fs = int(base_fs * scale_factor * size_mult)
     font = get_cached_font(FONT_PATH_ARABIC, final_fs)
 
-    wrapped_text = wrap_text(text, pl)
+    wrapped_text = text
     lines = wrapped_text.split('\n')
     
     # 3. Measure Text
@@ -507,6 +507,11 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
             print(f"❌ Local Fallback Error: {e}")
             
     return pool
+    
+    
+def split_into_chunks(text, words_per_chunk=5):
+    words = text.split()
+    return [" ".join(words[i:i + words_per_chunk]) for i in range(0, len(words), words_per_chunk)]
 # ==========================================
 # ⚡ Optimized Video Builder (Segmented)
 # ==========================================
@@ -541,62 +546,84 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             check_stop(job_id)
             update_job_status(job_id, int((i / total_ayahs) * 80), f'Processing Ayah {ayah}...')
 
-            # A. Audio
+            # جلب البيانات الأساسية للآية
             ap = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
-            audioclip = AudioFileClip(ap)
-            duration = audioclip.duration
+            full_audioclip = AudioFileClip(ap)
+            full_ar_text = get_text(surah, ayah)
+            full_en_text = get_en_text(surah, ayah)
 
-            # B. Text (Updated to use Style)
-            ar_text = f"{get_text(surah, ayah)} ({ayah})"
-            en_text = get_en_text(surah, ayah)
+            # --- التقطيع الذكي ---
+            # تقسيم العربي لقطع (مثلاً كل 5 كلمات)
+            ar_chunks = split_into_chunks(full_ar_text, words_per_chunk=5)
+            en_words = full_en_text.split()
             
-            # 🚨 تمرير الـ style هنا هو السر!
-            ac = create_text_clip(ar_text, duration, target_w, scale, use_glow, style=style)
-            ec = create_english_clip(en_text, duration, target_w, scale, use_glow, style=style)
+            # حساب عدد كلمات الإنجليزية المقابلة لكل قطة عربية بالتبعية
+            avg_en_per_ar = len(en_words) / len(ar_chunks) if len(ar_chunks) > 0 else 0
+            
+            current_audio_time = 0.0
 
-            # Positioning (Dynamic based on size)
-            # نقوم بحساب المكان بناءً على حجم الخط المختار لضمان التناسق
-            ar_size_mult = float(style.get('arSize', '1.0'))
-            
-            # نرفع النص العربي قليلاً إذا كان الخط كبيراً جداً
-            base_y = 0.32
-            if ar_size_mult > 1.2: base_y = 0.28 
-            
-            ar_y_pos = target_h * base_y
-            en_y_pos = ar_y_pos + ac.h + (10 * scale)
-            
-            ac = ac.set_position(('center', ar_y_pos))
-            ec = ec.set_position(('center', en_y_pos))
-
-            # C. Background Slice
-            if dynamic_bg and i < len(vpool):
-                # 🔄 حالة الخلفية المتغيرة: نستخدم فيديو جديد ونعمله Fade
-                bg_clip = VideoFileClip(vpool[i]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
+            for chunk_idx, ar_chunk in enumerate(ar_chunks):
+                # 1. حساب مدة القطعة بناءً على طول النص (النسبة والتناسب)
+                # نسبة طول النص الحالي من إجمالي نص الآية
+                ratio = len(ar_chunk) / len(full_ar_text)
+                chunk_duration = ratio * full_audioclip.duration
                 
-                if bg_clip.duration < duration:
-                    bg_clip = bg_clip.loop(duration=duration)
+                # التأكد من عدم وجود قطع مدتها صفر
+                if chunk_duration <= 0: chunk_duration = 0.1
+                
+                # 2. قص الصوت الخاص بهذه القطعة
+                # نأخذ الصوت من الوقت الحالي ولمدة chunk_duration
+                # قمنا بعمل subclip مع إضافة fade بسيط جداً لمنع الـ "تكات"
+                chunk_audio = full_audioclip.subclip(current_audio_time, min(current_audio_time + chunk_duration, full_audioclip.duration))
+                chunk_audio = chunk_audio.fade_in(0.05).fade_out(0.05)
+
+                # 3. تجهيز نص الترجمة المقابل (تقريبي)
+                start_en = int(chunk_idx * avg_en_per_ar)
+                end_en = int((chunk_idx + 1) * avg_en_per_ar)
+                # في آخر قطعة، نأخذ كل ما تبقى من الترجمة
+                if chunk_idx == len(ar_chunks) - 1:
+                    en_chunk = " ".join(en_words[start_en:])
+                    display_ar = f"{ar_chunk} ({ayah})" # إضافة رقم الآية في آخر قطعة فقط
                 else:
-                    max_start = max(0, bg_clip.duration - duration)
-                    start_t = random.uniform(0, max_start)
-                    bg_clip = bg_clip.subclip(start_t, start_t + duration)
+                    en_chunk = " ".join(en_words[start_en:end_en])
+                    display_ar = ar_chunk
+
+                # 4. إنشاء الكليبات البصرية (Text Clips)
+                # استخدمنا نفس الدوال القديمة لكن للقطع الصغيرة
+                ac = create_text_clip(display_ar, chunk_duration, target_w, scale, use_glow, style=style)
+                ec = create_english_clip(en_chunk, chunk_duration, target_w, scale, use_glow, style=style)
+
+                # التموضع
+                ar_size_mult = float(style.get('arSize', '1.0'))
+                ar_y_pos = target_h * (0.32 if ar_size_mult <= 1.2 else 0.28)
+                en_y_pos = ar_y_pos + ac.h + (10 * scale)
                 
-                # الـ Fade يطبق هنا فقط لأنها خلفية متغيرة
-                bg_clip = bg_clip.set_duration(duration).fadein(0.5).fadeout(0.5)
+                ac = ac.set_position(('center', ar_y_pos))
+                ec = ec.set_position(('center', en_y_pos))
+
+                # 5. معالجة الخلفية لهذه القطعة
+                if dynamic_bg:
+                    # إذا كانت الخلفية متغيرة، نأخذ جزء من الفيديو العشوائي
+                    bg_clip = VideoFileClip(vpool[i % len(vpool)]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
+                    # لضمان عدم حدوث قطع، نأخذ جزء عشوائي ونكرره إذا لزم الأمر
+                    bg_clip = bg_clip.loop(duration=chunk_duration).subclip(0, chunk_duration)
+                    bg_clip = bg_clip.fadein(0.2).fadeout(0.2)
+                else:
+                    # إذا كانت ثابتة، نكمل من حيث توقفنا في الفيديو الأساسي
+                    bg_clip = base_bg_clip.loop().subclip(current_bg_time, current_bg_time + chunk_duration)
+                    current_bg_time += chunk_duration
                 
-            else:
-                # 🚀 حالة الخلفية الثابتة: استمرار الفيديو كقطعة واحدة بدون أي Fade أو تقطيع عشوائي
-                bg_clip = base_bg_clip.loop().subclip(current_bg_time, current_bg_time + duration)
-                current_bg_time += duration  # نزود الوقت عشان الآية الجاية تكمل من مكان ما دي وقفت
-                bg_clip = bg_clip.set_duration(duration)
-                # ❌ لا يوجد fadein أو fadeout هنا إطلاقاً!
-            
-            # Apply overlays to this segment
-            segment_overlays = [o.set_duration(duration) for o in overlays_static]
-            
-            # D. Compose Segment
-            # 🚀 تم إزالة الـ fadeout الخارجي لضمان تواصل التلاوة (النَفَس) بدون سكون بين الآيات
-            segment = CompositeVideoClip([bg_clip] + segment_overlays + [ac, ec]).set_audio(audioclip)
-            segments.append(segment)
+                # تجميع القطعة (Segment)
+                segment_overlays = [o.set_duration(chunk_duration) for o in overlays_static]
+                full_segment = CompositeVideoClip([bg_clip] + segment_overlays + [ac, ec]).set_audio(chunk_audio)
+                
+                segments.append(full_segment)
+                
+                # تحديث الوقت الحالي للصوت للقطعة القادمة
+                current_audio_time += chunk_duration
+
+            # تنظيف الذاكرة بعد كل آية
+            full_audioclip.close()
 
         # 5. Concatenate
         update_job_status(job_id, 85, "Merging Clips...")
@@ -780,7 +807,6 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
-
 
 
 
