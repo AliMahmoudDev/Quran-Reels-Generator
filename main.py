@@ -227,14 +227,17 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     
     check_stop(job_id)
     seg = AudioSegment.from_file(full_audio_path)[t['start']:t['end']]
-    silence_thresh = seg.dBFS - 16 
+    silence_thresh = seg.dBFS - 20 # جعلنا المقص ألطف
 
     start_trim = detect_leading_silence(seg, silence_threshold=silence_thresh)
     end_trim = detect_leading_silence(seg.reverse(), silence_threshold=silence_thresh)
     duration = len(seg)
     
-    if duration - start_trim - end_trim > 200: 
-        seg = seg[start_trim:duration-end_trim]
+    # نترك 150 ملي ثانية كـ "مساحة أمان" في نهاية الآية للحفاظ على صدى التلاوة ونفس القارئ
+    safe_end_trim = max(0, end_trim - 150) 
+    
+    if duration - start_trim - safe_end_trim > 200: 
+        seg = seg[start_trim:duration-safe_end_trim]
     
     seg = seg.fade_in(50).fade_out(50) 
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
@@ -452,8 +455,14 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             for chunk_idx, ar_chunk in enumerate(ar_chunks):
                 
                 # أ. حساب النسبة الزمنية
-                ratio = len(ar_chunk.replace(" ", "")) / max(1, len(full_ar_text.replace(" ", "")))
-                chunk_duration = ratio * full_audioclip.duration
+                if chunk_idx == len(ar_chunks) - 1:
+                    # لو دي القطعة الأخيرة، تاخد كل الوقت اللي باقي في الصوت عشان المد!
+                    chunk_duration = full_audioclip.duration - current_audio_time
+                else:
+                    # لو قطعة عادية، نحسبها بالنسبة والتناسب
+                    ratio = len(ar_chunk.replace(" ", "")) / max(1, len(full_ar_text.replace(" ", "")))
+                    chunk_duration = ratio * full_audioclip.duration
+                
                 if chunk_duration <= 0.05: chunk_duration = 0.1
 
                 # ب. اقتطاع الصوت مع تنعيم (audio_fadein/audio_fadeout)
