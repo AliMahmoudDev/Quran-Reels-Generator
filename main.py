@@ -48,8 +48,6 @@ STUDIO_DRY_FILTER = (
     "loudnorm=I=-16:TP=-1.5:LRA=11"
 )
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 def app_dir():
     if getattr(sys, "frozen", False): return os.path.dirname(sys.executable)
@@ -635,3 +633,4 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=7860, threaded=True)
+
