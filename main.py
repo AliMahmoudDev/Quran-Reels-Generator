@@ -452,37 +452,40 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 ayah_bg_time = 0.0
 
             # الدوران على قطع الآية (السطور)
+            # الدوران على قطع الآية (السطور)
             for chunk_idx, ar_chunk in enumerate(ar_chunks):
                 
-                # أ. حساب النسبة الزمنية
+                # 1. تحديد وقت النهاية بدقة شديدة
                 if chunk_idx == len(ar_chunks) - 1:
-                    # لو دي القطعة الأخيرة، تاخد كل الوقت اللي باقي في الصوت عشان المد!
-                    chunk_duration = full_audioclip.duration - current_audio_time
+                    t_end = full_audioclip.duration # القطعة الأخيرة تاخد كل الباقي
                 else:
-                    # لو قطعة عادية، نحسبها بالنسبة والتناسب
                     ratio = len(ar_chunk.replace(" ", "")) / max(1, len(full_ar_text.replace(" ", "")))
-                    chunk_duration = ratio * full_audioclip.duration
-                
-                if chunk_duration <= 0.05: chunk_duration = 0.1
+                    t_end = min(current_audio_time + (ratio * full_audioclip.duration), full_audioclip.duration)
 
-                # ب. اقتطاع الصوت مع تنعيم (audio_fadein/audio_fadeout)
-                t_start = current_audio_time
-                t_end = min(current_audio_time + chunk_duration, full_audioclip.duration)
-                chunk_audio = full_audioclip.subclip(t_start, t_end).audio_fadein(0.05).audio_fadeout(0.05)
+                # حماية من الأوقات الصفرية
+                if t_end - current_audio_time <= 0.05: 
+                    t_end = min(current_audio_time + 0.1, full_audioclip.duration)
+
+                # 2. قص الصوت أولاً
+                chunk_audio = full_audioclip.subclip(current_audio_time, t_end).audio_fadein(0.05).audio_fadeout(0.05)
+                
+                # 🚀 3. الحل الجذري: نعتمد وقت الصوت الفعلي كأساس لوقت الفيديو!
+                actual_duration = chunk_audio.duration
+                if actual_duration <= 0: continue
                 
                 # ج. اقتطاع الترجمة الإنجليزية
                 start_en = int(chunk_idx * avg_en_per_ar)
                 end_en = int((chunk_idx + 1) * avg_en_per_ar)
                 if chunk_idx == len(ar_chunks) - 1:
                     en_chunk = " ".join(en_words[start_en:])
-                    display_ar = f"{ar_chunk} ({ayah})" # الآية في آخر قطعة
+                    display_ar = f"{ar_chunk} ({ayah})" 
                 else:
                     en_chunk = " ".join(en_words[start_en:end_en])
                     display_ar = ar_chunk
 
-                # د. إنشاء الكليبات البصرية
-                ac = create_text_clip(display_ar, chunk_duration, target_w, scale, use_glow, style=style)
-                ec = create_english_clip(en_chunk, chunk_duration, target_w, scale, use_glow, style=style)
+                # د. إنشاء الكليبات البصرية (نستخدم actual_duration بدل chunk_duration)
+                ac = create_text_clip(display_ar, actual_duration, target_w, scale, use_glow, style=style)
+                ec = create_english_clip(en_chunk, actual_duration, target_w, scale, use_glow, style=style)
 
                 # هـ. تحديد المواقع
                 ar_size_mult = float(style.get('arSize', '1.0'))
@@ -492,23 +495,23 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 ac = ac.set_position(('center', ar_y_pos))
                 ec = ec.set_position(('center', ar_y_pos + ac.h + (10 * scale)))
 
-                # و. معالجة الخلفية للقطعة
+                # و. معالجة الخلفية للقطعة (نستخدم actual_duration)
                 if dynamic_bg and i < len(vpool):
-                    bg_slice = ayah_bg_clip.loop().subclip(ayah_bg_time, ayah_bg_time + chunk_duration)
-                    # تنعيم الخلفية في أول وآخر الآية فقط
+                    bg_slice = ayah_bg_clip.loop().subclip(ayah_bg_time, ayah_bg_time + actual_duration)
                     if chunk_idx == 0: bg_slice = bg_slice.fadein(0.5)
                     if chunk_idx == len(ar_chunks) - 1: bg_slice = bg_slice.fadeout(0.5)
-                    ayah_bg_time += chunk_duration
+                    ayah_bg_time += actual_duration
                 else:
-                    bg_slice = base_bg_clip.loop().subclip(current_bg_time, current_bg_time + chunk_duration)
-                    current_bg_time += chunk_duration
+                    bg_slice = base_bg_clip.loop().subclip(current_bg_time, current_bg_time + actual_duration)
+                    current_bg_time += actual_duration
                 
                 # ز. تجميع القطعة
-                segment_overlays =[o.set_duration(chunk_duration) for o in overlays_static]
+                segment_overlays =[o.set_duration(actual_duration) for o in overlays_static]
                 full_segment = CompositeVideoClip([bg_slice] + segment_overlays + [ac, ec]).set_audio(chunk_audio)
                 final_segments.append(full_segment)
 
-                current_audio_time += chunk_duration
+                # تحديث الوقت للقطعة القادمة
+                current_audio_time = t_end
 
         # 5. الدمج والرندر النهائي
         update_job_status(job_id, 85, "Merging All Chunks...")
