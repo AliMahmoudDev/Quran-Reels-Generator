@@ -575,8 +575,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 # نأخذ الصوت من الوقت الحالي ولمدة chunk_duration
                 # قمنا بعمل subclip مع إضافة fade بسيط جداً لمنع الـ "تكات"
                 chunk_audio = full_audioclip.subclip(current_audio_time, min(current_audio_time + chunk_duration, full_audioclip.duration))
-                chunk_audio = chunk_audio.fade_in(0.05).fade_out(0.05)
-
+                chunk_audio = chunk_audio.audio_fadein(0.05).audio_fadeout(0.05)
                 # 3. تجهيز نص الترجمة المقابل (تقريبي)
                 start_en = int(chunk_idx * avg_en_per_ar)
                 end_en = int((chunk_idx + 1) * avg_en_per_ar)
@@ -807,4 +806,5 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, threaded=True)
+
 
