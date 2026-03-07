@@ -13,7 +13,7 @@ import gc
 import random
 import requests
 import json
-from functools import lru_cache  # ✅ Added for caching
+from functools import lru_cache
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 
@@ -21,6 +21,11 @@ from flask_cors import CORS
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import PIL.Image
+
+# YouTube API Imports
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+from google.oauth2.credentials import Credentials
 
 # Patch for older PIL versions if needed
 if not hasattr(PIL.Image, 'ANTIALIAS'):
@@ -39,6 +44,9 @@ from deep_translator import GoogleTranslator
 # ⚙️ Configuration & Setup
 # ==========================================
 
+# 🛑 أمان اليوتيوب (كلمة سر الأدمن) 🛑
+ADMIN_SECRET = "MY_SECRET_KEY_123" # غيّر هذه الكلمة!
+
 STUDIO_DRY_FILTER = (
     "highpass=f=60, "
     "equalizer=f=200:width_type=h:width=200:g=3, "
@@ -47,7 +55,6 @@ STUDIO_DRY_FILTER = (
     "extrastereo=m=1.3, "
     "loudnorm=I=-16:TP=-1.5:LRA=11"
 )
-
 
 def app_dir():
     if getattr(sys, "frozen", False): return os.path.dirname(sys.executable)
@@ -119,7 +126,7 @@ app = Flask(__name__, static_folder=EXEC_DIR)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # ==========================================
-# 🧠 Job Management
+# 🧠 Job Management & YouTube Upload
 # ==========================================
 JOBS = {}
 JOBS_LOCK = threading.Lock()
@@ -173,6 +180,44 @@ class ScopedQuranLogger(ProgressBarLogger):
                     remaining = (total - value) / rate
                     rem_str = str(datetime.timedelta(seconds=int(remaining)))[2:] if remaining > 0 else "00:00"
                 update_job_status(self.job_id, percent, f"جاري التصدير... {percent}%", eta=rem_str)
+
+# --- دالة الرفع لليوتيوب ---
+def upload_to_youtube(video_path, title, description):
+    client_secret_data = os.environ.get('CLIENT_SECRET_JSON')
+    token_data = os.environ.get('TOKEN_JSON')
+    
+    if not client_secret_data or not token_data:
+        raise Exception("مفاتيح اليوتيوب غير موجودة في الـ Secrets السيرفر!")
+
+    # إنشاء الملفات مؤقتاً للتوثيق
+    with open('client_secret.json', 'w') as f: f.write(client_secret_data)
+    with open('token.json', 'w') as f: f.write(token_data)
+    
+    try:
+        creds = Credentials.from_authorized_user_file('token.json', ['https://www.googleapis.com/auth/youtube.upload'])
+        youtube = build('youtube', 'v3', credentials=creds)
+        
+        body = {
+            'snippet': {
+                'title': title,
+                'description': description,
+                'tags':['Quran', 'Reels', 'Shorts', 'قرآن', 'تلاوة'],
+                'categoryId': '22'
+            },
+            'status': {
+                'privacyStatus': 'private', # اجعلها 'public' لاحقاً للنشر العام
+                'selfDeclaredMadeForKids': False
+            }
+        }
+        
+        media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
+        request = youtube.videos().insert(part='snippet,status', body=body, media_body=media)
+        response = request.execute()
+        return response.get('id')
+    finally:
+        # 🧹 تنظيف الملفات السرية من السيرفر فوراً بعد الاستخدام
+        if os.path.exists('client_secret.json'): os.remove('client_secret.json')
+        if os.path.exists('token.json'): os.remove('token.json')
 
 # ==========================================
 # 🛠️ Helper Functions & Optimization
@@ -268,7 +313,6 @@ def get_en_text(surah, ayah):
     try: return requests.get(f'http://api.alquran.cloud/v1/ayah/{surah}:{ayah}/en.sahih').json()['data']['text']
     except: return ""
 
-# 🆕 دالة تقطيع النصوص للريلز (5 كلمات كحد أقصى للسطر)
 def split_into_chunks(text, words_per_chunk=5):
     words = text.split()
     if not words: return []
@@ -295,7 +339,6 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
     has_shadow = style.get('arShadow', False)
     shadow_c = style.get('arShadowC', '#000000')
 
-    # الخط كبير لأنه سطر واحد
     final_fs = int(55 * scale_factor * size_mult)
     font = get_cached_font(FONT_PATH_ARABIC, final_fs)
     
@@ -390,7 +433,7 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     return pool
 
 # ==========================================
-# ⚡ Optimized Video Builder (Segmented / Chunked)
+# ⚡ Optimized Video Builder 
 # ==========================================
 def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, style):
     job = get_job(job_id)
@@ -400,16 +443,13 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
     last = min(end if end else start+9, VERSE_COUNTS.get(surah, 286))
     total_ayahs = (last - start) + 1
     
-    # مصفوفات لتخزين الملفات المفتوحة لإغلاقها في الـ finally لعدم تسريب الذاكرة
     audio_clips_to_close =[]
     video_clips_to_close = []
     final_segments =[]
 
     try:
-        # 1. Fetch Backgrounds
         vpool = fetch_video_pool(user_pexels_key, bg_query, count=total_ayahs if dynamic_bg else 1, job_id=job_id)
         
-        # 2. Prepare Base Background
         if not vpool:
             base_bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35))
         else:
@@ -417,17 +457,14 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             video_clips_to_close.append(base_bg_clip)
 
         overlays_static =[ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.3)]
-        if use_vignette:
-            overlays_static.append(create_vignette_mask(target_w, target_h))
+        if use_vignette: overlays_static.append(create_vignette_mask(target_w, target_h))
 
         current_bg_time = 0.0
         
-        # 4. معالجة الآيات 
         for i, ayah in enumerate(range(start, last+1)):
             check_stop(job_id)
             update_job_status(job_id, int((i / total_ayahs) * 80), f'Processing Ayah {ayah}...')
 
-            # تحميل الصوت
             ap = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
             full_audioclip = AudioFileClip(ap)
             audio_clips_to_close.append(full_audioclip)
@@ -435,47 +472,38 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             full_ar_text = get_text(surah, ayah)
             full_en_text = get_en_text(surah, ayah)
             
-            # تقطيع النصوص (العربي والإنجليزي)
             ar_chunks = split_into_chunks(full_ar_text, words_per_chunk=5)
             en_words = full_en_text.split()
             avg_en_per_ar = len(en_words) / len(ar_chunks) if len(ar_chunks) > 0 else 0
             
             current_audio_time = 0.0
             
-            # فتح فيديو الخلفية مرة واحدة للآية (إذا كان متغيراً) لتقليل استهلاك الرام
             if dynamic_bg and i < len(vpool):
                 ayah_bg_clip = VideoFileClip(vpool[i % len(vpool)]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
                 video_clips_to_close.append(ayah_bg_clip)
                 ayah_bg_time = 0.0
 
-            # الدوران على قطع الآية (السطور)
             for chunk_idx, ar_chunk in enumerate(ar_chunks):
-                
-                # أ. حساب النسبة الزمنية
                 ratio = len(ar_chunk.replace(" ", "")) / max(1, len(full_ar_text.replace(" ", "")))
                 chunk_duration = ratio * full_audioclip.duration
                 if chunk_duration <= 0.05: chunk_duration = 0.1
 
-                # ب. اقتطاع الصوت مع تنعيم (audio_fadein/audio_fadeout)
                 t_start = current_audio_time
                 t_end = min(current_audio_time + chunk_duration, full_audioclip.duration)
                 chunk_audio = full_audioclip.subclip(t_start, t_end).audio_fadein(0.05).audio_fadeout(0.05)
                 
-                # ج. اقتطاع الترجمة الإنجليزية
                 start_en = int(chunk_idx * avg_en_per_ar)
                 end_en = int((chunk_idx + 1) * avg_en_per_ar)
                 if chunk_idx == len(ar_chunks) - 1:
                     en_chunk = " ".join(en_words[start_en:])
-                    display_ar = f"{ar_chunk} ({ayah})" # الآية في آخر قطعة
+                    display_ar = f"{ar_chunk} ({ayah})" 
                 else:
                     en_chunk = " ".join(en_words[start_en:end_en])
                     display_ar = ar_chunk
 
-                # د. إنشاء الكليبات البصرية
                 ac = create_text_clip(display_ar, chunk_duration, target_w, scale, use_glow, style=style)
                 ec = create_english_clip(en_chunk, chunk_duration, target_w, scale, use_glow, style=style)
 
-                # هـ. تحديد المواقع
                 ar_size_mult = float(style.get('arSize', '1.0'))
                 base_y = 0.35 if ar_size_mult <= 1.2 else 0.30
                 ar_y_pos = target_h * base_y
@@ -483,10 +511,8 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 ac = ac.set_position(('center', ar_y_pos))
                 ec = ec.set_position(('center', ar_y_pos + ac.h + (10 * scale)))
 
-                # و. معالجة الخلفية للقطعة
                 if dynamic_bg and i < len(vpool):
                     bg_slice = ayah_bg_clip.loop().subclip(ayah_bg_time, ayah_bg_time + chunk_duration)
-                    # تنعيم الخلفية في أول وآخر الآية فقط
                     if chunk_idx == 0: bg_slice = bg_slice.fadein(0.5)
                     if chunk_idx == len(ar_chunks) - 1: bg_slice = bg_slice.fadeout(0.5)
                     ayah_bg_time += chunk_duration
@@ -494,14 +520,12 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                     bg_slice = base_bg_clip.loop().subclip(current_bg_time, current_bg_time + chunk_duration)
                     current_bg_time += chunk_duration
                 
-                # ز. تجميع القطعة
                 segment_overlays =[o.set_duration(chunk_duration) for o in overlays_static]
                 full_segment = CompositeVideoClip([bg_slice] + segment_overlays + [ac, ec]).set_audio(chunk_audio)
                 final_segments.append(full_segment)
 
                 current_audio_time += chunk_duration
 
-        # 5. الدمج والرندر النهائي
         update_job_status(job_id, 85, "Merging All Chunks...")
         final_video = concatenate_videoclips(final_segments, method="compose")
         
@@ -510,29 +534,13 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         
         update_job_status(job_id, 90, "Rendering Video (Mixing)...")
         final_video.write_videofile(
-            temp_mix_path, 
-            fps=fps, 
-            codec='libx264', 
-            audio_codec='aac', 
-            audio_bitrate='192k',
-            preset='ultrafast', 
-            threads=os.cpu_count() or 4,
-            logger=ScopedQuranLogger(job_id)
+            temp_mix_path, fps=fps, codec='libx264', audio_codec='aac', audio_bitrate='192k', preset='ultrafast', threads=os.cpu_count() or 4, logger=ScopedQuranLogger(job_id)
         )
 
-        # 6. معالجة وتوحيد الصوت (Studio Dry Filter)
         update_job_status(job_id, 98, "Mastering Audio (Dry Studio)...")
-        cmd = (
-            f'ffmpeg -y -i "{temp_mix_path}" '
-            f'-af "{STUDIO_DRY_FILTER}" '
-            f'-c:v copy '
-            f'-c:a aac -b:a 192k '
-            f'"{out_p}"'
-        )
+        cmd = f'ffmpeg -y -i "{temp_mix_path}" -af "{STUDIO_DRY_FILTER}" -c:v copy -c:a aac -b:a 192k "{out_p}"'
         
-        if os.system(cmd) != 0: 
-            # في حال فشل الفلتر لأي سبب، نستخدم النسخة الأصلية
-            shutil.move(temp_mix_path, out_p)
+        if os.system(cmd) != 0: shutil.move(temp_mix_path, out_p)
         else:
             if os.path.exists(temp_mix_path): os.remove(temp_mix_path)
 
@@ -546,21 +554,21 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         with JOBS_LOCK: JOBS[job_id].update({'error': msg, 'status': status, 'is_running': False})
     
     finally:
-        # إغلاق جميع الملفات المفتوحة بحرص شديد
         for ac in audio_clips_to_close:
             try: ac.close()
             except: pass
-            
         for vc in video_clips_to_close:
             try: vc.close()
             except: pass
-            
         try:
             if 'final_video' in locals(): final_video.close()
             for s in final_segments: s.close()
         except: pass
         gc.collect()
 
+# ==========================================
+# 🌐 API Routes
+# ==========================================
 @app.route('/')
 def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "API Running"
 
@@ -569,27 +577,11 @@ def gen():
     d = request.json
     job_id = create_job()
     style_settings = d.get('style', {}) 
-    
     threading.Thread(
         target=build_video_task, 
-        args=(
-            job_id, 
-            d['pexelsKey'], 
-            d['reciter'], 
-            int(d['surah']), 
-            int(d['startAyah']), 
-            int(d.get('endAyah',0)), 
-            d.get('quality','720'), 
-            d.get('bgQuery',''), 
-            int(d.get('fps',20)), 
-            d.get('dynamicBg',False), 
-            d.get('useGlow',False), 
-            d.get('useVignette',False),
-            style_settings
-        ), 
+        args=(job_id, d['pexelsKey'], d['reciter'], int(d['surah']), int(d['startAyah']), int(d.get('endAyah',0)), d.get('quality','720'), d.get('bgQuery',''), int(d.get('fps',20)), d.get('dynamicBg',False), d.get('useGlow',False), d.get('useVignette',False), style_settings), 
         daemon=True
     ).start()
-    
     return jsonify({'ok': True, 'jobId': job_id})
 
 @app.route('/api/progress')
@@ -612,6 +604,26 @@ def cancel_process():
 @app.route('/api/config')
 def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 'reciters': RECITERS_MAP})
 
+# Route الخاصة بالرفع لليوتيوب
+@app.route('/api/upload_to_youtube', methods=['POST'])
+def upload_youtube_route():
+    d = request.json
+    if d.get('secret') != ADMIN_SECRET:
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    job = get_job(d.get('jobId'))
+    if not job or not job.get('output_path'):
+        return jsonify({"error": "Video not found"}), 404
+        
+    try:
+        title = d.get('title', "تلاوة قرآنية مريحة للقلب 🤍 #quran")
+        desc = "تم الإنشاء بواسطة صانع الريلز القرآني الأوتوماتيكي 🚀"
+        vid_id = upload_to_youtube(job['output_path'], title, desc)
+        return jsonify({"ok": True, "videoId": vid_id})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 def background_cleanup():
     while True:
         time.sleep(3600)
@@ -633,4 +645,3 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=7860, threaded=True)
-
