@@ -6,6 +6,7 @@
     <title>صانع الريلز القرآني | Quran Reels</title>
     
     <link rel="icon" href="https://ibb.co/zWy3WBhD"> 
+    
     <meta property="og:title" content="صانع الريلز القرآني 🚀">
     <meta property="og:description" content="أنشئ فيديوهات قرانية احترافية في ثوانٍ.">
     <meta name="theme-color" content="#0a0a0e">
@@ -21,7 +22,6 @@
             --gradient-gold: linear-gradient(135deg, #aa8a2e 0%, #d4af37 50%, #f9e5a0 100%);
             --danger-red: #ff4757;
             --success-green: #2ecc71;
-            --yt-red: #ff0000;
             --random-purple: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
         }
 
@@ -44,10 +44,20 @@
         
         .timer-badge { background: rgba(255, 255, 255, 0.1); padding: 5px 10px; border-radius: 20px; font-size: 0.9rem; color: var(--primary-gold); font-family: monospace; display: inline-flex; align-items: center; gap: 5px; margin-top: 5px; }
 
+        /* --- تنسيقات الهيستوري الجديدة والمحسنة --- */
         .history-section { margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
         .history-title-main { font-size: 1rem; color: #888; margin-bottom: 10px; text-align: center; font-weight: bold; }
         
-        .history-item { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.05); }
+        .history-item { 
+            background: rgba(255,255,255,0.03); 
+            padding: 12px; 
+            border-radius: 10px; 
+            margin-bottom: 8px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border: 1px solid rgba(255,255,255,0.05); 
+        }
         .hist-info { display: flex; flex-direction: column; gap: 4px; }
         .hist-title { font-weight: bold; font-size: 0.95rem; color: #fff; }
         .hist-meta { font-size: 0.75rem; color: var(--primary-gold); display: flex; align-items: center; gap: 5px; }
@@ -69,9 +79,6 @@
         .btn-main { width: 100%; height: 55px; margin-top: 10px; background: var(--gradient-gold); border: none; border-radius: 12px; color: #000; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; }
         .btn-stop { width: 100%; height: 55px; margin-top: 10px; background: var(--danger-red); border: none; border-radius: 12px; color: #fff; font-weight: 800; font-size: 1.1rem; display: none; align-items: center; justify-content: center; gap: 10px; cursor: pointer; }
         
-        /* ستايل زر اليوتيوب (مخفي افتراضياً) */
-        .btn-yt { width: 100%; height: 55px; margin-top: 10px; background: var(--yt-red); border: none; border-radius: 12px; color: #fff; font-weight: 800; font-size: 1.1rem; align-items: center; justify-content: center; gap: 10px; cursor: pointer; display: none; }
-
         .prog-area { display: none; margin-top: 20px; text-align: center; }
         .bar-track { height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin: 10px 0; }
         .bar-fill { height: 100%; width: 0; background: var(--primary-gold); transition: 0.3s; }
@@ -96,21 +103,49 @@
         .footer-contact { margin-top: 30px; padding-top: 20px; text-align: center; border-top: 1px solid var(--border-glow); display: flex; flex-direction: column; align-items: center; gap: 15px; }
         .social-link { display: inline-flex; align-items: center; gap: 8px; color: var(--primary-gold); text-decoration: none; font-weight: 600; transition: 0.3s; background: rgba(212, 175, 55, 0.05); padding: 8px 16px; border-radius: 50px; border: 1px solid var(--border-glow); font-size: 0.9rem; }
         .social-link:hover { background: var(--gradient-gold); color: #000; transform: translateY(-3px); }
+        .social-link svg { fill: currentColor; }
 
-        /* --- SETTINGS MODAL --- */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(8px); animation: fadeIn 0.2s; }
+        /* --- SETTINGS MODAL CSS --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 1000;
+            display: none; justify-content: center; align-items: center;
+            backdrop-filter: blur(8px); animation: fadeIn 0.2s;
+        }
         @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
-        .settings-card { background: #121215; width: 95%; max-width: 400px; border: 1px solid var(--primary-gold); border-radius: 20px; padding: 20px; max-height: 90vh; overflow-y: auto; box-shadow: 0 0 40px rgba(212, 175, 55, 0.15); display: flex; flex-direction: column; }
-        .preview-box { width: 100%; min-height: 150px; background: linear-gradient(45deg, #1a1a2e, #16213e); border-radius: 12px; border: 1px solid #444; margin-bottom: 20px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; flex-shrink: 0; }
-        .prev-text-ar { font-family: 'Amiri', serif; margin-bottom: 8px; line-height: 1.6; font-size: 1.6rem; z-index: 2; position: relative;}
-        .prev-text-en { font-family: 'Cairo', sans-serif; line-height: 1.4; font-size: 0.9rem; z-index: 2; position: relative;}
+        
+        .settings-card {
+            background: #121215; width: 95%; max-width: 400px;
+            border: 1px solid var(--primary-gold); border-radius: 20px;
+            padding: 20px; max-height: 90vh; overflow-y: auto;
+            box-shadow: 0 0 40px rgba(212, 175, 55, 0.15);
+            display: flex; flex-direction: column;
+        }
+
+        .preview-box {
+            width: 100%; min-height: 150px;
+            background: linear-gradient(45deg, #1a1a2e, #16213e);
+            border-radius: 12px; border: 1px solid #444;
+            margin-bottom: 20px; position: relative; overflow: hidden;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            flex-shrink: 0;
+        }
+        .preview-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.8)); z-index: 1; pointer-events: none;}
+        
+        .prev-text-ar, .prev-text-en { position: relative; z-index: 2; text-align: center; width: 90%; transition: 0.2s; }
+        .prev-text-ar { font-family: 'Amiri', serif; margin-bottom: 8px; line-height: 1.6; font-size: 1.6rem; }
+        .prev-text-en { font-family: 'Cairo', sans-serif; line-height: 1.4; font-size: 0.9rem; }
+
         .set-section { margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; }
         .set-header { color: var(--primary-gold); font-size: 0.95rem; font-weight: bold; margin-bottom: 10px; display:flex; justify-content:space-between; }
+
         .ctrl-line { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; color:#ccc; }
         .color-input { width: 30px; height: 30px; border: none; background: none; cursor: pointer; padding: 0; border-radius: 50%; overflow: hidden; }
         .color-input::-webkit-color-swatch-wrapper { padding: 0; }
         .color-input::-webkit-color-swatch { border: 2px solid #555; border-radius: 50%; }
+        
         .sm-slider { width: 80px; accent-color: var(--primary-gold); height: 4px; }
+
         .modal-btns { display: flex; gap: 10px; margin-top: 10px; }
         .btn-save { background: var(--success-green); color: white; flex: 1; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
         .btn-cancel { background: #333; color: #ccc; width: 80px; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
@@ -162,9 +197,10 @@
                 <div class="form-group">
                     <label class="label">سلاسة الفيديو (FPS)</label>
                     <select id="fpsSelect" class="input-box">
-                        <option value="15">🚀 15 FPS (سريع)</option>
-                        <option value="20" selected>⚖️ 20 FPS (متوازن)</option>
-                        <option value="30">💎 30 FPS (سلس)</option>
+                        <option value="15">🚀 15 FPS (سريع جداً)</option>
+                        <option value="20" selected>⚖️ 20 FPS (متوازن - ينصح به)</option>
+                        <option value="24">🎬 24 FPS (سينمائي)</option>
+                        <option value="30">💎 30 FPS (الأكثر سلاسة)</option>
                     </select>
                 </div>
 
@@ -185,15 +221,24 @@
                 <div class="toggle-box">
                     <div style="display:flex; flex-direction:column;">
                         <span style="font-size:0.9rem;">🔄 تغيير الخلفية مع الآيات</span>
+                        <span style="font-size:0.65rem; color:#aaa;">(يستهلك بيانات أكثر)</span>
                     </div>
                     <label class="switch"><input type="checkbox" id="dynamicBg" checked><span class="slider"></span></label>
                 </div>
 
-                <div class="toggle-box">
+                <div class="toggle-box" style="background: rgba(212, 175, 55, 0.1); border: 1px solid var(--border-glow);">
                     <div style="display:flex; flex-direction:column;">
                         <span style="font-size:0.9rem; color: var(--primary-gold);">✨ توهج النص (Glow)</span>
+                        <span style="font-size:0.65rem; color:#aaa;">(تأثير هالة خفيفة)</span>
                     </div>
                     <label class="switch"><input type="checkbox" id="useGlow" checked><span class="slider"></span></label>
+                </div>
+
+                <div class="toggle-box" style="background: rgba(212, 175, 55, 0.1); border: 1px solid var(--border-glow);">
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-size:0.9rem; color: var(--primary-gold);">🎬 تعتيم سينمائي (Vignette)</span>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="useVignette" checked><span class="slider"></span></label>
                 </div>
 
                 <button type="submit" id="btn" class="btn-main">✨ إنشاء الفيديو</button>
@@ -212,43 +257,87 @@
                 <div style="color: #4ade80; font-weight: bold; font-size: 1.2rem; margin-bottom: 10px;">✅ تم الانتهاء!</div>
                 <video id="player" controls playsinline loop></video>
                 <a id="dlLink" href="#" class="dl-link" download>⬇️ تحميل الفيديو</a>
-                
-                <!-- 🚀 زر اليوتيوب السري -->
-                <button id="ytBtn" class="btn-yt" onclick="uploadToYouTube()">📺 رفع لليوتيوب (Admin)</button>
             </div>
 
             <div class="history-section" id="histSection" style="display:none;">
                 <div class="history-title-main">📜 سجل العمليات (آخر 5)</div>
                 <div id="histList"></div>
+                <button onclick="clearHistory()" style="width:100%; padding:5px; background:none; border:none; color:#666; font-size:0.8rem; cursor:pointer; margin-top:5px;">🗑️ مسح السجل</button>
             </div>
 
+            <div class="footer-contact">
+                <p style="color: #888; font-size: 0.85rem;">للتطوير أو الإبلاغ عن أخطاء، يسعدنا تواصلك</p>
+                <div class="contact-links">
+                    <a href="https://t.me/QuranReelsGen" target="_blank" class="social-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.35-.97.52-1.35.51-.42-.01-1.22-.24-1.82-.43-.74-.24-1.33-.37-1.28-.77.03-.21.32-.42.88-.63 3.42-1.49 5.71-2.48 6.85-2.97 3.27-1.4 3.95-1.64 4.39-1.65.1 0 .32.02.46.14.12.1.15.24.16.33.01.06.02.19.01.28z"/></svg>
+                        قناة التحديثات
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Modal Settings Here (Same as before) -->
     <div class="modal-overlay" id="settingsModal">
         <div class="settings-card">
             <h3 style="text-align:center; color:white; margin-bottom:15px;">🎨 تخصيص مفصل</h3>
+            
             <div class="preview-box">
+                <div class="preview-overlay"></div>
                 <div id="prevAr" class="prev-text-ar">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
                 <div id="prevEn" class="prev-text-en">In the name of Allah, the Entirely Merciful</div>
             </div>
+
             <div class="set-section">
-                <div class="set-header">اللغة العربية</div>
-                <div class="ctrl-line"><span>اللون & الحجم</span><input type="color" id="arColor" class="color-input" value="#ffffff" oninput="upd()"><input type="range" id="arSize" class="sm-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="upd()"></div>
-                <div class="ctrl-line"><span>إطار</span><input type="color" id="arOutC" class="color-input" value="#000000" oninput="upd()"><input type="range" id="arOutW" class="sm-slider" min="0" max="10" step="1" value="4" oninput="upd()"></div>
-                <div class="ctrl-line"><span>ظل</span><input type="checkbox" id="arShadow" onchange="upd()"><input type="color" id="arShadowC" class="color-input" value="#000000" oninput="upd()"></div>
+                <div class="set-header">اللغة العربية (Arabic)</div>
+                <div class="ctrl-line">
+                    <span>اللون & الحجم</span>
+                    <input type="color" id="arColor" class="color-input" value="#ffffff" oninput="upd()">
+                    <input type="range" id="arSize" class="sm-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="upd()">
+                </div>
+                <div class="ctrl-line">
+                    <span>إطار (Outline)</span>
+                    <input type="color" id="arOutC" class="color-input" value="#000000" oninput="upd()">
+                    <input type="range" id="arOutW" class="sm-slider" min="0" max="10" step="1" value="4" oninput="upd()">
+                </div>
+                <div class="ctrl-line">
+                    <span>ظل (Shadow)</span>
+                    <input type="checkbox" id="arShadow" onchange="upd()">
+                    <input type="color" id="arShadowC" class="color-input" value="#000000" oninput="upd()">
+                </div>
             </div>
+
             <div class="set-section">
-                <div class="set-header">الترجمة</div>
-                <div class="ctrl-line"><span>اللون & الحجم</span><input type="color" id="enColor" class="color-input" value="#FFD700" oninput="upd()"><input type="range" id="enSize" class="sm-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="upd()"></div>
-                <div class="ctrl-line"><span>إطار</span><input type="color" id="enOutC" class="color-input" value="#000000" oninput="upd()"><input type="range" id="enOutW" class="sm-slider" min="0" max="10" step="1" value="3" oninput="upd()"></div>
-                <div class="ctrl-line"><span>ظل</span><input type="checkbox" id="enShadow" onchange="upd()"><input type="color" id="enShadowC" class="color-input" value="#000000" oninput="upd()"></div>
+                <div class="set-header">الترجمة (Translation)</div>
+                <div class="ctrl-line">
+                    <span>اللون & الحجم</span>
+                    <input type="color" id="enColor" class="color-input" value="#FFD700" oninput="upd()">
+                    <input type="range" id="enSize" class="sm-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="upd()">
+                </div>
+                <div class="ctrl-line">
+                    <span>إطار (Outline)</span>
+                    <input type="color" id="enOutC" class="color-input" value="#000000" oninput="upd()">
+                    <input type="range" id="enOutW" class="sm-slider" min="0" max="10" step="1" value="3" oninput="upd()">
+                </div>
+                <div class="ctrl-line">
+                    <span>ظل (Shadow)</span>
+                    <input type="checkbox" id="enShadow" onchange="upd()">
+                    <input type="color" id="enShadowC" class="color-input" value="#000000" oninput="upd()">
+                </div>
             </div>
+
+            <div class="set-section" style="border:none;">
+                <div class="set-header">⚡ إعدادات متقدمة (اختياري)</div>
+                <div class="ctrl-line" style="flex-direction:column; align-items:flex-start; gap:5px;">
+                    <span style="font-size:0.8rem; color:#aaa;">مفتاح Pexels خاص (لو معاك):</span>
+                    <input type="text" id="pexelsKey" class="input-box" style="height:35px; font-size:0.8rem; background:#222;" placeholder="اتركه فارغاً لاستخدام سيرفر التطبيق">
+                </div>
+            </div>
+
             <div class="modal-btns">
                 <button class="btn-cancel" onclick="document.getElementById('settingsModal').style.display='none'">إلغاء</button>
                 <button class="btn-save" onclick="saveSettings()">💾 حفظ</button>
             </div>
+            <button onclick="resetSettings()" style="width:100%; margin-top:10px; background:none; border:1px dashed #555; padding:5px; color:#777; border-radius:8px;">استعادة الافتراضي</button>
         </div>
     </div>
 
@@ -263,21 +352,44 @@
         };
 
         function openSettings() { loadSettingsUI(); upd(); document.getElementById('settingsModal').style.display = 'flex'; }
+        
         function upd() {
             const pAr = document.getElementById('prevAr');
             pAr.style.color = document.getElementById('arColor').value;
             pAr.style.fontSize = (1.5 * document.getElementById('arSize').value) + 'rem';
+            
+            const arOutW = document.getElementById('arOutW').value / 5; 
+            const arOutC = document.getElementById('arOutC').value;
+            pAr.style.webkitTextStroke = (arOutW > 0) ? `${arOutW}px ${arOutC}` : '0px transparent';
+            pAr.style.textShadow = document.getElementById('arShadow').checked ? `2px 2px 0px ${document.getElementById('arShadowC').value}` : 'none';
+
             const pEn = document.getElementById('prevEn');
             pEn.style.color = document.getElementById('enColor').value;
             pEn.style.fontSize = (0.85 * document.getElementById('enSize').value) + 'rem';
+
+            const enOutW = document.getElementById('enOutW').value / 5;
+            const enOutC = document.getElementById('enOutC').value;
+            pEn.style.webkitTextStroke = (enOutW > 0) ? `${enOutW}px ${enOutC}` : '0px transparent';
+            pEn.style.textShadow = document.getElementById('enShadow').checked ? `1px 1px 0px ${document.getElementById('enShadowC').value}` : 'none';
         }
+
         function saveSettings() {
-            const s = {};['arColor','arSize','arOutC','arOutW','arShadowC','enColor','enSize','enOutC','enOutW','enShadowC'].forEach(k => s[k] = document.getElementById(k).value);
+            const s = {};
+            ['arColor','arSize','arOutC','arOutW','arShadowC',
+             'enColor','enSize','enOutC','enOutW','enShadowC'].forEach(k => s[k] = document.getElementById(k).value);
             s.arShadow = document.getElementById('arShadow').checked;
             s.enShadow = document.getElementById('enShadow').checked;
             localStorage.setItem('quran_app_styles_v2', JSON.stringify(s));
+            
+            const pkVal = document.getElementById('pexelsKey').value;
+            if(pkVal) localStorage.setItem('user_pexels_key', pkVal);
+            else localStorage.removeItem('user_pexels_key');
+
             document.getElementById('settingsModal').style.display='none';
+            const btn = document.querySelector('.btn-gear');
+            const old = btn.innerText; btn.innerText = "✅"; setTimeout(() => btn.innerText = old, 1500);
         }
+
         function loadSettingsUI() {
             const s = JSON.parse(localStorage.getItem('quran_app_styles_v2')) || defSet;
             Object.keys(s).forEach(k => {
@@ -287,6 +399,17 @@
                     else el.value = s[k];
                 }
             });
+            const savedKey = localStorage.getItem('user_pexels_key');
+            if(savedKey) document.getElementById('pexelsKey').value = savedKey;
+        }
+        
+        function resetSettings() {
+            if(confirm('reset?')) { 
+                localStorage.removeItem('quran_app_styles_v2'); 
+                localStorage.removeItem('user_pexels_key');
+                document.getElementById('pexelsKey').value = "";
+                loadSettingsUI(); upd(); 
+            }
         }
 
         window.onload = async () => {
@@ -300,6 +423,18 @@
         };
 
         function toggleSearch() { document.getElementById('bgQuery').style.display = document.getElementById('useSearch').checked ? 'block' : 'none'; }
+        
+        async function stopProcess() { 
+            if(currentJobId && confirm("إيقاف؟")) {
+                if(pollInterval) clearInterval(pollInterval);
+                await fetch('/api/cancel', {method:'POST', body:JSON.stringify({jobId:currentJobId}), headers:{'Content-Type':'application/json'}});
+                document.getElementById('stopBtn').style.display = 'none';
+                document.getElementById('btn').style.display = 'flex';
+                document.getElementById('progArea').style.display = 'none';
+                document.getElementById('statusTxt').innerText = 'تم الإيقاف';
+            }
+        }
+
         function validateAyah(id) {
             const el = document.getElementById(id);
             const max = COUNTS[sSelect.value] || 286;
@@ -319,68 +454,49 @@
             }
         }
 
+        // --- دالة عرض الهيستوري المعدلة ---
         function loadHistory() {
             const h = JSON.parse(localStorage.getItem('q_hist')||'[]');
             const l = document.getElementById('histList'); 
             l.innerHTML = '';
+            
             if(h.length) document.getElementById('histSection').style.display = 'block';
             else document.getElementById('histSection').style.display = 'none';
+            
             h.forEach(x => {
-                l.innerHTML += `<div class="history-item"><div class="hist-info"><span class="hist-title">${x.t}</span><span class="hist-meta">🎤 ${x.r}</span></div><a href="${x.u}" class="hist-btn" download>تحميل</a></div>`;
+                const reciter = x.r || 'غير محدد';
+                const quality = x.q || '720';
+                const fps = x.f || '20';
+                const date = x.d || '---';
+
+                l.innerHTML += `
+                <div class="history-item">
+                    <div class="hist-info">
+                        <span class="hist-title">${x.t}</span>
+                        <span class="hist-meta">
+                            🎤 ${reciter} | 📺 ${quality}p | 🚀 ${fps}fps
+                        </span>
+                        <span class="hist-date">🕒 ${date}</span>
+                    </div>
+                    <a href="${x.u}" class="hist-btn" download>تحميل</a>
+                </div>`;
             });
         }
 
-        // 🚀 دالة الرفع لليوتيوب 🚀
-        async function uploadToYouTube() {
-            if(!currentJobId) return alert("لا يوجد فيديو للرفع!");
-            
-            const secret = prompt("🔒 أدخل كلمة سر الأدمن لرفع الفيديو:");
-            if (!secret) return;
-
-            const btn = document.getElementById('ytBtn');
-            const oldText = btn.innerText;
-            btn.innerText = "⏳ جاري الرفع لليوتيوب...";
-            btn.disabled = true;
-            btn.style.opacity = '0.5';
-
-            // تجهيز عنوان ديناميكي
-            const surahName = sSelect.options[sSelect.selectedIndex].text;
-            const dynamicTitle = `تلاوة مريحة من ${surahName} 🤍 #quran #قرآن #تلاوة`;
-
-            try {
-                const res = await fetch('/api/upload_to_youtube', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ 
-                        jobId: currentJobId, 
-                        secret: secret, 
-                        title: dynamicTitle 
-                    })
-                });
-                const data = await res.json();
-                
-                if(data.ok) {
-                    alert("✅ تم رفع الفيديو بنجاح للقناة!\nVideo ID: " + data.videoId);
-                } else {
-                    alert("❌ فشل الرفع: " + data.error);
-                }
-            } catch(err) {
-                alert("❌ خطأ في الاتصال: " + err.message);
-            } finally {
-                btn.innerText = oldText;
-                btn.disabled = false;
-                btn.style.opacity = '1';
-            }
-        }
+        function clearHistory() { localStorage.removeItem('q_hist'); loadHistory(); }
 
         document.getElementById('vForm').onsubmit = async (e) => {
             e.preventDefault();
+            
+            const pkElement = document.getElementById('pexelsKey');
+            const pk = pkElement ? pkElement.value : "";
+            if(pk) localStorage.setItem('user_pexels_key', pk);
+
             document.getElementById('btn').style.display='none';
+            document.getElementById('stopBtn').style.display = 'flex';
             document.getElementById('progArea').style.display='block';
             document.getElementById('resArea').style.display='none';
-            
-            // إخفاء زر اليوتيوب حتى لو كان ظاهراً
-            document.getElementById('ytBtn').style.display = 'none';
+            document.getElementById('timerBadge').style.display = 'none';
 
             const sty = JSON.parse(localStorage.getItem('quran_app_styles_v2')) || defSet;
 
@@ -388,48 +504,87 @@
                 const res = await fetch('/api/generate', {
                     method:'POST', headers:{'Content-Type':'application/json'},
                     body: JSON.stringify({
-                        pexelsKey: "", reciter: rSelect.value, surah: sSelect.value,
+                        pexelsKey: pk, reciter: rSelect.value, surah: sSelect.value,
                         startAyah: startAyah.value, endAyah: endAyah.value,
                         quality: qSelect.value, fps: fpsSelect.value,
                         bgQuery: document.getElementById('useSearch').checked ? document.getElementById('bgQuery').value : "",
                         dynamicBg: document.getElementById('dynamicBg').checked,
                         useGlow: document.getElementById('useGlow').checked,
+                        useVignette: document.getElementById('useVignette').checked,
                         style: sty
                     })
                 });
                 const d = await res.json();
+                if(d.error) throw new Error(d.error);
                 currentJobId = d.jobId;
 
                 pollInterval = setInterval(async () => {
-                    const p = await (await fetch(`/api/progress?jobId=${currentJobId}`)).json();
-                    document.getElementById('barFill').style.width = p.percent+'%';
-                    document.getElementById('statusTxt').innerText = p.status;
-
-                    if(p.is_complete) {
-                        clearInterval(pollInterval);
-                        document.getElementById('statusTxt').innerText = "جاري جلب الفيديو...";
+                    try {
+                        const p = await (await fetch(`/api/progress?jobId=${currentJobId}`)).json();
+                        document.getElementById('barFill').style.width = p.percent+'%';
+                        document.getElementById('statusTxt').innerText = p.status;
                         
-                        setTimeout(async () => {
-                            const vidRes = await fetch(`/api/download?jobId=${currentJobId}`);
-                            const b = await vidRes.blob();
-                            const u = URL.createObjectURL(b);
+                        if(p.percent > 0 && p.percent < 100) {
+                            document.getElementById('timerBadge').style.display = 'inline-flex';
+                            document.getElementById('etaTxt').innerText = p.eta || "--:--";
+                        }
+
+                        if(p.is_complete) {
+                            clearInterval(pollInterval);
+                            document.getElementById('statusTxt').innerText = "جاري جلب الفيديو...";
                             
-                            document.getElementById('player').src = u;
-                            document.getElementById('dlLink').href = u;
-                            document.getElementById('dlLink').setAttribute('download', `Quran_${sSelect.value}_${startAyah.value}.mp4`);
-                            
-                            document.getElementById('progArea').style.display='none';
-                            document.getElementById('resArea').style.display='block';
-                            document.getElementById('btn').style.display='flex';
-                            
-                            const h = JSON.parse(localStorage.getItem('q_hist')||'[]');
-                            h.unshift({t: `${sSelect.options[sSelect.selectedIndex].text} (${startAyah.value}-${endAyah.value})`, u: u, r: rSelect.options[rSelect.selectedIndex].text});
-                            localStorage.setItem('q_hist', JSON.stringify(h.slice(0,5))); 
-                            loadHistory();
-                        }, 1000);
+                            setTimeout(async () => {
+                                try {
+                                    const vidRes = await fetch(`/api/download?jobId=${currentJobId}`);
+                                    if(!vidRes.ok) throw new Error("تأخر الملف قليلاً، حاول مجدداً");
+                                    
+                                    const b = await vidRes.blob();
+                                    const u = URL.createObjectURL(b);
+                                    
+                                    document.getElementById('player').src = u;
+                                    document.getElementById('dlLink').href = u;
+                                    document.getElementById('dlLink').setAttribute('download', `Quran_${sSelect.value}_${startAyah.value}.mp4`);
+                                    
+                                    document.getElementById('progArea').style.display='none';
+                                    document.getElementById('resArea').style.display='block';
+                                    document.getElementById('stopBtn').style.display='none';
+                                    document.getElementById('btn').style.display='flex';
+                                    
+                                    // --- كود الحفظ الجديد (يخزن كل التفاصيل) ---
+                                    const now = new Date();
+                                    const timeStr = now.toLocaleDateString('ar-EG') + ' | ' + now.toLocaleTimeString('ar-EG');
+                                    
+                                    const h = JSON.parse(localStorage.getItem('q_hist')||'[]');
+                                    h.unshift({
+                                        t: `${sSelect.options[sSelect.selectedIndex].text} (آية ${startAyah.value}-${endAyah.value})`,
+                                        u: u,
+                                        r: rSelect.options[rSelect.selectedIndex].text,
+                                        q: qSelect.value,
+                                        f: fpsSelect.value,
+                                        d: timeStr
+                                    });
+                                    localStorage.setItem('q_hist', JSON.stringify(h.slice(0,5))); 
+                                    loadHistory();
+                                    // --------------------------------------------
+                                    
+                                } catch (innerErr) {
+                                    alert("حدث خطأ أثناء جلب الملف: " + innerErr.message);
+                                    document.getElementById('btn').style.display='flex';
+                                }
+                            }, 1500);
+                        }
+                    } catch(err) {
+                        clearInterval(pollInterval);
+                        alert(err.message);
+                        document.getElementById('stopBtn').style.display = 'none';
+                        document.getElementById('btn').style.display = 'flex';
                     }
                 }, 1000);
-            } catch(err) { alert(err.message); document.getElementById('btn').style.display='flex'; }
+            } catch(err) { 
+                alert(err.message); 
+                document.getElementById('stopBtn').style.display = 'none'; 
+                document.getElementById('btn').style.display = 'flex'; 
+            }
         };
     </script>
 </body>
