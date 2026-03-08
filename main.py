@@ -237,10 +237,14 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     aggressive_start_trim = start_trim + 350  # قص 150 ملي ثانية إضافية من أول الآية
     
     # ترك مساحة أمان في النهاية للحفاظ على صدى الشيخ
-    safe_end_trim = max(0, end_trim - 150) 
+    # 🧪 تجربة البتر: هنجبره يقص 300 ملي ثانية زيادة من آخر الآية عشان نكتشف مصدر الصوت!
+    experiment_cut = 300 
     
-    if duration - aggressive_start_trim - safe_end_trim > 200: 
-        seg = seg[aggressive_start_trim:duration-safe_end_trim]
+    # لاحظ خلينا الـ end_trim يزيد عليه 300 ملي ثانية عشان ياكل من آخر الصوت
+    safe_end_trim = end_trim + experiment_cut 
+    
+    if duration - start_trim - safe_end_trim > 200: 
+        seg = seg[start_trim:duration-safe_end_trim]
         
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
     seg.export(out, format="mp3")
@@ -647,4 +651,5 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=7860, threaded=True)
+
 
