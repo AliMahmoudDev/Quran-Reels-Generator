@@ -331,14 +331,7 @@
                     <span style="font-size:0.8rem; color:#aaa;">مفتاح Pexels خاص (لو معاك):</span>
                     <input type="text" id="pexelsKey" class="input-box" style="height:35px; font-size:0.8rem; background:#222;" placeholder="اتركه فارغاً لاستخدام سيرفر التطبيق">
                 </div>
-                <hr/>
-                <div class="set-section" style="border:none;">
-                <div class="set-header" style="color: var(--danger-red);">🚀 ميزات الإدارة (Admin)</div>
-                <div class="ctrl-line">
-                    <span>الرفع التلقائي لليوتيوب</span>
-                    <input type="checkbox" id="autoUploadYT" onchange="handleAutoUploadToggle()">
-                </div>
-            </div>
+                
             </div>
 
             <div class="modal-btns">
@@ -358,22 +351,6 @@
             arColor: "#ffffff", arSize: "1.0", arOutC: "#000000", arOutW: "4", arShadow: false, arShadowC: "#000000",
             enColor: "#FFD700", enSize: "1.0", enOutC: "#000000", enOutW: "3", enShadow: false, enShadowC: "#000000"
         };
-
-
-        function handleAutoUploadToggle() {
-            const checkbox = document.getElementById('autoUploadYT');
-            if (checkbox.checked) {
-                let savedSecret = localStorage.getItem('admin_secret_key');
-                if (!savedSecret) {
-                    savedSecret = prompt("🔒 أدخل كلمة سر الأدمن لتفعيل الرفع التلقائي:");
-                    if (savedSecret) {
-                        localStorage.setItem('admin_secret_key', savedSecret);
-                    } else {
-                        checkbox.checked = false; // لو عمل كنسل، نلغي التفعيل
-                    }
-                }
-            }
-        }
 
         function openSettings() { loadSettingsUI(); upd(); document.getElementById('settingsModal').style.display = 'flex'; }
         
@@ -535,9 +512,7 @@
                         dynamicBg: document.getElementById('dynamicBg').checked,
                         useGlow: document.getElementById('useGlow').checked,
                         useVignette: document.getElementById('useVignette').checked,
-                        style: sty,
-                        autoUpload: document.getElementById('autoUploadYT') ? document.getElementById('autoUploadYT').checked : false,
-                        adminSecret: localStorage.getItem('admin_secret_key') || "",
+                        style: sty
                     })
                 });
                 const d = await res.json();
@@ -615,4 +590,3 @@
     </script>
 </body>
 </html>
-
