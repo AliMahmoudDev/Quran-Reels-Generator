@@ -401,7 +401,8 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
 # ==========================================
 # ⚡ Optimized Video Builder (Segmented / Chunked)
 # ==========================================
-def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, style, auto_upload, admin_secret):    job = get_job(job_id)
+def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, style):
+    job = get_job(job_id)
     workspace = job['workspace']
     target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
     scale = 1.0 if quality == '1080' else 0.67
@@ -553,36 +554,9 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         else:
             if os.path.exists(temp_mix_path): os.remove(temp_mix_path)
 
-        # === 🚀 ميزة الرفع التلقائي (Auto Upload Logic) ===
-        if auto_upload:
-            if admin_secret == ADMIN_SECRET:
-                update_job_status(job_id, 99, "🚀 جاري الرفع التلقائي لليوتيوب...")
-                try:
-                    # نجهز عنوان ديناميكي شيك باسم السورة
-                    surah_name = SURAH_NAMES[surah - 1]
-                    yt_title = f"تلاوة تريح القلب من سورة {surah_name} 🤍 #quran #قرآن"
-                    yt_desc = "تم الإنشاء بواسطة صانع الريلز القرآني الأوتوماتيكي 🚀"
-                    
-                    vid_id = upload_to_youtube(out_p, yt_title, yt_desc)
-                    final_status = f"✅ تم الانتهاء والرفع! (ID: {vid_id})"
-                except Exception as upload_err:
-                    print("Upload Error:", upload_err)
-                    final_status = "⚠️ تم الفيديو، لكن فشل الرفع لليوتيوب!"
-            else:
-                final_status = "⚠️ تم الفيديو (فشل الرفع: كلمة سر الأدمن خاطئة!)"
-        else:
-            final_status = "✅ تم الانتهاء بنجاح!"
-
-        # تحديث حالة الوظيفة للانتهاء
         with JOBS_LOCK: 
-            JOBS[job_id].update({
-                'output_path': out_p, 
-                'is_complete': True, 
-                'is_running': False, 
-                'percent': 100, 
-                'status': final_status
-            })
-            
+            JOBS[job_id].update({'output_path': out_p, 'is_complete': True, 'is_running': False, 'percent': 100, 'status': "Done!"})
+
     except Exception as e:
         msg = str(e)
         traceback.print_exc()
@@ -613,17 +587,23 @@ def gen():
     d = request.json
     job_id = create_job()
     style_settings = d.get('style', {}) 
-    auto_upload = d.get('autoUpload', False)
-    admin_secret = d.get('adminSecret', '')
     
     threading.Thread(
         target=build_video_task, 
         args=(
-            job_id, d['pexelsKey'], d['reciter'], int(d['surah']), 
-            int(d['startAyah']), int(d.get('endAyah',0)), d.get('quality','720'), 
-            d.get('bgQuery',''), int(d.get('fps',20)), d.get('dynamicBg',False), 
-            d.get('useGlow',False), d.get('useVignette',False), style_settings,
-            auto_upload, admin_secret # 👈 ضفنا المتغيرين الجداد هنا
+            job_id, 
+            d['pexelsKey'], 
+            d['reciter'], 
+            int(d['surah']), 
+            int(d['startAyah']), 
+            int(d.get('endAyah',0)), 
+            d.get('quality','720'), 
+            d.get('bgQuery',''), 
+            int(d.get('fps',20)), 
+            d.get('dynamicBg',False), 
+            d.get('useGlow',False), 
+            d.get('useVignette',False),
+            style_settings
         ), 
         daemon=True
     ).start()
@@ -671,6 +651,4 @@ threading.Thread(target=background_cleanup, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=7860, threaded=True)
-
-
 
