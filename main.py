@@ -233,13 +233,15 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     end_trim = detect_leading_silence(seg.reverse(), silence_threshold=silence_thresh)
     duration = len(seg)
     
-    # نترك 150 ملي ثانية كـ "مساحة أمان" في نهاية الآية للحفاظ على صدى التلاوة ونفس القارئ
+    # 🚀 التعديل السحري: إضافة مقص إجباري في البداية لقتل "التسريب"
+    aggressive_start_trim = start_trim + 250  # قص 150 ملي ثانية إضافية من أول الآية
+    
+    # ترك مساحة أمان في النهاية للحفاظ على صدى الشيخ
     safe_end_trim = max(0, end_trim - 150) 
     
-    if duration - start_trim - safe_end_trim > 200: 
-        seg = seg[start_trim:duration-safe_end_trim]
-    
-    seg = seg.fade_in(50).fade_out(50) 
+    if duration - aggressive_start_trim - safe_end_trim > 200: 
+        seg = seg[aggressive_start_trim:duration-safe_end_trim]
+        
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
     seg.export(out, format="mp3")
     return out
