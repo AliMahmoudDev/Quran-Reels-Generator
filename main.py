@@ -615,7 +615,7 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     
     if duration - aggressive_start_trim - safe_end_trim > 200: 
         # 🎵 Fade out ناعم 200ms بدل 50ms
-        seg = seg[aggressive_start_trim:duration-safe_end_trim].fade_out(200)
+        seg = seg[aggressive_start_trim:duration-safe_end_trim].fade_out(100)
         
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
     seg.export(out, format="mp3")
