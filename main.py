@@ -588,24 +588,34 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     
     check_stop(job_id)
     seg = AudioSegment.from_file(full_audio_path)[t['start']:t['end']]
-    silence_thresh = seg.dBFS - 25 # جعلنا المقص ألطف
+    
+    # 🎯 جعل الـ threshold أكثر حساسية عشان ميعتبرش الصدى صمت
+    # كان -25، خليناه -35 عشان يسيب الصوت الخافت (الصدى والمد)
+    silence_thresh = seg.dBFS - 35
 
     start_trim = detect_leading_silence(seg, silence_threshold=silence_thresh)
     end_trim = detect_leading_silence(seg.reverse(), silence_threshold=silence_thresh)
     duration = len(seg)
     
-    # 🚀 التعديل السحري: إضافة مقص إجباري في البداية لقتل "التسريب"
-    aggressive_start_trim = max(0,start_trim- 30)  # قص 150 ملي ثانية إضافية من أول الآية
+    # 🚀 قص 30ms إضافية من أول الآية عشان نتأكد مفيش تسريب
+    aggressive_start_trim = max(0, start_trim - 30)
     
-    # ترك مساحة أمان في النهاية للحفاظ على صدى الشيخ
-    # 🧪 تجربة البتر: هنجبره يقص 300 ملي ثانية زيادة من آخر الآية عشان نكتشف مصدر الصوت!
-    experiment_cut = 500
+    # 🎵 مساحة أمان أكبر للصدى في الآخر
+    # هنسيب 800ms من الآخر بدل 500ms عشان الصدى والمد
+    safe_buffer = 800
     
-    # لاحظ خلينا الـ end_trim يزيد عليه 300 ملي ثانية عشان ياكل من آخر الصوت
-    safe_end_trim = max(0,end_trim-experiment_cut )
+    # لو الصمت المكتشف أكبر من الـ buffer، نقص الفرق بس
+    # لو الصمت المكتشف أصغر، نقص الصمت كله وسيب الصوت
+    if end_trim > safe_buffer:
+        # فيه صمت كافي - نقص جزء منه
+        safe_end_trim = end_trim - safe_buffer
+    else:
+        # الصوت قريب من النهاية - مفيش صمت كافي، نسيبه زي ما هو
+        safe_end_trim = 0
     
-    if duration - start_trim - safe_end_trim > 200: 
-        seg = seg[start_trim:duration-safe_end_trim].fade_out(50)
+    if duration - aggressive_start_trim - safe_end_trim > 200: 
+        # 🎵 Fade out ناعم 200ms بدل 50ms
+        seg = seg[aggressive_start_trim:duration-safe_end_trim].fade_out(200)
         
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
     seg.export(out, format="mp3")
