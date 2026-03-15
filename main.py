@@ -598,7 +598,7 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     duration = len(seg)
     
     # 🚀 قص 30ms إضافية من أول الآية عشان نتأكد مفيش تسريب
-    aggressive_start_trim = max(0, start_trim + 200)
+    aggressive_start_trim = max(0, start_trim + 250)
     
     # 🎵 مساحة أمان أكبر للصدى في الآخر
     # هنسيب 800ms من الآخر بدل 500ms عشان الصدى والمد
