@@ -1009,6 +1009,27 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             if workspace and os.path.exists(workspace):
                 shutil.rmtree(workspace, ignore_errors=True)
                 print(f"🧹 Cleaned workspace: {job_id}")
+            
+            # حذف ملفات الـ cache بعد كل عملية
+            # cache_mp3quran - ملفات الصوت المحملة
+            cache_mp3_dir = os.path.join(EXEC_DIR, "cache_mp3quran")
+            if os.path.exists(cache_mp3_dir):
+                shutil.rmtree(cache_mp3_dir, ignore_errors=True)
+                os.makedirs(cache_mp3_dir, exist_ok=True)
+                print(f"🧹 Cleaned cache_mp3quran")
+            
+            # vision - فيديوهات الخلفية المحملة من Pexels
+            if os.path.exists(VISION_DIR):
+                for f in os.listdir(VISION_DIR):
+                    fpath = os.path.join(VISION_DIR, f)
+                    try:
+                        if os.path.isfile(fpath):
+                            os.remove(fpath)
+                        elif os.path.isdir(fpath):
+                            shutil.rmtree(fpath, ignore_errors=True)
+                    except: pass
+                print(f"🧹 Cleaned vision backgrounds")
+                
         except Exception as cleanup_err:
             print(f"⚠️ Cleanup error: {cleanup_err}")
 
@@ -1328,13 +1349,16 @@ def recover_pending_jobs():
 
 threading.Thread(target=background_cleanup, daemon=True).start()
 
-if __name__ == "__main__":
-    # Initialize database on startup
-    init_db()
-    
-    # Recover any pending jobs from previous session
+# Initialize database on module load (important for gunicorn/production)
+init_db()
+
+# Recover any pending jobs from previous session
+try:
     recover_pending_jobs()
-    
+except Exception as e:
+    print(f"⚠️ Failed to recover pending jobs: {e}")
+
+if __name__ == "__main__":
     print("🚀 Quran Reels Generator starting...")
     app.run(host='0.0.0.0', port=7860, threaded=True)
 
