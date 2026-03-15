@@ -858,8 +858,16 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 if t_end - current_audio_time <= 0.05: 
                     t_end = min(current_audio_time + 0.1, full_audioclip.duration)
 
-                # 2. قص الصوت أولاً
-                chunk_audio = full_audioclip.subclip(current_audio_time, t_end).audio_fadein(0.05).audio_fadeout(0.05)
+                # 2. قص الصوت - fade بس في أول وآخر chunk في الآية
+                chunk_audio = full_audioclip.subclip(current_audio_time, t_end)
+                
+                # fade in بس في أول سطر
+                if chunk_idx == 0:
+                    chunk_audio = chunk_audio.audio_fadein(0.05)
+                
+                # fade out بس في آخر سطر
+                if chunk_idx == len(ar_chunks) - 1:
+                    chunk_audio = chunk_audio.audio_fadeout(0.05)
                 
                 # 🚀 3. الحل الجذري: نعتمد وقت الصوت الفعلي كأساس لوقت الفيديو!
                 actual_duration = chunk_audio.duration
