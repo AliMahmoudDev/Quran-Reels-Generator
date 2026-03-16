@@ -1105,19 +1105,13 @@
 
                 <!-- 🎤 القارئ -->
                 <div class="form-group">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <label class="form-label" style="margin-bottom: 0;">🎤 القارئ</label>
-                        <button type="button" class="random-btn" onclick="randomizeBatchReciter()">🎲 عشوائي</button>
-                    </div>
+                    <label class="form-label">🎤 القارئ</label>
                     <select class="form-select" id="batchReciterSelect"></select>
                 </div>
 
                 <!-- 📖 السورة -->
                 <div class="form-group">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <label class="form-label" style="margin-bottom: 0;">📖 السورة</label>
-                        <button type="button" class="random-btn" onclick="randomizeBatchSurah()">🎲 عشوائي</button>
-                    </div>
+                    <label class="form-label">📖 السورة</label>
                     <select class="form-select" id="batchSurahSelect"></select>
                 </div>
 
@@ -1125,7 +1119,6 @@
                 <div class="ayah-selector">
                     <div class="ayah-selector-header">
                         <span class="ayah-selector-title">📍 نطاق الآيات</span>
-                        <button type="button" class="random-btn" onclick="randomizeBatchAyahs()">🎲 عشوائي</button>
                     </div>
                     <div class="ayah-selector-range">
                         <div class="ayah-num-display">
@@ -1176,6 +1169,11 @@
                             <span class="switch-slider"></span>
                         </label>
                     </div>
+                </div>
+
+                <!-- أزرار التحكم -->
+                <div class="btn-row">
+                    <button type="button" class="btn-secondary" onclick="randomizeBatch()">🎲 عشوائي</button>
                 </div>
 
                 <!-- زر الإضافة -->
@@ -1920,40 +1918,24 @@
         let currentBatchId = null;
         let batchCancelled = false;
 
-        // دوال العشوائي
-        function randomizeBatchReciter() {
-            const select = document.getElementById('batchReciterSelect');
-            if (select.options.length > 0) {
-                const randomIndex = Math.floor(Math.random() * select.options.length);
-                select.selectedIndex = randomIndex;
+        // دالة العشوائي الواحدة - زي الصفحة الرئيسية
+        function randomizeBatch() {
+            const reciterSelect = document.getElementById('batchReciterSelect');
+            const surahSelect = document.getElementById('batchSurahSelect');
+            
+            // عشوائي للقارئ
+            if (reciterSelect.options.length > 0) {
+                reciterSelect.selectedIndex = Math.floor(Math.random() * reciterSelect.options.length);
             }
-        }
-
-        function randomizeBatchSurah() {
-            const select = document.getElementById('batchSurahSelect');
-            if (select.options.length > 0) {
-                const randomIndex = Math.floor(Math.random() * select.options.length);
-                select.selectedIndex = randomIndex;
-                // تحديث الآيات
-                const max = VERSE_COUNTS[parseInt(select.value)] || 286;
-                const start = 1;
-                const end = Math.min(5, max);
+            
+            // عشوائي للسورة والآيات
+            if (surahSelect.options.length > 0) {
+                surahSelect.selectedIndex = Math.floor(Math.random() * surahSelect.options.length);
+                const max = VERSE_COUNTS[parseInt(surahSelect.value)] || 286;
+                const start = Math.floor(Math.random() * Math.max(1, max - 5)) + 1;
                 document.getElementById('batchStartAyah').value = start;
-                document.getElementById('batchEndAyah').value = end;
+                document.getElementById('batchEndAyah').value = Math.min(start + 4, max);
             }
-        }
-
-        function randomizeBatchAyahs() {
-            const surah = parseInt(document.getElementById('batchSurahSelect').value);
-            const max = VERSE_COUNTS[surah] || 286;
-            
-            // اختيار نطاق عشوائي
-            const rangeSize = Math.min(Math.floor(Math.random() * 5) + 3, max); // 3-7 آيات
-            const start = Math.floor(Math.random() * (max - rangeSize + 1)) + 1;
-            const end = start + rangeSize - 1;
-            
-            document.getElementById('batchStartAyah').value = start;
-            document.getElementById('batchEndAyah').value = end;
         }
 
         function adjustBatchAyah(id, delta) {
