@@ -39,6 +39,252 @@ from pydub import AudioSegment
 from deep_translator import GoogleTranslator
 
 # ==========================================
+# 🛡️ Content Safety System (الحماية من المحتوى غير اللائق)
+# ==========================================
+
+# متغيرات عامة للنظام (تتحمل مرة واحدة بس)
+_CONTENT_SAFETY_INITIALIZED = False
+_YOLO_MODEL = None
+_DEEPFACE_AVAILABLE = False
+
+def init_content_safety():
+    """تحميل موديلات الحماية (مرة واحدة)"""
+    global _CONTENT_SAFETY_INITIALIZED, _YOLO_MODEL, _DEEPFACE_AVAILABLE
+    
+    if _CONTENT_SAFETY_INITIALIZED:
+        return
+    
+    print("🛡️ Initializing Content Safety System...")
+    
+    # 1. تحميل YOLO
+    try:
+        from ultralytics import YOLO
+        import cv2
+        # نستخدم nano model لأنه صغير وسريع
+        _YOLO_MODEL = YOLO('yolov8n.pt')
+        print("  ✅ YOLO loaded successfully")
+    except Exception as e:
+        print(f"  ⚠️ YOLO load failed: {e}")
+        _YOLO_MODEL = None
+    
+    # 2. التحقق من DeepFace
+    try:
+        from deepface import DeepFace
+        _DEEPFACE_AVAILABLE = True
+        print("  ✅ DeepFace available")
+    except Exception as e:
+        print(f"  ⚠️ DeepFace not available: {e}")
+        _DEEPFACE_AVAILABLE = False
+    
+    _CONTENT_SAFETY_INITIALIZED = True
+    print("🛡️ Content Safety System Ready!")
+
+def detect_skin_percentage(image_array):
+    """حساب نسبة البشرة المكشوفة في الصورة"""
+    import cv2
+    import numpy as np
+    
+    try:
+        # تحويل للـ HSV
+        hsv = cv2.cvtColor(image_array, cv2.COLOR_BGR2HSV)
+        
+        # نطاق ألوان البشرة (مختلف الأعراق)
+        lower_skin = np.array([0, 20, 70], dtype=np.uint8)
+        upper_skin = np.array([20, 255, 255], dtype=np.uint8)
+        
+        # كشف البشرة
+        skin_mask = cv2.inRange(hsv, lower_skin, upper_skin)
+        
+        # نطاق تاني للبشرة (ألوان أدفأ)
+        lower_skin2 = np.array([0, 20, 40], dtype=np.uint8)
+        upper_skin2 = np.array([15, 150, 255], dtype=np.uint8)
+        skin_mask2 = cv2.inRange(hsv, lower_skin2, upper_skin2)
+        
+        # دمج النطاقات
+        skin_mask = cv2.bitwise_or(skin_mask, skin_mask2)
+        
+        # حساب النسبة المئوية
+        skin_pixels = cv2.countNonZero(skin_mask)
+        total_pixels = image_array.shape[0] * image_array.shape[1]
+        percentage = (skin_pixels / total_pixels) * 100
+        
+        return percentage
+    except:
+        return 0
+
+def check_frame_for_women(frame_array, frame_info=""):
+    """
+    فحص frame واحد للكشف عن النساء
+    Returns: (is_safe: bool, reason: str, details: dict)
+    """
+    import cv2
+    import numpy as np
+    
+    result = {
+        'has_persons': False,
+        'person_count': 0,
+        'women_detected': False,
+        'women_count': 0,
+        'men_count': 0,
+        'skin_percentage': 0,
+        'reason': 'safe'
+    }
+    
+    # Step 1: كشف الأشخاص بـ YOLO
+    if _YOLO_MODEL is None:
+        # لو YOLO مش متاح، نستخدم فحص البشرة فقط
+        skin_pct = detect_skin_percentage(frame_array)
+        result['skin_percentage'] = skin_pct
+        if skin_pct > 25:  # نسبة بشرة عالية
+            result['reason'] = 'high_skin_percentage'
+            return False, "⚠️ نسبة بشرة مكشوفة عالية", result
+        return True, "✅ آمن (بدون YOLO)", result
+    
+    try:
+        # تشغيل YOLO
+        yolo_results = _YOLO_MODEL(frame_array, verbose=False)
+        
+        persons = []
+        for r in yolo_results:
+            for box in r.boxes:
+                cls = int(box.cls[0])
+                if cls == 0:  # class 0 = person
+                    conf = float(box.conf[0])
+                    if conf > 0.5:  # ثقة عالية
+                        x1, y1, x2, y2 = map(int, box.xyxy[0])
+                        persons.append({
+                            'bbox': (x1, y1, x2, y2),
+                            'confidence': conf
+                        })
+        
+        result['person_count'] = len(persons)
+        result['has_persons'] = len(persons) > 0
+        
+        # مفيش أشخاص = آمن
+        if len(persons) == 0:
+            result['reason'] = 'no_persons'
+            return True, "✅ آمن - مفيش أشخاص", result
+        
+        # Step 2: فحص كل شخص
+        for i, person in enumerate(persons):
+            x1, y1, x2, y2 = person['bbox']
+            
+            # استخراج منطقة الشخص
+            person_region = frame_array[y1:y2, x1:x2]
+            
+            if person_region.size == 0:
+                continue
+            
+            # 2a. محاولة كشف الوجه وتصنيفه
+            if _DEEPFACE_AVAILABLE:
+                try:
+                    from deepface import DeepFace
+                    
+                    # تحويل للـ RGB (DeepFace بتحتاج كده)
+                    person_rgb = cv2.cvtColor(person_region, cv2.COLOR_BGR2RGB)
+                    
+                    # تحليل الجنس
+                    analysis = DeepFace.analyze(
+                        person_rgb,
+                        actions=['gender'],
+                        enforce_detection=False,
+                        silent=True
+                    )
+                    
+                    if isinstance(analysis, list):
+                        for face in analysis:
+                            gender = face.get('dominant_gender', 'Man')
+                            # DeepFace بترجع أحياناً قيم مختلفة
+                            if gender in ['Woman', 'Female', 'F']:
+                                result['women_detected'] = True
+                                result['women_count'] += 1
+                            else:
+                                result['men_count'] += 1
+                    else:
+                        gender = analysis.get('dominant_gender', 'Man')
+                        if gender in ['Woman', 'Female', 'F']:
+                            result['women_detected'] = True
+                            result['women_count'] += 1
+                        else:
+                            result['men_count'] += 1
+                            
+                except Exception as e:
+                    # لو فشل كشف الوجه، نعتمد على نسبة البشرة
+                    skin_pct = detect_skin_percentage(person_region)
+                    if skin_pct > 40:  # نسبة بشرة عالية في منطقة الشخص
+                        # محتمل تكون ست (ملابس قصيرة أو مكشوفة)
+                        result['women_detected'] = True
+                        result['women_count'] += 1
+            else:
+                # بدون DeepFace، نعتمد على نسبة البشرة
+                skin_pct = detect_skin_percentage(person_region)
+                if skin_pct > 40:
+                    result['women_detected'] = True
+                    result['women_count'] += 1
+                else:
+                    result['men_count'] += 1
+        
+        # Step 3: القرار النهائي
+        if result['women_detected']:
+            result['reason'] = 'women_detected'
+            return False, f"🚨 فيه {result['women_count']} امرأة/نساء", result
+        
+        result['reason'] = 'safe_with_persons'
+        return True, f"✅ آمن - {result['men_count']} راجل/رجال", result
+        
+    except Exception as e:
+        print(f"Error in content check: {e}")
+        # في حالة الخطأ، نعتبره آمن (لعدم تعطيل النظام)
+        return True, "✅ آمن (فحص تخطي بسبب خطأ)", result
+
+def check_video_safe(video_path, frames_to_check=3):
+    """
+    فحص فيديو كامل
+    Returns: (is_safe: bool, reason: str)
+    """
+    import cv2
+    
+    # التأكد من تحميل الموديلات
+    init_content_safety()
+    
+    try:
+        cap = cv2.VideoCapture(video_path)
+        
+        if not cap.isOpened():
+            return True, "⚠️ تعذر فتح الفيديو - تم قبوله"
+        
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        
+        if total_frames <= 0:
+            cap.release()
+            return True, "⚠️ فيديو فارغ - تم قبوله"
+        
+        # أماكن الفحص (البداية، النص، النهاية)
+        positions = [0.1, 0.5, 0.9]
+        
+        for pos in positions[:frames_to_check]:
+            frame_idx = int(pos * total_frames)
+            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+            
+            ret, frame = cap.read()
+            if not ret:
+                continue
+            
+            # فحص الـ frame
+            is_safe, reason, details = check_frame_for_women(frame, f"frame_{frame_idx}")
+            
+            if not is_safe:
+                cap.release()
+                return False, f"{reason} (عند الثانية {int(pos * 100)}%)"
+        
+        cap.release()
+        return True, "✅ الفيديو آمن"
+        
+    except Exception as e:
+        print(f"Video check error: {e}")
+        return True, "✅ آمن (خطأ في الفحص)"
+
+# ==========================================
 # ⚙️ Configuration & Setup
 # ==========================================
 
@@ -751,48 +997,101 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     pool =[]
     active_key = user_key if user_key and len(user_key) > 10 else random.choice(PEXELS_API_KEYS) if PEXELS_API_KEYS else ""
     
+    # كلمات آمنة مسموح بيها
     SAFE_WHITELIST =[
         'nature', 'sky', 'sea', 'ocean', 'water', 'rain', 'cloud', 'mountain',
         'forest', 'tree', 'desert', 'sand', 'star', 'galaxy', 'space', 'moon',
         'sun', 'sunset', 'sunrise', 'mosque', 'islam', 'kaaba', 'makkah',
-        'snow', 'winter', 'landscape', 'river', 'fog', 'mist', 'earth', 'bird'
+        'snow', 'winter', 'landscape', 'river', 'fog', 'mist', 'earth', 'bird',
+        'flower', 'leaf', 'autumn', 'spring', 'summer', 'fall', 'night', 'aurora'
     ]
 
-    safe_topics =['sky clouds timelapse', 'galaxy stars space', 'ocean waves slow motion', 'forest trees drone', 'desert sand dunes', 'waterfall nature', 'mountains fog', 'mosque architecture', 'islamic pattern']
+    # مواضيع آمنة افتراضية
+    safe_topics =[
+        'sky clouds timelapse nature landscape',
+        'galaxy stars space nebula',
+        'ocean waves slow motion nature',
+        'forest trees drone aerial',
+        'desert sand dunes golden',
+        'waterfall nature scenic',
+        'mountains fog mist',
+        'mosque architecture islamic',
+        'islamic pattern geometric',
+        'northern lights aurora sky',
+        'sunset beach ocean peaceful',
+        'rain drops nature peaceful'
+    ]
+    
+    # كلمات استبعاد إضافية للبحث
+    EXCLUDE_KEYWORDS = "-women -girl -female -person -people -face -model -portrait -couple -family -child -man -boy -body"
 
     if custom_query and len(custom_query) > 2:
         try: 
             q_trans = GoogleTranslator(source='auto', target='en').translate(custom_query.strip()).lower()
             is_safe = any(safe_word in q_trans for safe_word in SAFE_WHITELIST)
-            q = f"{q_trans} landscape scenery atmospheric no people" if is_safe else f"{random.choice(safe_topics)} no people"
+            # إضافة كلمات الاستبعاد
+            q = f"{q_trans} landscape scenery nature {EXCLUDE_KEYWORDS}" if is_safe else f"{random.choice(safe_topics)} {EXCLUDE_KEYWORDS}"
         except: 
-            q = f"{random.choice(safe_topics)} no people"
+            q = f"{random.choice(safe_topics)} {EXCLUDE_KEYWORDS}"
     else:
-        q = f"{random.choice(safe_topics)} no people"
+        q = f"{random.choice(safe_topics)} {EXCLUDE_KEYWORDS}"
 
     if active_key:
         try:
             check_stop(job_id)
-            url = f"https://api.pexels.com/videos/search?query={q}&per_page={count+5}&page={random.randint(1, 10)}&orientation=portrait"
+            # تحسين البحث
+            url = f"https://api.pexels.com/videos/search?query={q}&per_page={count+10}&page={random.randint(1, 10)}&orientation=portrait"
             r = requests.get(url, headers={'Authorization': active_key}, timeout=10)
             if r.status_code == 200:
                 vids = r.json().get('videos',[])
                 random.shuffle(vids)
+                
                 for vid in vids:
                     if len(pool) >= count: break
                     check_stop(job_id)
+                    
                     f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), None)
                     if not f and vid['video_files']: f = vid['video_files'][0]
                     if f:
                         path = os.path.join(VISION_DIR, f"bg_{vid['id']}.mp4")
-                        if not os.path.exists(path): smart_download(f['link'], path, job_id)
-                        pool.append(path)
-        except: pass
+                        if not os.path.exists(path): 
+                            smart_download(f['link'], path, job_id)
+                        
+                        # 🛡️ فحص الفيديو للتأكد من خلوة من النساء
+                        print(f"🔍 Checking video safety: {vid['id']}")
+                        is_safe, reason = check_video_safe(path, frames_to_check=3)
+                        
+                        if is_safe:
+                            print(f"  ✅ Video approved: {reason}")
+                            pool.append(path)
+                        else:
+                            print(f"  ❌ Video rejected: {reason}")
+                            # حذف الفيديو المرفوض
+                            try:
+                                os.remove(path)
+                            except:
+                                pass
+                            # نحمل واحد تاني
+                            continue
+                            
+        except Exception as e:
+            print(f"Error fetching videos: {e}")
 
-    if not pool:
+    # fallback للفيديوهات المحلية
+    if len(pool) < count:
         try:
             local_files =[os.path.join(LOCAL_BGS_DIR, f) for f in os.listdir(LOCAL_BGS_DIR) if f.lower().endswith(('.mp4', '.mov', '.mkv'))]
-            if local_files: pool = random.choices(local_files, k=count)
+            
+            for local_file in local_files:
+                if len(pool) >= count: break
+                
+                # فحص الفيديو المحلي أيضاً
+                is_safe, reason = check_video_safe(local_file, frames_to_check=2)
+                if is_safe:
+                    pool.append(local_file)
+                else:
+                    print(f"  ❌ Local video rejected: {reason}")
+                    
         except: pass
             
     return pool
