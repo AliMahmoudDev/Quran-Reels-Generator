@@ -3,1523 +3,1735 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>صانع الريلز القرآني | Quran Reels</title>
-    
-    <link rel="icon" href="https://ibb.co/zWy3WBhD"> 
-    
-    <meta property="og:title" content="صانع الريلز القرآني 🚀">
-    <meta property="og:description" content="أنشئ فيديوهات قرانية احترافية في ثوانٍ.">
-    <meta name="theme-color" content="#0a0a0e">
-
-    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>صانع الريلز القرآني</title>
+    <meta name="theme-color" content="#0f0f0f">
+    <meta property="og:title" content="صانع الريلز القرآني 🎬">
+    <meta property="og:description" content="أنشئ فيديوهات قرآنية احترافية في ثوانٍ">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
+        /* ═══════════════════════════════════════
+           🎨 CSS Variables & Base
+        ═══════════════════════════════════════ */
         :root {
-            --primary-gold: #d4af37;
-            --bg-dark: #0a0a0e;
-            --bg-glass: rgba(20, 20, 25, 0.95);
-            --border-glow: rgba(212, 175, 55, 0.3);
-            --gradient-gold: linear-gradient(135deg, #aa8a2e 0%, #d4af37 50%, #f9e5a0 100%);
-            --danger-red: #ff4757;
-            --success-green: #2ecc71;
-            --random-purple: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
+            /* Dark Theme (Default) */
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-card: #1f1f1f;
+            --bg-input: #2a2a2a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666666;
+            --accent: #c9a227;
+            --accent-light: #e6c458;
+            --accent-dark: #9a7b1c;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: rgba(255,255,255,0.08);
+            --shadow: 0 4px 24px rgba(0,0,0,0.4);
+            --radius: 16px;
+            --radius-sm: 10px;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        .light-theme {
+            --bg-primary: #f8f8f8;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-input: #f0f0f0;
+            --text-primary: #1a1a1a;
+            --text-secondary: #555555;
+            --text-muted: #999999;
+            --accent: #b8941f;
+            --accent-light: #d4b030;
+            --accent-dark: #8a6d15;
+            --border: rgba(0,0,0,0.08);
+            --shadow: 0 4px 24px rgba(0,0,0,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
 
         body {
-            font-family: 'Cairo', sans-serif;
-            background-color: var(--bg-dark);
-            color: #fff;
+            font-family: 'IBM Plex Sans Arabic', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100dvh;
-            display: flex; justify-content: center; align-items: flex-start;
-            padding: 10px;
-            background-image: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.1) 0%, transparent 60%);
+            transition: background 0.3s, color 0.3s;
         }
 
-        .container { width: 100%; max-width: 500px; padding-bottom: 50px; }
-        
-        .logo-img { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--primary-gold); margin-bottom: 10px; box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
-        .card { background: var(--bg-glass); backdrop-filter: blur(10px); border-radius: 16px; border: 1px solid var(--border-glow); padding: 20px 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        
-        .timer-badge { background: rgba(255, 255, 255, 0.1); padding: 5px 10px; border-radius: 20px; font-size: 0.9rem; color: var(--primary-gold); font-family: monospace; display: inline-flex; align-items: center; gap: 5px; margin-top: 5px; }
-
-        /* --- تنسيقات الهيستوري الجديدة والمحسنة --- */
-        .history-section { margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
-        .history-title-main { font-size: 1rem; color: #888; margin-bottom: 10px; text-align: center; font-weight: bold; }
-        
-        .history-item { 
-            background: rgba(255,255,255,0.03); 
-            padding: 12px; 
-            border-radius: 10px; 
-            margin-bottom: 8px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            border: 1px solid rgba(255,255,255,0.05); 
-        }
-        .hist-info { display: flex; flex-direction: column; gap: 4px; }
-        .hist-title { font-weight: bold; font-size: 0.95rem; color: #fff; }
-        .hist-meta { font-size: 0.75rem; color: var(--primary-gold); display: flex; align-items: center; gap: 5px; }
-        .hist-date { font-size: 0.65rem; color: #888; font-family: monospace; }
-        .hist-btn { background: var(--primary-gold); color: #000; text-decoration: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; font-size: 0.85rem; transition: 0.2s; }
-        .hist-btn:hover { transform: scale(1.05); }
-
-        .header { text-align: center; margin-bottom: 20px; }
-        .title { font-family: 'Amiri', serif; font-size: 1.8rem; background: var(--gradient-gold); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .form-group { margin-bottom: 15px; }
-        .label { display: block; margin-bottom: 6px; color: var(--primary-gold); font-size: 0.9rem; font-weight: bold; }
-        .input-box, select { width: 100%; height: 50px; padding: 0 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-family: 'Cairo'; font-size: 16px; outline: none; }
-        .num-row { display: flex; gap: 10px; margin-bottom: 15px; }
-        .num-group { flex: 1; min-width: 0; }
-        .num-ctrl { display: flex; height: 50px; width: 100%; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; }
-        .num-btn { width: 35px; background: rgba(255,255,255,0.05); border: none; color: var(--primary-gold); font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .num-val { flex: 1; background: transparent; border: none; color: #fff; text-align: center; font-weight: bold; font-size: 1.1rem; min-width: 0; outline: none; }
-        
-        .btn-main { width: 100%; height: 55px; margin-top: 10px; background: var(--gradient-gold); border: none; border-radius: 12px; color: #000; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; }
-        .btn-stop { width: 100%; height: 55px; margin-top: 10px; background: var(--danger-red); border: none; border-radius: 12px; color: #fff; font-weight: 800; font-size: 1.1rem; display: none; align-items: center; justify-content: center; gap: 10px; cursor: pointer; }
-        
-        .prog-area { display: none; margin-top: 20px; text-align: center; }
-        .bar-track { height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin: 10px 0; }
-        .bar-fill { height: 100%; width: 0; background: var(--primary-gold); transition: 0.3s; }
-        
-        .result-area { display: none; margin-top: 20px; text-align: center; }
-        video { width: 100%; border-radius: 12px; border: 1px solid var(--primary-gold); background: #000; max-height: 70vh; }
-        .dl-link { display: flex; align-items: center; justify-content: center; margin-top: 15px; padding: 15px; background: var(--success-green); color: #fff; text-decoration: none; border-radius: 12px; font-weight: 800; }
-        
-        .toggle-box { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 10px; }
-        .switch { position: relative; width: 50px; height: 26px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.1); border-radius: 34px; transition: .3s; }
-        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s; }
-        input:checked + .slider { background: var(--primary-gold); }
-        input:checked + .slider:before { transform: translateX(24px); }
-        
-        .ctrl-row { display: flex; gap: 10px; margin-bottom: 20px; }
-        .btn-rand { flex: 1; height: 45px; background: var(--random-purple); border: none; border-radius: 12px; color: #fff; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-gear { width: 50px; height: 45px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glow); color: var(--primary-gold); border-radius: 12px; cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-        .btn-gear:hover { background: rgba(212, 175, 55, 0.1); transform: rotate(45deg); }
-
-        .footer-contact { margin-top: 30px; padding-top: 20px; text-align: center; border-top: 1px solid var(--border-glow); display: flex; flex-direction: column; align-items: center; gap: 15px; }
-        .social-link { display: inline-flex; align-items: center; gap: 8px; color: var(--primary-gold); text-decoration: none; font-weight: 600; transition: 0.3s; background: rgba(212, 175, 55, 0.05); padding: 8px 16px; border-radius: 50px; border: 1px solid var(--border-glow); font-size: 0.9rem; }
-        .social-link:hover { background: var(--gradient-gold); color: #000; transform: translateY(-3px); }
-        .social-link svg { fill: currentColor; }
-
-        /* --- SETTINGS MODAL CSS --- */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 1000;
-            display: none; justify-content: center; align-items: center;
-            backdrop-filter: blur(8px); animation: fadeIn 0.2s;
-        }
-        @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
-        
-        .settings-card {
-            background: #121215; width: 95%; max-width: 400px;
-            border: 1px solid var(--primary-gold); border-radius: 20px;
-            padding: 20px; max-height: 90vh; overflow-y: auto;
-            box-shadow: 0 0 40px rgba(212, 175, 55, 0.15);
-            display: flex; flex-direction: column;
+        /* ═══════════════════════════════════════
+           📱 App Container
+        ═══════════════════════════════════════ */
+        .app {
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
         }
 
-        .preview-box {
-            width: 100%; min-height: 150px;
-            background: linear-gradient(45deg, #1a1a2e, #16213e);
-            border-radius: 12px; border: 1px solid #444;
-            margin-bottom: 20px; position: relative; overflow: hidden;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            flex-shrink: 0;
+        /* ═══════════════════════════════════════
+           🔝 Header
+        ═══════════════════════════════════════ */
+        .header {
+            padding: 20px 20px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
         }
-        .preview-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.8)); z-index: 1; pointer-events: none;}
-        
-        .prev-text-ar, .prev-text-en { position: relative; z-index: 2; text-align: center; width: 90%; transition: 0.2s; }
-        .prev-text-ar { font-family: 'Amiri', serif; margin-bottom: 8px; line-height: 1.6; font-size: 1.6rem; }
-        .prev-text-en { font-family: 'Cairo', sans-serif; line-height: 1.4; font-size: 0.9rem; }
 
-        .set-section { margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; }
-        .set-header { color: var(--primary-gold); font-size: 0.95rem; font-weight: bold; margin-bottom: 10px; display:flex; justify-content:space-between; }
-
-        .ctrl-line { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; color:#ccc; }
-        .color-input { width: 30px; height: 30px; border: none; background: none; cursor: pointer; padding: 0; border-radius: 50%; overflow: hidden; }
-        .color-input::-webkit-color-swatch-wrapper { padding: 0; }
-        .color-input::-webkit-color-swatch { border: 2px solid #555; border-radius: 50%; }
-        
-        .sm-slider { width: 80px; accent-color: var(--primary-gold); height: 4px; }
-
-        .modal-btns { display: flex; gap: 10px; margin-top: 10px; }
-        .btn-save { background: var(--success-green); color: white; flex: 1; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
-        .btn-cancel { background: #333; color: #ccc; width: 80px; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        
-        /* 🆕 Notification Animation */
-        @keyframes slideDown {
-            from { transform: translateX(-50%) translateY(-100px); opacity: 0; }
-            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
-        
-        @keyframes fadeOut {
+
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+
+        .logo-text h1 {
+            font-family: 'Amiri', serif;
+            font-size: 1.4rem;
+            background: linear-gradient(135deg, var(--accent-light), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-text span {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* ═══════════════════════════════════════
+           📑 Tabs Navigation
+        ═══════════════════════════════════════ */
+        .tabs-nav {
+            display: flex;
+            padding: 0 20px;
+            gap: 4px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 14px 16px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+        }
+
+        .tab-btn::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 2px;
+            background: var(--accent);
+            border-radius: 2px;
+            transition: width 0.2s;
+        }
+
+        .tab-btn.active::after {
+            width: 60%;
+        }
+
+        /* ═══════════════════════════════════════
+           📄 Tab Content
+        ═══════════════════════════════════════ */
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ═══════════════════════════════════════
+           📝 Form Elements
+        ═══════════════════════════════════════ */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .form-select, .form-input {
+            width: 100%;
+            height: 52px;
+            padding: 0 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-select:focus, .form-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.15);
+        }
+
+        /* ═══════════════════════════════════════
+           🔢 Ayah Selection
+        ═══════════════════════════════════════ */
+        .ayah-selector {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            margin-bottom: 18px;
+        }
+
+        .ayah-selector-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .ayah-selector-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .ayah-selector-range {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ayah-num-display {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ayah-num-display input {
+            width: 60px;
+            height: 44px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .ayah-num-display input:focus {
+            border-color: var(--accent);
+        }
+
+        .ayah-num-display button {
+            width: 36px;
+            height: 36px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--accent);
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .ayah-num-display button:hover {
+            background: var(--accent);
+            color: #000;
+        }
+
+        .ayah-separator {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            padding: 0 4px;
+        }
+
+        .ayah-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        .ayah-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .ayah-row .form-group {
+            flex: 1;
+        }
+
+        /* ═══════════════════════════════════════
+           🔘 Buttons
+        ═══════════════════════════════════════ */
+        .btn-primary {
+            width: 100%;
+            height: 56px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border: none;
+            border-radius: var(--radius-sm);
+            color: #000;
+            font-family: inherit;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(201, 162, 39, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            flex: 1;
+            height: 48px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn-stop {
+            background: var(--danger);
+            border: none;
+            color: #fff;
+        }
+
+        .btn-stop:hover {
+            background: #dc2626;
+            color: #fff;
+        }
+
+        /* ═══════════════════════════════════════
+           🎚️ Toggle Switches
+        ═══════════════════════════════════════ */
+        .toggle-group {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .toggle-item:last-child {
+            border-bottom: none;
+        }
+
+        .toggle-info h4 {
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .toggle-info span {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .switch {
+            position: relative;
+            width: 48px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .switch-slider {
+            position: absolute;
+            inset: 0;
+            background: var(--bg-input);
+            border-radius: 26px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .switch-slider::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .switch input:checked + .switch-slider {
+            background: var(--accent);
+        }
+
+        .switch input:checked + .switch-slider::before {
+            transform: translateX(22px);
+        }
+
+        /* ═══════════════════════════════════════
+           📊 Progress Section
+        ═══════════════════════════════════════ */
+        .progress-section {
+            display: none;
+            text-align: center;
+            padding: 30px 20px;
+        }
+
+        .progress-section.active {
+            display: block;
+        }
+
+        .progress-ring {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 20px;
+            position: relative;
+        }
+
+        .progress-ring svg {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring circle {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+        }
+
+        .progress-ring .bg {
+            stroke: var(--bg-input);
+        }
+
+        .progress-ring .fill {
+            stroke: var(--accent);
+            stroke-dasharray: 408;
+            stroke-dashoffset: 408;
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        .progress-percent {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .progress-status {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .progress-eta {
+            font-size: 0.85rem;
+            color: var(--accent);
+            font-family: monospace;
+        }
+
+        /* ═══════════════════════════════════════
+           ✅ Result Section
+        ═══════════════════════════════════════ */
+        .result-section {
+            display: none;
+            text-align: center;
+        }
+
+        .result-section.active {
+            display: block;
+        }
+
+        .result-video {
+            width: 100%;
+            border-radius: var(--radius);
+            background: #000;
+            margin-bottom: 16px;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .result-actions .btn-secondary {
+            flex: 1;
+        }
+
+        .btn-download {
+            background: var(--success);
+            border: none;
+            color: #fff;
+        }
+
+        .btn-download:hover {
+            background: #16a34a;
+            color: #fff;
+        }
+
+        /* ═══════════════════════════════════════
+           📜 History Section
+        ═══════════════════════════════════════ */
+        .history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .history-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .history-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+
+        .history-empty-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .history-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .history-item-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .history-item-status {
+            font-size: 0.85rem;
+        }
+
+        .history-item-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .history-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .history-item-actions button,
+        .history-item-actions a {
+            flex: 1;
+            height: 38px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .history-item-actions button:hover,
+        .history-item-actions a:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .history-item-actions .btn-delete {
+            color: var(--danger);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .history-item-actions .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--danger);
+        }
+
+        .history-timer {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            background: rgba(245, 158, 11, 0.1);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: var(--warning);
+            margin-right: 8px;
+        }
+
+        .history-timer.urgent {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        /* ═══════════════════════════════════════
+           ⚙️ Settings Panel
+        ═══════════════════════════════════════ */
+        .settings-section {
+            margin-bottom: 24px;
+        }
+
+        .settings-section h4 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .settings-row:last-child {
+            border-bottom: none;
+        }
+
+        .settings-label {
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .settings-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .color-picker {
+            width: 36px;
+            height: 36px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .color-picker::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        .color-picker::-webkit-color-swatch {
+            border: none;
+            border-radius: 6px;
+        }
+
+        .size-slider {
+            width: 80px;
+            height: 4px;
+            accent-color: var(--accent);
+        }
+
+        /* ═══════════════════════════════════════
+           🔔 Toast Notifications
+        ═══════════════════════════════════════ */
+        .toast-container {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .toast {
+            padding: 12px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow);
+            font-size: 0.9rem;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+            pointer-events: auto;
+        }
+
+        .toast.success {
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .toast.error {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes toastOut {
             from { opacity: 1; }
             to { opacity: 0; }
         }
-        
-        /* 🆕 Status badge styles */
-        .status-processing { color: #f39c12; }
-        .status-complete { color: #2ecc71; }
-        .status-error { color: #ff4757; }
-        
-        /* 🆕 Preview button style */
-        .preview-btn {
-            background: linear-gradient(135deg, #3498db, #2980b9) !important;
-            border: none;
+
+        /* ═══════════════════════════════════════
+           📱 Preview Box (Settings)
+        ═══════════════════════════════════════ */
+        .preview-box {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: var(--radius);
+            padding: 30px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview-box::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 50%, transparent 30%, rgba(0,0,0,0.6) 100%);
+            pointer-events: none;
+        }
+
+        .preview-ar {
+            font-family: 'Amiri', serif;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .preview-en {
+            font-size: 0.85rem;
+            color: #ccc;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ═══════════════════════════════════════
+           🔧 Advanced Options
+        ═══════════════════════════════════════ */
+        .advanced-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            background: var(--bg-card);
+            border: 1px dashed var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            font-size: 0.85rem;
             cursor: pointer;
+            margin-bottom: 16px;
+            transition: all 0.2s;
         }
-        .preview-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 2px 10px rgba(52, 152, 219, 0.4);
+
+        .advanced-toggle:hover {
+            border-color: var(--accent);
+            color: var(--accent);
         }
-        
-        /* 🆕 Delete button style */
-        .delete-btn {
-            background: #ff4757 !important;
-            border: none;
-            cursor: pointer;
-            min-width: 35px;
+
+        .advanced-options {
+            display: none;
         }
-        .delete-btn:hover {
-            background: #ff6b7a !important;
-            transform: scale(1.1);
+
+        .advanced-options.show {
+            display: block;
+        }
+
+        /* ═══════════════════════════════════════
+           📱 Responsive
+        ═══════════════════════════════════════ */
+        @media (max-width: 400px) {
+            .header {
+                padding: 16px 16px 12px;
+            }
+            
+            .tab-content {
+                padding: 16px;
+            }
+            
+            .logo-text h1 {
+                font-size: 1.2rem;
+            }
         }
     </style>
 </head>
 <body>
-
-    <div class="container">
-        <div class="card">
-            <div class="header">
-                <img src="https://ibb.co/zWy3WBhD" alt="Logo" class="logo-img" onerror="this.style.display='none'">
-                <h1 class="title">صانع الريلز القرآني</h1>
-                <p style="color:#888; font-size:0.8rem;">نسخة التوربو 🚀</p>
-            </div>
-
-            <div class="ctrl-row">
-                <button type="button" class="btn-rand" onclick="smartRandomize()">🎲 اختيار عشوائي</button>
-                <button type="button" class="btn-batch" onclick="openBatchModal()" style="background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; flex: 1; height: 45px; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer;">🎬 فيديوهات متعددة</button>
-                <button type="button" class="btn-gear" onclick="openSettings()">⚙️</button>
-            </div>
-
-            <form id="vForm">
-                <div class="form-group">
-                    <label class="label">القارئ</label>
-                    <select id="rSelect" class="input-box"></select>
+    <div class="app">
+        <!-- ═══════════════════════════════════
+             🔝 Header
+        ═════════════════════════════════════ -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">🎬</div>
+                <div class="logo-text">
+                    <h1>صانع الريلز القرآني</h1>
+                    <span>نسخة التوربو</span>
                 </div>
-                <div class="form-group">
-                    <label class="label">السورة</label>
-                    <select id="sSelect" class="input-box"></select>
-                </div>
-                <div class="num-row">
-                    <div class="num-group">
-                        <label class="label">من آية</label>
-                        <div class="num-ctrl">
-                            <button type="button" class="num-btn" onclick="adj('startAyah',-1)">−</button>
-                            <input type="number" id="startAyah" class="num-val" value="1" onchange="validateAyah('startAyah')">
-                            <button type="button" class="num-btn" onclick="adj('startAyah',1)">+</button>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+            </div>
+        </header>
+
+        <!-- ═══════════════════════════════════
+             📑 Tabs Navigation
+        ═════════════════════════════════════ -->
+        <nav class="tabs-nav">
+            <button class="tab-btn active" data-tab="main">🏠 الرئيسية</button>
+            <button class="tab-btn" data-tab="history">📜 السجل</button>
+            <button class="tab-btn" data-tab="settings">⚙️ إعدادات</button>
+        </nav>
+
+        <!-- ═══════════════════════════════════
+             📄 Tab Content
+        ═════════════════════════════════════ -->
+        <main class="tab-content">
+            
+            <!-- 🏠 Main Tab -->
+            <div class="tab-panel active" id="main-panel">
+                <form id="videoForm">
+                    <!-- القارئ -->
+                    <div class="form-group">
+                        <label class="form-label">🎤 القارئ</label>
+                        <select class="form-select" id="reciterSelect"></select>
+                    </div>
+
+                    <!-- السورة -->
+                    <div class="form-group">
+                        <label class="form-label">📖 السورة</label>
+                        <select class="form-select" id="surahSelect"></select>
+                    </div>
+
+                    <!-- الآيات -->
+                    <div class="ayah-selector">
+                        <div class="ayah-selector-header">
+                            <span class="ayah-selector-title">📍 نطاق الآيات</span>
+                        </div>
+                        <div class="ayah-selector-range">
+                            <div class="ayah-num-display">
+                                <button type="button" onclick="adjustAyah('startAyah', -1)">−</button>
+                                <input type="number" id="startAyah" value="1" min="1">
+                                <button type="button" onclick="adjustAyah('startAyah', 1)">+</button>
+                            </div>
+                            <span class="ayah-separator">←</span>
+                            <div class="ayah-num-display">
+                                <button type="button" onclick="adjustAyah('endAyah', -1)">−</button>
+                                <input type="number" id="endAyah" value="5" min="1">
+                                <button type="button" onclick="adjustAyah('endAyah', 1)">+</button>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 6px;">
+                            <span class="ayah-label">من آية</span>
+                            <span class="ayah-label">إلى آية</span>
                         </div>
                     </div>
-                    <div class="num-group">
-                        <label class="label">إلى آية</label>
-                        <div class="num-ctrl">
-                            <button type="button" class="num-btn" onclick="adj('endAyah',-1)">−</button>
-                            <input type="number" id="endAyah" class="num-val" value="5" onchange="validateAyah('endAyah')">
-                            <button type="button" class="num-btn" onclick="adj('endAyah',1)">+</button>
+
+                    <!-- خيارات سريعة -->
+                    <div class="toggle-group" style="margin-bottom: 18px;">
+                        <div class="toggle-item">
+                            <div class="toggle-info">
+                                <h4>تغيير الخلفية مع الآيات</h4>
+                                <span>كل آية بخلفية مختلفة</span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="dynamicBg" checked>
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-item">
+                            <div class="toggle-info">
+                                <h4>توهج النص</h4>
+                                <span>تأثير هالة حول النص</span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="useGlow" checked>
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-item">
+                            <div class="toggle-info">
+                                <h4>تعتيم سينمائي</h4>
+                                <span>Vignette effect</span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="useVignette" checked>
+                                <span class="switch-slider"></span>
+                            </label>
                         </div>
                     </div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="label">سلاسة الفيديو (FPS)</label>
-                    <select id="fpsSelect" class="input-box">
-                        <option value="15">🚀 15 FPS (سريع جداً)</option>
-                        <option value="20" selected>⚖️ 20 FPS (متوازن - ينصح به)</option>
-                        <option value="24">🎬 24 FPS (سينمائي)</option>
-                        <option value="30">💎 30 FPS (الأكثر سلاسة)</option>
-                    </select>
-                </div>
 
-                <div class="form-group">
-                    <label class="label">جودة الفيديو</label>
-                    <select id="qSelect" class="input-box">
-                        <option value="720">⚡ 720p HD (الأسرع)</option>
-                        <option value="1080">🌟 1080p FHD</option>
-                    </select>
-                </div>
-
-                <div class="toggle-box">
-                    <span style="font-size:0.9rem;">🔍 بحث مخصص (خلفية)</span>
-                    <label class="switch"><input type="checkbox" id="useSearch" onchange="toggleSearch()"><span class="slider"></span></label>
-                </div>
-                <input type="text" id="bgQuery" class="input-box" placeholder="اكتب: بحر، سماء..." style="display:none; margin-bottom:15px;">
-
-                <div class="toggle-box">
-                    <div style="display:flex; flex-direction:column;">
-                        <span style="font-size:0.9rem;">🔄 تغيير الخلفية مع الآيات</span>
-                        <span style="font-size:0.65rem; color:#aaa;">(يستهلك بيانات أكثر)</span>
+                    <!-- خيارات متقدمة -->
+                    <div class="advanced-toggle" onclick="toggleAdvanced()">
+                        <span>⚡</span>
+                        <span>خيارات متقدمة</span>
                     </div>
-                    <label class="switch"><input type="checkbox" id="dynamicBg" checked><span class="slider"></span></label>
-                </div>
-
-                <div class="toggle-box" style="background: rgba(212, 175, 55, 0.1); border: 1px solid var(--border-glow);">
-                    <div style="display:flex; flex-direction:column;">
-                        <span style="font-size:0.9rem; color: var(--primary-gold);">✨ توهج النص (Glow)</span>
-                        <span style="font-size:0.65rem; color:#aaa;">(تأثير هالة خفيفة)</span>
-                    </div>
-                    <label class="switch"><input type="checkbox" id="useGlow" checked><span class="slider"></span></label>
-                </div>
-
-                <div class="toggle-box" style="background: rgba(212, 175, 55, 0.1); border: 1px solid var(--border-glow);">
-                    <div style="display:flex; flex-direction:column;">
-                        <span style="font-size:0.9rem; color: var(--primary-gold);">🎬 تعتيم سينمائي (Vignette)</span>
-                    </div>
-                    <label class="switch"><input type="checkbox" id="useVignette" checked><span class="slider"></span></label>
-                </div>
-
-                <button type="submit" id="btn" class="btn-main">✨ إنشاء الفيديو</button>
-                <button type="button" id="stopBtn" class="btn-stop" onclick="stopProcess()">🛑 إيقاف</button>
-            </form>
-
-            <div class="prog-area" id="progArea">
-                <div class="status-txt" id="statusTxt">جاري الاتصال...</div>
-                <div class="timer-badge" id="timerBadge" style="display:none;">
-                    ⏳ متبقي: <span id="etaTxt">--:--</span>
-                </div>
-                <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
-            </div>
-
-            <div class="result-area" id="resArea">
-                <div style="color: #4ade80; font-weight: bold; font-size: 1.2rem; margin-bottom: 10px;">✅ تم الانتهاء!</div>
-                <video id="player" controls playsinline loop></video>
-                <a id="dlLink" href="#" class="dl-link" download>⬇️ تحميل الفيديو</a>
-            </div>
-
-            <div class="history-section" id="histSection" style="display:none;">
-                <div class="history-title-main">📜 سجل العمليات</div>
-                <div class="warning-box" style="background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 8px; padding: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 1.2rem;">⚠️</span>
-                    <span style="color: #ffc107; font-size: 0.8rem;">الفيديوهات تُحذف تلقائياً بعد <strong>ساعة واحدة</strong> من الإنشاء</span>
-                </div>
-                <div id="histList"></div>
-                <button onclick="clearHistory()" style="width:100%; padding:5px; background:none; border:none; color:#666; font-size:0.8rem; cursor:pointer; margin-top:5px;">🗑️ مسح السجل</button>
-            </div>
-
-            <div class="footer-contact">
-                <p style="color: #888; font-size: 0.85rem;">للتطوير أو الإبلاغ عن أخطاء، يسعدنا تواصلك</p>
-                <div class="contact-links">
-                    <a href="https://t.me/QuranReelsGen" target="_blank" class="social-link">
-                        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.35-.97.52-1.35.51-.42-.01-1.22-.24-1.82-.43-.74-.24-1.33-.37-1.28-.77.03-.21.32-.42.88-.63 3.42-1.49 5.71-2.48 6.85-2.97 3.27-1.4 3.95-1.64 4.39-1.65.1 0 .32.02.46.14.12.1.15.24.16.33.01.06.02.19.01.28z"/></svg>
-                        قناة التحديثات
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="settingsModal">
-        <div class="settings-card">
-            <h3 style="text-align:center; color:white; margin-bottom:15px;">🎨 تخصيص مفصل</h3>
-            
-            <div class="preview-box">
-                <div class="preview-overlay"></div>
-                <div id="prevAr" class="prev-text-ar">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
-                <div id="prevEn" class="prev-text-en">In the name of Allah, the Entirely Merciful</div>
-            </div>
-
-            <div class="set-section">
-                <div class="set-header">اللغة العربية (Arabic)</div>
-                <div class="ctrl-line">
-                    <span>اللون & الحجم</span>
-                    <input type="color" id="arColor" class="color-input" value="#ffffff" oninput="upd()">
-                    <input type="range" id="arSize" class="sm-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="upd()">
-                </div>
-                <div class="ctrl-line">
-                    <span>إطار (Outline)</span>
-                    <input type="color" id="arOutC" class="color-input" value="#000000" oninput="upd()">
-                    <input type="range" id="arOutW" class="sm-slider" min="0" max="10" step="1" value="4" oninput="upd()">
-                </div>
-                <div class="ctrl-line">
-                    <span>ظل (Shadow)</span>
-                    <input type="checkbox" id="arShadow" onchange="upd()">
-                    <input type="color" id="arShadowC" class="color-input" value="#000000" oninput="upd()">
-                </div>
-            </div>
-
-            <div class="set-section">
-                <div class="set-header">الترجمة (Translation)</div>
-                <div class="ctrl-line">
-                    <span>اللون & الحجم</span>
-                    <input type="color" id="enColor" class="color-input" value="#FFD700" oninput="upd()">
-                    <input type="range" id="enSize" class="sm-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="upd()">
-                </div>
-                <div class="ctrl-line">
-                    <span>إطار (Outline)</span>
-                    <input type="color" id="enOutC" class="color-input" value="#000000" oninput="upd()">
-                    <input type="range" id="enOutW" class="sm-slider" min="0" max="10" step="1" value="3" oninput="upd()">
-                </div>
-                <div class="ctrl-line">
-                    <span>ظل (Shadow)</span>
-                    <input type="checkbox" id="enShadow" onchange="upd()">
-                    <input type="color" id="enShadowC" class="color-input" value="#000000" oninput="upd()">
-                </div>
-            </div>
-
-            <div class="set-section" style="border:none;">
-                <div class="set-header">⚡ إعدادات متقدمة (اختياري)</div>
-                <div class="ctrl-line" style="flex-direction:column; align-items:flex-start; gap:5px;">
-                    <span style="font-size:0.8rem; color:#aaa;">مفتاح Pexels خاص (لو معاك):</span>
-                    <input type="text" id="pexelsKey" class="input-box" style="height:35px; font-size:0.8rem; background:#222;" placeholder="اتركه فارغاً لاستخدام سيرفر التطبيق">
-                </div>
-                
-            </div>
-
-            <div class="modal-btns">
-                <button class="btn-cancel" onclick="document.getElementById('settingsModal').style.display='none'">إلغاء</button>
-                <button class="btn-save" onclick="saveSettings()">💾 حفظ</button>
-            </div>
-            <button onclick="resetSettings()" style="width:100%; margin-top:10px; background:none; border:1px dashed #555; padding:5px; color:#777; border-radius:8px;">استعادة الافتراضي</button>
-        </div>
-    </div>
-
-    <!-- 📦 Batch Export Modal -->
-    <div class="modal-overlay" id="batchModal">
-        <div class="settings-card" style="max-width: 550px; max-height: 90vh; overflow-y: auto;">
-            <h3 style="text-align:center; color:white; margin-bottom:15px;">🎬 فيديوهات متعددة</h3>
-            
-            <div class="warning-box" style="background: rgba(155, 89, 182, 0.1); border: 1px solid rgba(155, 89, 182, 0.3); border-radius: 8px; padding: 10px; margin-bottom: 15px;">
-                <span style="color: #9b59b6; font-size: 0.85rem;">💡 أضف عدة فيديوهات بإعدادات مختلفة وسيتم إنشاؤهم بالترتيب</span>
-            </div>
-            
-            <!-- Common Settings -->
-            <div class="set-section" style="padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 15px;">
-                <div class="set-header">⚙️ إعدادات عامة (تطبق على الكل)</div>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <div style="flex: 1; min-width: 120px;">
-                        <label style="color: #aaa; font-size: 0.75rem;">الجودة</label>
-                        <select id="batchQuality" class="input-box" style="height: 35px; font-size: 0.85rem;">
-                            <option value="720">720p ⚡</option>
-                            <option value="1080">1080p 💎</option>
-                        </select>
-                    </div>
-                    <div style="flex: 1; min-width: 120px;">
-                        <label style="color: #aaa; font-size: 0.75rem;">FPS</label>
-                        <select id="batchFps" class="input-box" style="height: 35px; font-size: 0.85rem;">
-                            <option value="20">20 FPS</option>
-                            <option value="24">24 FPS</option>
-                            <option value="30">30 FPS</option>
-                        </select>
-                    </div>
-                    <div style="flex: 1; min-width: 120px;">
-                        <label style="color: #aaa; font-size: 0.75rem;">خلفية متغيرة</label>
-                        <select id="batchDynamicBg" class="input-box" style="height: 35px; font-size: 0.85rem;">
-                            <option value="true">نعم 🔄</option>
-                            <option value="false">ثابتة</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Videos List -->
-            <div class="set-section">
-                <div class="set-header" style="display: flex; justify-content: space-between; align-items: center;">
-                    <span>🎬 قائمة الفيديوهات</span>
-                    <span id="videoCount" style="background: #9b59b6; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;">0</span>
-                </div>
-                
-                <div id="batchVideosList" style="max-height: 300px; overflow-y: auto; margin-bottom: 10px;">
-                    <!-- Videos will be added here -->
-                    <p style="color: #666; text-align: center; padding: 20px;">لم تضف أي فيديوهات بعد</p>
-                </div>
-                
-                <!-- Add Video Form -->
-                <div style="background: rgba(155, 89, 182, 0.1); border-radius: 8px; padding: 12px; margin-top: 10px;">
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
-                        <div style="flex: 2; min-width: 150px;">
-                            <label style="color: #aaa; font-size: 0.7rem;">السورة</label>
-                            <select id="addVideoSurah" class="input-box" style="height: 32px; font-size: 0.8rem;">
+                    
+                    <div class="advanced-options" id="advancedOptions">
+                        <div class="form-group">
+                            <label class="form-label">سلاسة الفيديو (FPS)</label>
+                            <select class="form-select" id="fpsSelect">
+                                <option value="15">🚀 15 FPS - سريع جداً</option>
+                                <option value="20" selected>⚖️ 20 FPS - متوازن</option>
+                                <option value="24">🎬 24 FPS - سينمائي</option>
+                                <option value="30">💎 30 FPS - الأكثر سلاسة</option>
                             </select>
                         </div>
-                        <div style="flex: 1; min-width: 60px;">
-                            <label style="color: #aaa; font-size: 0.7rem;">من</label>
-                            <input type="number" id="addVideoStart" class="input-box" style="height: 32px; font-size: 0.8rem;" value="1" min="1">
-                        </div>
-                        <div style="flex: 1; min-width: 60px;">
-                            <label style="color: #aaa; font-size: 0.7rem;">إلى</label>
-                            <input type="number" id="addVideoEnd" class="input-box" style="height: 32px; font-size: 0.8rem;" value="1" min="1">
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <div style="flex: 1;">
-                            <label style="color: #aaa; font-size: 0.7rem;">القارئ</label>
-                            <select id="addVideoReciter" class="input-box" style="height: 32px; font-size: 0.8rem;">
+                        <div class="form-group">
+                            <label class="form-label">جودة الفيديو</label>
+                            <select class="form-select" id="qualitySelect">
+                                <option value="720">⚡ 720p HD - الأسرع</option>
+                                <option value="1080">🌟 1080p FHD</option>
                             </select>
                         </div>
-                        <button type="button" onclick="addBatchVideo()" style="background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; border: none; border-radius: 8px; padding: 0 15px; font-weight: bold; cursor: pointer; margin-top: 17px;">➕ إضافة</button>
+                        <div class="toggle-item" style="border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px;">
+                            <div class="toggle-info">
+                                <h4>بحث خلفية مخصص</h4>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="useSearch" onchange="toggleSearchInput()">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="form-group" id="searchInputGroup" style="display: none;">
+                            <input type="text" class="form-input" id="bgQuery" placeholder="اكتب: بحر، سماء، جبال...">
+                        </div>
+                    </div>
+
+                    <!-- أزرار التحكم -->
+                    <div class="btn-row">
+                        <button type="button" class="btn-secondary" onclick="randomize()">🎲 عشوائي</button>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="submitBtn">✨ إنشاء الفيديو</button>
+                    <button type="button" class="btn-primary btn-stop" id="stopBtn" style="display: none;">🛑 إيقاف</button>
+                </form>
+
+                <!-- Progress Section -->
+                <div class="progress-section" id="progressSection">
+                    <div class="progress-ring">
+                        <svg width="140" height="140">
+                            <circle class="bg" cx="70" cy="70" r="65"></circle>
+                            <circle class="fill" id="progressCircle" cx="70" cy="70" r="65"></circle>
+                        </svg>
+                        <div class="progress-percent" id="progressPercent">0%</div>
+                    </div>
+                    <div class="progress-status" id="progressStatus">جاري التحضير...</div>
+                    <div class="progress-eta" id="progressEta" style="display: none;">
+                        ⏳ متبقي: <span id="etaTime">--:--</span>
+                    </div>
+                </div>
+
+                <!-- Result Section -->
+                <div class="result-section" id="resultSection">
+                    <video class="result-video" id="videoPlayer" controls playsinline></video>
+                    <div class="result-actions">
+                        <a class="btn-secondary btn-download" id="downloadLink" download>⬇️ تحميل</a>
+                        <button class="btn-secondary" onclick="resetForm()">🔄 فيديو جديد</button>
                     </div>
                 </div>
             </div>
-            
-            <div class="modal-btns" style="margin-top: 15px;">
-                <button class="btn-cancel" onclick="document.getElementById('batchModal').style.display='none'">إلغاء</button>
-                <button class="btn-save" onclick="startBatchExport()" id="startBatchBtn" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);" disabled>🚀 بدء التصدير (0 فيديو)</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- 📦 Batch Progress Modal -->
-    <div class="modal-overlay" id="batchProgressModal">
-        <div class="settings-card" style="max-width: 500px;">
-            <h3 style="text-align:center; color:white; margin-bottom:15px;">🎬 تقدم الفيديوهات المتعددة</h3>
-            
-            <div style="text-align: center; margin-bottom: 15px;">
-                <div style="font-size: 2rem; font-weight: bold; color: #9b59b6;" id="batchPercent">0%</div>
-                <div style="color: #888; font-size: 0.9rem;" id="batchStatus">جاري التحضير...</div>
-                <div class="timer-badge" id="batchTimerBadge" style="display:none; margin-top: 8px;">
-                    ⏳ الفيديو الحالي: <span id="batchEtaTxt">--:--</span>
+
+            <!-- 📜 History Tab -->
+            <div class="tab-panel" id="history-panel">
+                <div class="history-header">
+                    <h3>سجل الفيديوهات</h3>
+                    <button class="btn-secondary" style="width: auto; height: 36px; padding: 0 12px; font-size: 0.8rem;" onclick="clearAllHistory()">🗑️ مسح الكل</button>
                 </div>
+                <div class="history-empty" id="historyEmpty">
+                    <div class="history-empty-icon">📜</div>
+                    <p>لا توجد فيديوهات في السجل</p>
+                </div>
+                <div id="historyList"></div>
             </div>
-            
-            <div class="bar-track" style="height: 10px; margin-bottom: 20px;">
-                <div class="bar-fill" id="batchProgressBar" style="width: 0%; background: linear-gradient(90deg, #9b59b6, #8e44ad);"></div>
+
+            <!-- ⚙️ Settings Tab -->
+            <div class="tab-panel" id="settings-panel">
+                <!-- Preview -->
+                <div class="preview-box">
+                    <div class="preview-ar" id="previewAr">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
+                    <div class="preview-en" id="previewEn">In the name of Allah, the Entirely Merciful</div>
+                </div>
+
+                <!-- Arabic Settings -->
+                <div class="settings-section">
+                    <h4>النص العربي</h4>
+                    <div class="settings-row">
+                        <span class="settings-label">اللون</span>
+                        <div class="settings-controls">
+                            <input type="color" class="color-picker" id="arColor" value="#ffffff" onchange="updatePreview()">
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">الحجم</span>
+                        <div class="settings-controls">
+                            <input type="range" class="size-slider" id="arSize" min="0.5" max="2" step="0.1" value="1" onchange="updatePreview()">
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">لون الإطار</span>
+                        <div class="settings-controls">
+                            <input type="color" class="color-picker" id="arOutlineColor" value="#000000" onchange="updatePreview()">
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">سمك الإطار</span>
+                        <div class="settings-controls">
+                            <input type="range" class="size-slider" id="arOutlineWidth" min="0" max="10" step="1" value="4" onchange="updatePreview()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- English Settings -->
+                <div class="settings-section">
+                    <h4>الترجمة الإنجليزية</h4>
+                    <div class="settings-row">
+                        <span class="settings-label">اللون</span>
+                        <div class="settings-controls">
+                            <input type="color" class="color-picker" id="enColor" value="#FFD700" onchange="updatePreview()">
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">الحجم</span>
+                        <div class="settings-controls">
+                            <input type="range" class="size-slider" id="enSize" min="0.5" max="2" step="0.1" value="1" onchange="updatePreview()">
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">لون الإطار</span>
+                        <div class="settings-controls">
+                            <input type="color" class="color-picker" id="enOutlineColor" value="#000000" onchange="updatePreview()">
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">سمك الإطار</span>
+                        <div class="settings-controls">
+                            <input type="range" class="size-slider" id="enOutlineWidth" min="0" max="10" step="1" value="3" onchange="updatePreview()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pexels Key -->
+                <div class="settings-section">
+                    <h4>مفتاح Pexels (اختياري)</h4>
+                    <input type="text" class="form-input" id="pexelsKey" placeholder="اتركه فارغاً للاستخدام الافتراضي" style="margin-top: 8px;">
+                </div>
+
+                <button class="btn-primary" onclick="saveAllSettings()" style="margin-top: 10px;">💾 حفظ الإعدادات</button>
+                <button class="btn-secondary" onclick="resetAllSettings()" style="margin-top: 10px;">استعادة الافتراضي</button>
             </div>
-            
-            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                <span style="color: #2ecc71;">✅ مكتمل: <span id="batchCompleted">0</span></span>
-                <span style="color: #ff4757;">❌ فشل: <span id="batchFailed">0</span></span>
-                <span style="color: #888;">المجموع: <span id="batchTotal">0</span></span>
-            </div>
-            
-            <!-- Batch Items List -->
-            <div id="batchItemsList" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;">
-            </div>
-            
-            <div class="modal-btns">
-                <button class="btn-cancel" onclick="cancelBatchExport()" id="batchCancelBtn">إلغاء</button>
-                <button class="btn-save" onclick="closeBatchProgress()" id="batchCloseBtn" style="display: none;">إغلاق</button>
-                <button class="btn-save" onclick="downloadBatchZip()" id="batchDownloadBtn" style="display: none; background: #2ecc71;">⬇️ تحميل الكل (ZIP)</button>
-            </div>
-        </div>
+        </main>
     </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
 
     <script>
-        let COUNTS = {};
+        // ═══════════════════════════════════════
+        // 📦 State & Config
+        // ═══════════════════════════════════════
+        let VERSE_COUNTS = {};
         let currentJobId = null;
-        let pollInterval = null; 
+        let pollInterval = null;
 
-        const defSet = {
-            arColor: "#ffffff", arSize: "1.0", arOutC: "#000000", arOutW: "4", arShadow: false, arShadowC: "#000000",
-            enColor: "#FFD700", enSize: "1.0", enOutC: "#000000", enOutW: "3", enShadow: false, enShadowC: "#000000"
+        const defaultSettings = {
+            arColor: '#ffffff',
+            arSize: '1',
+            arOutlineColor: '#000000',
+            arOutlineWidth: '4',
+            enColor: '#FFD700',
+            enSize: '1',
+            enOutlineColor: '#000000',
+            enOutlineWidth: '3'
         };
 
-        function openSettings() { loadSettingsUI(); upd(); document.getElementById('settingsModal').style.display = 'flex'; }
-        
-        function upd() {
-            const pAr = document.getElementById('prevAr');
-            pAr.style.color = document.getElementById('arColor').value;
-            pAr.style.fontSize = (1.5 * document.getElementById('arSize').value) + 'rem';
-            
-            const arOutW = document.getElementById('arOutW').value / 5; 
-            const arOutC = document.getElementById('arOutC').value;
-            pAr.style.webkitTextStroke = (arOutW > 0) ? `${arOutW}px ${arOutC}` : '0px transparent';
-            pAr.style.textShadow = document.getElementById('arShadow').checked ? `2px 2px 0px ${document.getElementById('arShadowC').value}` : 'none';
-
-            const pEn = document.getElementById('prevEn');
-            pEn.style.color = document.getElementById('enColor').value;
-            pEn.style.fontSize = (0.85 * document.getElementById('enSize').value) + 'rem';
-
-            const enOutW = document.getElementById('enOutW').value / 5;
-            const enOutC = document.getElementById('enOutC').value;
-            pEn.style.webkitTextStroke = (enOutW > 0) ? `${enOutW}px ${enOutC}` : '0px transparent';
-            pEn.style.textShadow = document.getElementById('enShadow').checked ? `1px 1px 0px ${document.getElementById('enShadowC').value}` : 'none';
-        }
-
-        function saveSettings() {
-            const s = {};
-            ['arColor','arSize','arOutC','arOutW','arShadowC',
-             'enColor','enSize','enOutC','enOutW','enShadowC'].forEach(k => s[k] = document.getElementById(k).value);
-            s.arShadow = document.getElementById('arShadow').checked;
-            s.enShadow = document.getElementById('enShadow').checked;
-            localStorage.setItem('quran_app_styles_v2', JSON.stringify(s));
-            
-            const pkVal = document.getElementById('pexelsKey').value;
-            if(pkVal) localStorage.setItem('user_pexels_key', pkVal);
-            else localStorage.removeItem('user_pexels_key');
-
-            document.getElementById('settingsModal').style.display='none';
-            const btn = document.querySelector('.btn-gear');
-            const old = btn.innerText; btn.innerText = "✅"; setTimeout(() => btn.innerText = old, 1500);
-        }
-
-        function loadSettingsUI() {
-            const s = JSON.parse(localStorage.getItem('quran_app_styles_v2')) || defSet;
-            Object.keys(s).forEach(k => {
-                const el = document.getElementById(k);
-                if(el) {
-                    if(el.type === 'checkbox') el.checked = s[k];
-                    else el.value = s[k];
-                }
-            });
-            const savedKey = localStorage.getItem('user_pexels_key');
-            if(savedKey) document.getElementById('pexelsKey').value = savedKey;
-        }
-        
-        function resetSettings() {
-            if(confirm('reset?')) { 
-                localStorage.removeItem('quran_app_styles_v2'); 
-                localStorage.removeItem('user_pexels_key');
-                document.getElementById('pexelsKey').value = "";
-                loadSettingsUI(); upd(); 
-            }
-        }
-
-        // ==========================================
-        // 📦 Batch Export Functions
-        // ==========================================
-        
-        let currentBatchId = null;
-        let batchPollInterval = null;
-        let batchVideos = []; // قائمة الفيديوهات المضافة
-        let batchVideoId = 0; // معرف مؤقت لكل فيديو
-        
-        function openBatchModal() {
-            // Populate surah dropdowns
-            const addVideoSurah = document.getElementById('addVideoSurah');
-            const addVideoReciter = document.getElementById('addVideoReciter');
-            
-            addVideoSurah.innerHTML = '';
-            addVideoReciter.innerHTML = '';
-            
-            // Add surahs
-            const sSelect = document.getElementById('sSelect');
-            for(let i = 0; i < sSelect.options.length; i++) {
-                addVideoSurah.add(new Option(sSelect.options[i].text, sSelect.options[i].value));
-            }
-            
-            // Add reciters
-            const rSelect = document.getElementById('rSelect');
-            for(let i = 0; i < rSelect.options.length; i++) {
-                addVideoReciter.add(new Option(rSelect.options[i].text, rSelect.options[i].value));
-            }
-            
-            // Reset list
-            batchVideos = [];
-            batchVideoId = 0;
-            updateBatchVideosList();
-            
-            document.getElementById('batchModal').style.display = 'flex';
-        }
-        
-        function addBatchVideo() {
-            const surah = parseInt(document.getElementById('addVideoSurah').value);
-            const surahName = document.getElementById('addVideoSurah').options[document.getElementById('addVideoSurah').selectedIndex].text;
-            const startAyah = parseInt(document.getElementById('addVideoStart').value) || 1;
-            const endAyah = parseInt(document.getElementById('addVideoEnd').value) || startAyah;
-            const reciter = document.getElementById('addVideoReciter').value;
-            const reciterName = document.getElementById('addVideoReciter').options[document.getElementById('addVideoReciter').selectedIndex].text;
-            
-            // Validate
-            const maxAyah = COUNTS[surah] || 1;
-            if(startAyah < 1 || endAyah < 1 || startAyah > maxAyah || endAyah > maxAyah) {
-                alert(`عدد آيات هذه السورة: ${maxAyah}`);
-                return;
-            }
-            
-            if(startAyah > endAyah) {
-                alert('آية البداية يجب أن تكون أقل من أو تساوي آية النهاية');
-                return;
-            }
-            
-            // Add to list
-            batchVideos.push({
-                id: ++batchVideoId,
-                surah,
-                surahName,
-                startAyah,
-                endAyah,
-                reciter,
-                reciterName
-            });
-            
-            updateBatchVideosList();
-            
-            // Reset form for next addition
-            document.getElementById('addVideoStart').value = 1;
-            document.getElementById('addVideoEnd').value = 1;
-        }
-        
-        function removeBatchVideo(videoId) {
-            batchVideos = batchVideos.filter(v => v.id !== videoId);
-            updateBatchVideosList();
-        }
-        
-        function updateBatchVideosList() {
-            const listEl = document.getElementById('batchVideosList');
-            const countEl = document.getElementById('videoCount');
-            const startBtn = document.getElementById('startBatchBtn');
-            
-            countEl.textContent = batchVideos.length;
-            startBtn.disabled = batchVideos.length === 0;
-            startBtn.textContent = `🚀 بدء التصدير (${batchVideos.length} فيديو)`;
-            
-            if(batchVideos.length === 0) {
-                listEl.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">لم تضف أي فيديوهات بعد</p>';
-                return;
-            }
-            
-            listEl.innerHTML = batchVideos.map((v, index) => `
-                <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; margin-bottom: 8px; border: 1px solid rgba(155, 89, 182, 0.2);">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <span style="background: #9b59b6; padding: 2px 8px; border-radius: 5px; font-size: 0.7rem; margin-left: 8px;">#${index + 1}</span>
-                            <span style="color: #fff; font-weight: bold;">${v.surahName}</span>
-                            <span style="color: #aaa; font-size: 0.85rem;">(آية ${v.startAyah}${v.startAyah !== v.endAyah ? '-' + v.endAyah : ''})</span>
-                        </div>
-                        <button onclick="removeBatchVideo(${v.id})" style="background: none; border: none; color: #ff4757; cursor: pointer; font-size: 1.2rem;">✕</button>
-                    </div>
-                    <div style="color: #888; font-size: 0.75rem; margin-top: 4px; padding-right: 30px;">
-                        🎤 ${v.reciterName}
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        async function startBatchExport() {
-            if(batchVideos.length === 0) {
-                alert('أضف فيديو واحد على الأقل');
-                return;
-            }
-            
-            const quality = document.getElementById('batchQuality').value;
-            const fps = parseInt(document.getElementById('batchFps').value);
-            const dynamicBg = document.getElementById('batchDynamicBg').value === 'true';
-            const sty = JSON.parse(localStorage.getItem('quran_app_styles_v2')) || defSet;
-            
-            // Build items list
-            const items = batchVideos.map(v => ({
-                surah: v.surah,
-                startAyah: v.startAyah,
-                endAyah: v.endAyah,
-                reciter: v.reciter
-            }));
-            
-            if(!confirm(`سيتم إنشاء ${items.length} فيديو بالترتيب. هل تريد المتابعة؟`)) {
-                return;
-            }
-            
-            try {
-                const res = await fetch('/api/batch/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        items,
-                        quality,
-                        fps,
-                        dynamicBg,
-                        pexelsKey: document.getElementById('pexelsKey')?.value || '',
-                        style: sty
-                    })
-                });
-                
-                const data = await res.json();
-                
-                if(data.ok) {
-                    currentBatchId = data.batchId;
-                    document.getElementById('batchModal').style.display = 'none';
-                    showBatchProgress(data.batchId, data.totalJobs);
-                } else {
-                    alert('خطأ: ' + (data.error || 'غير معروف'));
-                }
-            } catch(err) {
-                alert('خطأ في الاتصال: ' + err.message);
-            }
-        }
-        
-        function showBatchProgress(batchId, totalJobs) {
-            document.getElementById('batchTotal').textContent = totalJobs;
-            document.getElementById('batchCompleted').textContent = '0';
-            document.getElementById('batchFailed').textContent = '0';
-            document.getElementById('batchPercent').textContent = '0%';
-            document.getElementById('batchProgressBar').style.width = '0%';
-            document.getElementById('batchStatus').textContent = 'جاري التحضير...';
-            document.getElementById('batchItemsList').innerHTML = '';
-            document.getElementById('batchTimerBadge').style.display = 'none';
-            document.getElementById('batchEtaTxt').textContent = '--:--';
-            
-            document.getElementById('batchCancelBtn').style.display = 'inline-block';
-            document.getElementById('batchCloseBtn').style.display = 'none';
-            document.getElementById('batchDownloadBtn').style.display = 'none';
-            
-            document.getElementById('batchProgressModal').style.display = 'flex';
-            
-            // Start polling
-            if(batchPollInterval) clearInterval(batchPollInterval);
-            batchPollInterval = setInterval(() => pollBatchStatus(batchId), 2000);
-        }
-        
-        async function pollBatchStatus(batchId) {
-            try {
-                const res = await fetch(`/api/batch/${batchId}`);
-                const data = await res.json();
-                
-                if(!data.id) return;
-                
-                // Update UI
-                const percent = data.percent || 0;
-                document.getElementById('batchPercent').textContent = percent + '%';
-                document.getElementById('batchProgressBar').style.width = percent + '%';
-                document.getElementById('batchCompleted').textContent = data.completedJobs;
-                document.getElementById('batchFailed').textContent = data.failedJobs;
-                document.getElementById('batchTotal').textContent = data.totalJobs;
-                
-                // Update status
-                if(data.status === 'running') {
-                    document.getElementById('batchStatus').textContent = `جاري معالجة الفيديو ${data.currentJobIndex + 1} من ${data.totalJobs}...`;
-                    
-                    // Fetch current job ETA
-                    if(data.currentJobId) {
-                        try {
-                            const jobRes = await fetch(`/api/progress?jobId=${data.currentJobId}`);
-                            const jobData = await jobRes.json();
-                            
-                            if(jobData && jobData.eta && jobData.percent > 0 && jobData.percent < 100) {
-                                document.getElementById('batchTimerBadge').style.display = 'inline-flex';
-                                document.getElementById('batchEtaTxt').textContent = jobData.eta;
-                            } else {
-                                document.getElementById('batchTimerBadge').style.display = 'none';
-                            }
-                        } catch(e) {
-                            document.getElementById('batchTimerBadge').style.display = 'none';
-                        }
-                    }
-                } else if(data.status === 'pending') {
-                    document.getElementById('batchStatus').textContent = 'في انتظار البدء...';
-                    document.getElementById('batchTimerBadge').style.display = 'none';
-                }
-                
-                // Update items list
-                const itemsList = document.getElementById('batchItemsList');
-                itemsList.innerHTML = '';
-                
-                data.items.forEach(item => {
-                    const statusIcon = item.status === 'complete' ? '✅' : 
-                                       item.status === 'error' ? '❌' : 
-                                       item.status === 'processing' ? '⏳' : '⏸️';
-                    
-                    itemsList.innerHTML += `
-                        <div style="display: flex; justify-content: space-between; padding: 5px 10px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.8rem;">
-                            <span>${statusIcon} ${item.surahName} (${item.startAyah})</span>
-                            ${item.downloadUrl ? `<a href="${item.downloadUrl}" download style="color: #3498db;">تحميل</a>` : ''}
-                        </div>
-                    `;
-                });
-                
-                // Check if complete
-                if(data.status === 'complete' || data.status === 'cancelled') {
-                    clearInterval(batchPollInterval);
-                    
-                    document.getElementById('batchTimerBadge').style.display = 'none';
-                    document.getElementById('batchCancelBtn').style.display = 'none';
-                    document.getElementById('batchCloseBtn').style.display = 'inline-block';
-                    
-                    if(data.status === 'complete' && data.completedJobs > 0) {
-                        document.getElementById('batchStatus').textContent = '✅ اكتمل التصدير!';
-                        document.getElementById('batchDownloadBtn').style.display = 'inline-block';
-                        showNotification(`تم إنشاء ${data.completedJobs} فيديو بنجاح! 🎉`);
-                    } else if(data.status === 'cancelled') {
-                        document.getElementById('batchStatus').textContent = 'تم الإلغاء';
-                    }
-                }
-                
-            } catch(err) {
-                console.error('Batch poll error:', err);
-            }
-        }
-        
-        async function cancelBatchExport() {
-            if(!currentBatchId) return;
-            
-            if(confirm('هل تريد إلغاء التصدير؟')) {
-                await fetch(`/api/batch/${currentBatchId}/cancel`, { method: 'POST' });
-            }
-        }
-        
-        function closeBatchProgress() {
-            document.getElementById('batchProgressModal').style.display = 'none';
-            loadServerHistory();
-        }
-        
-        async function downloadBatchZip() {
-            if(!currentBatchId) return;
-            window.location.href = `/api/batch/${currentBatchId}/download-zip`;
-        }
-        
-        // 🆕 دالة فحص العمليات الجارية
-        async function checkRunningOperations() {
-            try {
-                // فحص الـ Batch الجارية
-                const batchRes = await fetch('/api/batch/list');
-                const batchData = await batchRes.json();
-                
-                if(batchData.ok && batchData.batches) {
-                    // البحث عن batch شغالة
-                    const runningBatch = batchData.batches.find(b => b.status === 'running');
-                    const pendingBatch = batchData.batches.find(b => b.status === 'pending');
-                    
-                    if(runningBatch) {
-                        // فيه batch شغالة
-                        const action = confirm(
-                            `🎬 يوجد تصدير فيديوهات متعددة قيد التشغيل!\n` +
-                            `الفيديوهات: ${runningBatch.completedJobs} من ${runningBatch.totalJobs}\n` +
-                            `هل تريد متابعته؟`
-                        );
-                        
-                        if(action) {
-                            currentBatchId = runningBatch.id;
-                            showBatchProgress(runningBatch.id, runningBatch.totalJobs);
-                            return true;
-                        }
-                    } else if(pendingBatch) {
-                        // فيه batch في الانتظار
-                        const action = confirm(
-                            `🎬 يوجد تصدير فيديوهات متعددة في الانتظار!\n` +
-                            `عدد الفيديوهات: ${pendingBatch.totalJobs}\n` +
-                            `هل تريد متابعته؟`
-                        );
-                        
-                        if(action) {
-                            currentBatchId = pendingBatch.id;
-                            showBatchProgress(pendingBatch.id, pendingBatch.totalJobs);
-                            return true;
-                        }
-                    }
-                }
-                
-                // فحص الـ Jobs الفردية
-                const jobsRes = await fetch('/api/my-jobs?status=processing');
-                const jobsData = await jobsRes.json();
-                
-                if(jobsData.ok && jobsData.jobs && jobsData.jobs.length > 0) {
-                    const job = jobsData.jobs[0];
-                    const action = confirm(
-                        `🎬 يوجد فيديو قيد المعالجة!\n` +
-                        `التقدم: ${job.percent}%\n` +
-                        `هل تريد متابعته؟`
-                    );
-                    
-                    if(action) {
-                        currentJobId = job.id;
-                        startPolling(job.id);
-                        return true;
-                    }
-                }
-                
-                // فحص فيديوهات خلصت مؤخراً
-                const completeRes = await fetch('/api/my-jobs?status=complete');
-                const completeData = await completeRes.json();
-                
-                if(completeData.ok && completeData.jobs && completeData.jobs.length > 0) {
-                    // فيه فيديوهات خلصت - نعرض إشعار خفيف
-                    const recentJobs = completeData.jobs.filter(j => {
-                        // خلصت خلال آخر ساعة
-                        if(!j.completedAt) return false;
-                        const hourAgo = Date.now() - (60 * 60 * 1000);
-                        return (j.completedAt * 1000) > hourAgo;
-                    });
-                    
-                    if(recentJobs.length > 0) {
-                        showNotification(`✅ لديك ${recentJobs.length} فيديو جاهز للتحميل!`);
-                    }
-                }
-                
-            } catch(e) {
-                console.log('Check running operations error:', e);
-            }
-            
-            return false;
-        }
-
+        // ═══════════════════════════════════════
+        // 🚀 Initialization
+        // ═══════════════════════════════════════
         window.onload = async () => {
-            loadSettingsUI();
-            
-            // 🔑 Session Management - Get or Create Session ID
-            let sessionId = localStorage.getItem('quran_session_id');
-            if (!sessionId) {
-                // Get new session from server
-                try {
-                    const sessionRes = await fetch('/api/session');
-                    const sessionData = await sessionRes.json();
-                    if (sessionData.ok && sessionData.sessionId) {
-                        sessionId = sessionData.sessionId;
-                        localStorage.setItem('quran_session_id', sessionId);
-                        console.log('✅ New session created:', sessionId);
-                    }
-                } catch(e) {
-                    // Fallback: generate local session
-                    sessionId = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                    localStorage.setItem('quran_session_id', sessionId);
-                    console.log('⚠️ Local session created:', sessionId);
-                }
-            } else {
-                // Verify session exists on server
-                try {
-                    const verifyRes = await fetch(`/api/session?sessionId=${sessionId}`);
-                    const verifyData = await verifyRes.json();
-                    if (!verifyData.ok) {
-                        // Session invalid, create new one
-                        localStorage.removeItem('quran_session_id');
-                        sessionId = null;
-                        window.location.reload();
-                        return;
-                    }
-                    console.log('✅ Session verified:', sessionId);
-                } catch(e) {
-                    console.log('⚠️ Could not verify session, using existing:', sessionId);
-                }
-            }
-            
-            // Store globally
-            window.SESSION_ID = sessionId;
-            
-            // Request notification permission
-            if('Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission();
-            }
-            
-            try {
-                const d = await (await fetch(`/api/config`)).json();
-                COUNTS = d.verseCounts;
-                d.surahs.forEach((n, i) => sSelect.add(new Option(`${i+1}. ${n}`, i+1)));
-                for(const [n, id] of Object.entries(d.reciters)) rSelect.add(new Option(n, id));
-                
-                // 🆕 تحميل السجل من السيرفر
-                await loadServerHistory();
-                
-                // 🆕 فحص العمليات الجارية (الآهم!)
-                const hasRunningOp = await checkRunningOperations();
-                
-                // لو مفيش حاجة شغالة، نفذ الفحص القديم
-                if(!hasRunningOp) {
-                    await checkPendingJobs();
-                }
-                
-            } catch(e) {
-                console.error('Init error:', e);
-                // Fallback to local history
-                loadHistory();
-            }
+            initTabs();
+            loadSettings();
+            initAyahValidation();
+            await loadConfig();
+            await loadHistory();
+            await checkRunningJob();
         };
-        
-        // 🆕 Event Delegation - ده بيشتغل مع أي عنصر جديد أو قديم
-        document.addEventListener('click', async function(e) {
-            // زرار الحذف الفردي
-            if(e.target.classList.contains('delete-btn') || e.target.closest('.delete-btn')) {
-                const btn = e.target.classList.contains('delete-btn') ? e.target : e.target.closest('.delete-btn');
-                const historyId = btn.getAttribute('data-delete');
-                
-                if(!historyId) {
-                    console.error('[ERROR] No data-delete attribute found');
-                    return;
-                }
-                
-                console.log('[DEBUG] Delete button clicked for history:', historyId);
-                
-                if(!confirm('هل تريد حذف هذا العنصر؟')) return;
-                
-                const sessionId = window.SESSION_ID || localStorage.getItem('quran_session_id');
-                
-                try {
-                    const res = await fetch(`/api/history/${historyId}?sessionId=${sessionId || ''}`, { method: 'DELETE' });
-                    const data = await res.json();
-                    
-                    if(data.ok) {
-                        const item = btn.closest('.history-item');
-                        if(item) {
-                            item.style.opacity = '0';
-                            item.style.transition = 'opacity 0.3s';
-                            setTimeout(() => {
-                                item.remove();
-                                const list = document.getElementById('histList');
-                                if(!list || list.children.length === 0) {
-                                    document.getElementById('histSection').style.display = 'none';
-                                }
-                            }, 300);
-                        }
-                        showNotification('تم حذف العنصر');
-                    } else {
-                        alert('فشل الحذف: ' + (data.error || 'خطأ غير معروف'));
-                    }
-                } catch(err) {
-                    console.error('Delete error:', err);
-                    alert('حدث خطأ أثناء الحذف: ' + err.message);
-                }
-            }
+
+        function initAyahValidation() {
+            const startInput = document.getElementById('startAyah');
+            const endInput = document.getElementById('endAyah');
+            const surahInput = document.getElementById('surahSelect');
             
-            // زرار العرض
-            if(e.target.hasAttribute('data-preview') || e.target.closest('[data-preview]')) {
-                const btn = e.target.hasAttribute('data-preview') ? e.target : e.target.closest('[data-preview]');
-                const url = btn.getAttribute('data-preview');
-                if(url) previewVideo(url);
+            // validation عند الخروج من الـ input
+            startInput?.addEventListener('blur', () => validateAyahInput('startAyah'));
+            endInput?.addEventListener('blur', () => validateAyahInput('endAyah'));
+            
+            // عند الضغط على Enter
+            startInput?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    validateAyahInput('startAyah');
+                    endInput.focus();
+                }
+            });
+            
+            endInput?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    validateAyahInput('endAyah');
+                }
+            });
+            
+            // عند تغيير السورة
+            surahInput?.addEventListener('change', () => {
+                const max = VERSE_COUNTS[parseInt(surahInput.value)] || 286;
+                startInput.value = 1;
+                endInput.value = Math.min(5, max);
+            });
+        }
+
+        function initTabs() {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabId = btn.dataset.tab;
+                    
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                    
+                    btn.classList.add('active');
+                    document.getElementById(`${tabId}-panel`).classList.add('active');
+                });
+            });
+        }
+
+        async function loadConfig() {
+            try {
+                const res = await fetch('/api/config');
+                const data = await res.json();
+                VERSE_COUNTS = data.verseCounts;
+                
+                data.surahs.forEach((name, i) => {
+                    surahSelect.add(new Option(`${i + 1}. ${name}`, i + 1));
+                });
+                
+                Object.entries(data.reciters).forEach(([name, id]) => {
+                    reciterSelect.add(new Option(name, id));
+                });
+            } catch (err) {
+                console.error('Config load error:', err);
+                showToast('فشل تحميل الإعدادات', 'error');
             }
+        }
+
+        // ═══════════════════════════════════════
+        // 📝 Form Handling
+        // ═══════════════════════════════════════
+        document.getElementById('videoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await startGeneration();
         });
 
-        function toggleSearch() { document.getElementById('bgQuery').style.display = document.getElementById('useSearch').checked ? 'block' : 'none'; }
-        
-        async function stopProcess() { 
-            if(currentJobId && confirm("إيقاف؟")) {
-                if(pollInterval) clearInterval(pollInterval);
-                await fetch('/api/cancel', {method:'POST', body:JSON.stringify({jobId:currentJobId}), headers:{'Content-Type':'application/json'}});
-                document.getElementById('stopBtn').style.display = 'none';
-                document.getElementById('btn').style.display = 'flex';
-                document.getElementById('progArea').style.display = 'none';
-                document.getElementById('statusTxt').innerText = 'تم الإيقاف';
+        function adjustAyah(id, delta) {
+            const input = document.getElementById(id);
+            const surah = parseInt(surahSelect.value);
+            const max = VERSE_COUNTS[surah] || 286;
+            let val = parseInt(input.value) + delta;
+            
+            if (val < 1) val = 1;
+            if (val > max) val = max;
+            input.value = val;
+            
+            validateAyahRange();
+        }
+
+        function validateAyahInput(id) {
+            const input = document.getElementById(id);
+            const surah = parseInt(surahSelect.value);
+            const max = VERSE_COUNTS[surah] || 286;
+            let val = parseInt(input.value);
+            
+            // لو فاضي أو مش رقم
+            if (isNaN(val) || val < 1) {
+                val = 1;
+            }
+            // لو أكبر من عدد آيات السورة
+            if (val > max) {
+                val = max;
+                showToast(`هذه السورة بها ${max} آية فقط`, 'error');
+            }
+            
+            input.value = val;
+            validateAyahRange();
+        }
+
+        function validateAyahRange() {
+            const surah = parseInt(surahSelect.value);
+            const max = VERSE_COUNTS[surah] || 286;
+            const start = parseInt(startAyah.value);
+            const end = parseInt(endAyah.value);
+            
+            // تأكد إن البداية <= النهاية
+            if (start > end) {
+                endAyah.value = start;
+            }
+            
+            // تأكد إن النهاية <= max
+            if (end > max) {
+                endAyah.value = max;
             }
         }
 
-        function validateAyah(id) {
-            const el = document.getElementById(id);
-            const max = COUNTS[sSelect.value] || 286;
-            let val = parseInt(el.value);
-            if (isNaN(val) || val < 1) val = 1; if (val > max) val = max;
-            el.value = val;
-        }
-        function adj(id, v) { document.getElementById(id).value = parseInt(document.getElementById(id).value) + v; validateAyah(id); }
-        function smartRandomize() { 
-            if(rSelect.length) rSelect.selectedIndex = Math.floor(Math.random() * rSelect.length);
-            if(sSelect.length) {
-                sSelect.selectedIndex = Math.floor(Math.random() * sSelect.length);
-                const max = COUNTS[sSelect.value] || 286;
+        function randomize() {
+            if (reciterSelect.options.length > 0) {
+                reciterSelect.selectedIndex = Math.floor(Math.random() * reciterSelect.options.length);
+            }
+            if (surahSelect.options.length > 0) {
+                surahSelect.selectedIndex = Math.floor(Math.random() * surahSelect.options.length);
+                const max = VERSE_COUNTS[parseInt(surahSelect.value)] || 286;
                 const start = Math.floor(Math.random() * Math.max(1, max - 5)) + 1;
-                document.getElementById('startAyah').value = start;
-                document.getElementById('endAyah').value = Math.min(start + 4, max);
+                startAyah.value = start;
+                endAyah.value = Math.min(start + 4, max);
             }
         }
 
-        // --- دالة عرض الهيستوري المعدلة ---
-        function loadHistory() {
-            const h = JSON.parse(localStorage.getItem('q_hist')||'[]');
-            const l = document.getElementById('histList'); 
-            l.innerHTML = '';
-            
-            if(h.length) document.getElementById('histSection').style.display = 'block';
-            else document.getElementById('histSection').style.display = 'none';
-            
-            h.forEach((x, index) => {
-                const reciter = x.r || 'غير محدد';
-                const quality = x.q || '720';
-                const fps = x.f || '20';
-                const date = x.d || '---';
+        function toggleAdvanced() {
+            const options = document.getElementById('advancedOptions');
+            options.classList.toggle('show');
+        }
 
-                l.innerHTML += `
-                <div class="history-item">
-                    <div class="hist-info">
-                        <span class="hist-title">${x.t}</span>
-                        <span class="hist-meta">
-                            🎤 ${reciter} | 📺 ${quality}p | 🚀 ${fps}fps
-                        </span>
-                        <span class="hist-date">🕒 ${date}</span>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button onclick="previewLocalVideo(${index})" class="hist-btn preview-btn" style="background: #3498db;">عرض</button>
-                        <a href="${x.u}" class="hist-btn" download>تحميل</a>
-                    </div>
-                </div>`;
-            });
+        function toggleSearchInput() {
+            const input = document.getElementById('searchInputGroup');
+            input.style.display = useSearch.checked ? 'block' : 'none';
         }
-        
-        // --- دالة عرض الفيديو المحلي ---
-        function previewLocalVideo(index) {
-            const h = JSON.parse(localStorage.getItem('q_hist')||'[]');
-            if(h[index] && h[index].u) {
-                document.getElementById('player').src = h[index].u;
-                document.getElementById('dlLink').href = h[index].u;
-                document.getElementById('resArea').style.display = 'block';
-                document.getElementById('resArea').scrollIntoView({ behavior: 'smooth' });
-            }
-        }
-        
-        // --- 🆕 دالة تحميل السجل من السيرفر ---
-        async function loadServerHistory() {
+
+        // ═══════════════════════════════════════
+        // 🎬 Video Generation
+        // ═══════════════════════════════════════
+        async function startGeneration() {
+            const style = getStyleSettings();
+            
+            const payload = {
+                reciter: reciterSelect.value,
+                surah: parseInt(surahSelect.value),
+                startAyah: parseInt(startAyah.value),
+                endAyah: parseInt(endAyah.value),
+                fps: parseInt(fpsSelect.value),
+                quality: qualitySelect.value,
+                dynamicBg: dynamicBg.checked,
+                useGlow: useGlow.checked,
+                useVignette: useVignette.checked,
+                bgQuery: useSearch.checked ? bgQuery.value : '',
+                pexelsKey: localStorage.getItem('user_pexels_key') || '',
+                style: style
+            };
+
             try {
-                const sessionId = window.SESSION_ID || localStorage.getItem('quran_session_id');
-                const res = await fetch(`/api/history?sessionId=${sessionId || ''}`);
+                const res = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
                 const data = await res.json();
                 
-                if(data.ok && data.history && data.history.length > 0) {
-                    const l = document.getElementById('histList');
-                    l.innerHTML = ''; // Clear local history
-                    
-                    document.getElementById('histSection').style.display = 'block';
-                    
-                    data.history.forEach(item => {
-                        const date = new Date(item.createdAt * 1000);
-                        const dateStr = date.toLocaleDateString('ar-EG') + ' | ' + date.toLocaleTimeString('ar-EG');
-                        
-                        // Calculate time remaining before deletion (1 hour = 3600 seconds)
-                        const now = Date.now() / 1000;
-                        const elapsed = now - item.createdAt;
-                        const remaining = Math.max(0, 3600 - elapsed); // 1 hour
-                        const remainingMinutes = Math.floor(remaining / 60);
-                        
-                        // Time remaining badge
-                        let timeBadge = '';
-                        if(item.status === 'complete' && remaining > 0) {
-                            if(remainingMinutes < 10) {
-                                timeBadge = `<span style="color: #ff4757; font-size: 0.7rem;">⏰ يُحذف خلال ${remainingMinutes} دقيقة!</span>`;
-                            } else {
-                                timeBadge = `<span style="color: #ffc107; font-size: 0.7rem;">⏰ متبقي ${remainingMinutes} دقيقة</span>`;
-                            }
-                        } else if(item.status === 'complete' && remaining <= 0) {
-                            timeBadge = `<span style="color: #888; font-size: 0.7rem;">⚠️ منتهي الصلاحية</span>`;
-                        }
-                        
-                        // Status badge
-                        let statusBadge = '';
-                        if(item.status === 'complete') {
-                            statusBadge = '<span style="color: #2ecc71;">✅ مكتمل</span>';
-                        } else if(item.status === 'error') {
-                            statusBadge = '<span style="color: #ff4757;">❌ خطأ</span>';
-                        } else if(item.status === 'processing') {
-                            statusBadge = '<span style="color: #f39c12;">⏳ جاري...</span>';
-                        }
-                        
-                        // Download button or status - using data attributes instead of onclick
-                        let actionBtn = '';
-                        if(item.downloadUrl && remaining > 0) {
-                            actionBtn = `
-                                <div style="display: flex; gap: 8px; align-items: center;">
-                                    <button data-preview="${item.downloadUrl}" class="hist-btn preview-btn" style="background: #3498db;">عرض</button>
-                                    <a href="${item.downloadUrl}" class="hist-btn" download>تحميل</a>
-                                    <button data-delete="${item.id}" class="hist-btn delete-btn" style="background: #ff4757;">🗑️</button>
-                                </div>`;
-                        } else if(item.status === 'error') {
-                            actionBtn = `
-                                <div style="display: flex; gap: 8px; align-items: center;">
-                                    <span style="color: #888; font-size: 0.8rem;">غير متاح</span>
-                                    <button data-delete="${item.id}" class="hist-btn delete-btn" style="background: #ff4757;">🗑️</button>
-                                </div>`;
-                        } else if(remaining <= 0) {
-                            actionBtn = `
-                                <div style="display: flex; gap: 8px; align-items: center;">
-                                    <span style="color: #ff4757; font-size: 0.8rem;">⏰ انتهت الصلاحية</span>
-                                    <button data-delete="${item.id}" class="hist-btn delete-btn" style="background: #ff4757;">🗑️</button>
-                                </div>`;
-                        } else {
-                            actionBtn = `
-                                <div style="display: flex; gap: 8px; align-items: center;">
-                                    <span style="color: #f39c12; font-size: 0.8rem;">جاري...</span>
-                                    <button data-delete="${item.id}" class="hist-btn delete-btn" style="background: #ff4757;">🗑️</button>
-                                </div>`;
-                        }
-                        
-                        l.innerHTML += `
-                        <div class="history-item">
-                            <div class="hist-info">
-                                <span class="hist-title">${item.title}</span>
-                                <span class="hist-meta">
-                                    🎤 ${item.reciter || 'غير محدد'} | 📺 ${item.quality}p | 🚀 ${item.fps}fps
-                                </span>
-                                <span class="hist-date">🕒 ${dateStr} ${statusBadge}</span>
-                                ${timeBadge ? `<span class="hist-date">${timeBadge}</span>` : ''}
-                            </div>
-                            ${actionBtn}
-                        </div>`;
-                    });
-                    
-                    // Add event listeners for delete and preview buttons
-                    setupHistoryButtons();
-                    
-                    return data.history;
+                if (data.ok) {
+                    currentJobId = data.jobId;
+                    showProgress();
+                    startPolling(data.jobId);
+                } else {
+                    showToast('فشل بدء المعالجة', 'error');
                 }
-            } catch(e) {
-                console.log('Could not load server history:', e);
+            } catch (err) {
+                console.error('Generation error:', err);
+                showToast('حدث خطأ في الاتصال', 'error');
             }
-            return [];
         }
-        
-        // --- 🆕 دالة إضافة أحداث الأزرار ---
-        function setupHistoryButtons() {
-            console.log('[DEBUG] Setting up history buttons...');
-            console.log('[DEBUG] Found delete buttons:', document.querySelectorAll('.delete-btn').length);
+
+        function showProgress() {
+            document.getElementById('videoForm').style.display = 'none';
+            document.getElementById('progressSection').classList.add('active');
+            document.getElementById('resultSection').classList.remove('active');
         }
-        
-        // --- 🆕 دالة فحص الـ Jobs الجارية ---
-        async function checkPendingJobs() {
+
+        function startPolling(jobId) {
+            if (pollInterval) clearInterval(pollInterval);
+            
+            pollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/progress?jobId=${jobId}`);
+                    const data = await res.json();
+                    
+                    updateProgress(data);
+                    
+                    if (data.status === 'complete') {
+                        clearInterval(pollInterval);
+                        showResult(data);
+                    } else if (data.status === 'error' || data.status === 'cancelled') {
+                        clearInterval(pollInterval);
+                        showToast(data.error || 'حدث خطأ', 'error');
+                        resetForm();
+                    }
+                } catch (err) {
+                    console.error('Poll error:', err);
+                }
+            }, 1500);
+        }
+
+        function updateProgress(data) {
+            const percent = data.percent || 0;
+            const circle = document.getElementById('progressCircle');
+            const circumference = 2 * Math.PI * 65;
+            
+            circle.style.strokeDashoffset = circumference - (percent / 100) * circumference;
+            document.getElementById('progressPercent').textContent = `${percent}%`;
+            document.getElementById('progressStatus').textContent = data.status || 'جاري المعالجة...';
+            
+            if (data.eta && data.eta !== '--:--') {
+                document.getElementById('progressEta').style.display = 'block';
+                document.getElementById('etaTime').textContent = data.eta;
+            }
+        }
+
+        function showResult(data) {
+            document.getElementById('progressSection').classList.remove('active');
+            document.getElementById('resultSection').classList.add('active');
+            
+            const videoUrl = data.download_url || `/api/download?jobId=${currentJobId}`;
+            document.getElementById('videoPlayer').src = videoUrl;
+            document.getElementById('downloadLink').href = videoUrl;
+            
+            loadHistory();
+            showToast('تم إنشاء الفيديو بنجاح!', 'success');
+        }
+
+        function resetForm() {
+            document.getElementById('videoForm').style.display = 'block';
+            document.getElementById('progressSection').classList.remove('active');
+            document.getElementById('resultSection').classList.remove('active');
+            document.getElementById('progressCircle').style.strokeDashoffset = 408;
+            document.getElementById('progressPercent').textContent = '0%';
+            currentJobId = null;
+        }
+
+        async function stopGeneration() {
+            if (!currentJobId) return;
+            
+            if (confirm('هل تريد إيقاف المعالجة؟')) {
+                clearInterval(pollInterval);
+                
+                await fetch('/api/cancel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jobId: currentJobId })
+                });
+                
+                resetForm();
+                showToast('تم الإيقاف', 'error');
+            }
+        }
+
+        // ═══════════════════════════════════════
+        // 📜 History
+        // ═══════════════════════════════════════
+        async function loadHistory() {
+            try {
+                const res = await fetch('/api/history');
+                const data = await res.json();
+                
+                const list = document.getElementById('historyList');
+                const empty = document.getElementById('historyEmpty');
+                
+                if (data.ok && data.history && data.history.length > 0) {
+                    empty.style.display = 'none';
+                    list.innerHTML = data.history.map(item => createHistoryItem(item)).join('');
+                } else {
+                    empty.style.display = 'block';
+                    list.innerHTML = '';
+                }
+            } catch (err) {
+                console.error('History load error:', err);
+            }
+        }
+
+        function createHistoryItem(item) {
+            const date = new Date(item.createdAt * 1000);
+            const dateStr = date.toLocaleDateString('ar-EG') + ' ' + date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            
+            const now = Date.now() / 1000;
+            const remaining = Math.max(0, 3600 - (now - item.createdAt));
+            const mins = Math.floor(remaining / 60);
+            
+            let timerHtml = '';
+            if (item.status === 'complete' && remaining > 0) {
+                const urgent = mins < 10;
+                timerHtml = `<span class="history-timer ${urgent ? 'urgent' : ''}">⏰ ${mins} د</span>`;
+            }
+            
+            const statusIcon = item.status === 'complete' ? '✅' : item.status === 'error' ? '❌' : '⏳';
+            
+            let actionsHtml = '';
+            if (item.downloadUrl && remaining > 0) {
+                actionsHtml = `
+                    <button onclick="previewVideo('${item.downloadUrl}')">▶️ عرض</button>
+                    <a href="${item.downloadUrl}" download>⬇️ تحميل</a>
+                    <button class="btn-delete" onclick="deleteHistoryItem(${item.id})">🗑️</button>
+                `;
+            } else {
+                actionsHtml = `
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">غير متاح</span>
+                    <button class="btn-delete" onclick="deleteHistoryItem(${item.id})">🗑️</button>
+                `;
+            }
+            
+            return `
+                <div class="history-item" data-id="${item.id}">
+                    <div class="history-item-header">
+                        <span class="history-item-title">${item.title}</span>
+                        <span class="history-item-status">${statusIcon}</span>
+                    </div>
+                    <div class="history-item-meta">
+                        ${timerHtml}
+                        🎤 ${item.reciter || 'غير محدد'} • 📺 ${item.quality}p • 🕒 ${dateStr}
+                    </div>
+                    <div class="history-item-actions">
+                        ${actionsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function deleteHistoryItem(id) {
+            if (!confirm('حذف هذا العنصر؟')) return;
+            
+            try {
+                const res = await fetch(`/api/history/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                
+                if (data.ok) {
+                    document.querySelector(`.history-item[data-id="${id}"]`)?.remove();
+                    if (document.querySelectorAll('.history-item').length === 0) {
+                        document.getElementById('historyEmpty').style.display = 'block';
+                    }
+                    showToast('تم الحذف', 'success');
+                }
+            } catch (err) {
+                showToast('فشل الحذف', 'error');
+            }
+        }
+
+        async function clearAllHistory() {
+            if (!confirm('مسح كل السجل؟ لا يمكن التراجع.')) return;
+            
+            try {
+                const res = await fetch('/api/history/clear', { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.ok) {
+                    document.getElementById('historyList').innerHTML = '';
+                    document.getElementById('historyEmpty').style.display = 'block';
+                    showToast('تم مسح السجل', 'success');
+                }
+            } catch (err) {
+                showToast('فشل مسح السجل', 'error');
+            }
+        }
+
+        async function previewVideo(url) {
+            try {
+                document.querySelector('[data-tab="main"]').click();
+                showProgress();
+                document.getElementById('progressStatus').textContent = 'جاري تحميل الفيديو...';
+                
+                const res = await fetch(url);
+                const blob = await res.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                
+                document.getElementById('progressSection').classList.remove('active');
+                document.getElementById('resultSection').classList.add('active');
+                document.getElementById('videoPlayer').src = blobUrl;
+                document.getElementById('downloadLink').href = blobUrl;
+            } catch (err) {
+                showToast('فشل تحميل الفيديو', 'error');
+                resetForm();
+            }
+        }
+
+        // ═══════════════════════════════════════
+        // ⚙️ Settings
+        // ═══════════════════════════════════════
+        function getStyleSettings() {
+            return {
+                arColor: document.getElementById('arColor')?.value || '#ffffff',
+                arSize: document.getElementById('arSize')?.value || '1',
+                arOutC: document.getElementById('arOutlineColor')?.value || '#000000',
+                arOutW: document.getElementById('arOutlineWidth')?.value || '4',
+                enColor: document.getElementById('enColor')?.value || '#FFD700',
+                enSize: document.getElementById('enSize')?.value || '1',
+                enOutC: document.getElementById('enOutlineColor')?.value || '#000000',
+                enOutW: document.getElementById('enOutlineWidth')?.value || '3'
+            };
+        }
+
+        function loadSettings() {
+            const saved = JSON.parse(localStorage.getItem('quran_app_styles_v2')) || defaultSettings;
+            
+            Object.entries(saved).forEach(([key, value]) => {
+                const el = document.getElementById(key);
+                if (el) el.value = value;
+            });
+            
+            const pexelsKey = localStorage.getItem('user_pexels_key');
+            if (pexelsKey) {
+                document.getElementById('pexelsKey').value = pexelsKey;
+            }
+            
+            updatePreview();
+        }
+
+        function updatePreview() {
+            const ar = document.getElementById('previewAr');
+            const en = document.getElementById('previewEn');
+            
+            ar.style.color = document.getElementById('arColor').value;
+            ar.style.fontSize = `${1.5 * parseFloat(document.getElementById('arSize').value)}rem`;
+            const arOutline = parseInt(document.getElementById('arOutlineWidth').value) / 5;
+            ar.style.webkitTextStroke = arOutline > 0 ? `${arOutline}px ${document.getElementById('arOutlineColor').value}` : 'none';
+            
+            en.style.color = document.getElementById('enColor').value;
+            en.style.fontSize = `${0.85 * parseFloat(document.getElementById('enSize').value)}rem`;
+            const enOutline = parseInt(document.getElementById('enOutlineWidth').value) / 5;
+            en.style.webkitTextStroke = enOutline > 0 ? `${enOutline}px ${document.getElementById('enOutlineColor').value}` : 'none';
+        }
+
+        function saveAllSettings() {
+            const settings = {};
+            ['arColor', 'arSize', 'arOutlineColor', 'arOutlineWidth', 
+             'enColor', 'enSize', 'enOutlineColor', 'enOutlineWidth'].forEach(key => {
+                settings[key] = document.getElementById(key).value;
+            });
+            
+            localStorage.setItem('quran_app_styles_v2', JSON.stringify(settings));
+            
+            const pexelsKey = document.getElementById('pexelsKey').value;
+            if (pexelsKey) {
+                localStorage.setItem('user_pexels_key', pexelsKey);
+            } else {
+                localStorage.removeItem('user_pexels_key');
+            }
+            
+            showToast('تم حفظ الإعدادات', 'success');
+        }
+
+        function resetAllSettings() {
+            if (!confirm('استعادة الإعدادات الافتراضية؟')) return;
+            
+            localStorage.removeItem('quran_app_styles_v2');
+            localStorage.removeItem('user_pexels_key');
+            document.getElementById('pexelsKey').value = '';
+            loadSettings();
+            showToast('تم استعادة الإعدادات', 'success');
+        }
+
+        // ═══════════════════════════════════════
+        // 🎨 Theme
+        // ═══════════════════════════════════════
+        function toggleTheme() {
+            document.body.classList.toggle('light-theme');
+            const isLight = document.body.classList.contains('light-theme');
+            document.getElementById('themeBtn').textContent = isLight ? '☀️' : '🌙';
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        }
+
+        // Load saved theme
+        if (localStorage.getItem('theme') === 'light') {
+            document.body.classList.add('light-theme');
+            document.getElementById('themeBtn').textContent = '☀️';
+        }
+
+        // ═══════════════════════════════════════
+        // 🔔 Toast Notifications
+        // ═══════════════════════════════════════
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ═══════════════════════════════════════
+        // 🔄 Check Running Job
+        // ═══════════════════════════════════════
+        async function checkRunningJob() {
             try {
                 const res = await fetch('/api/my-jobs?status=processing');
                 const data = await res.json();
                 
-                if(data.ok && data.jobs && data.jobs.length > 0) {
-                    // There's a job in progress!
-                    const job = data.jobs[0]; // Get the latest
+                if (data.ok && data.jobs && data.jobs.length > 0) {
+                    const job = data.jobs[0];
                     
-                    if(confirm(`يوجد فيديو قيد المعالجة (${job.percent}%)
-هل تريد متابعته؟`)) {
+                    const action = confirm(
+                        `🎬 فيديو قيد المعالجة!\n` +
+                        `📊 التقدم: ${job.percent}%\n\n` +
+                        `هل تريد متابعته؟`
+                    );
+                    
+                    if (action) {
                         currentJobId = job.id;
+                        showProgress();
                         startPolling(job.id);
                     }
                 }
-            } catch(e) {
-                console.log('Could not check pending jobs:', e);
+            } catch (err) {
+                console.log('No running jobs');
             }
         }
-        
-        // --- 🆕 دالة بدء المراقبة ---
-        function startPolling(jobId) {
-            document.getElementById('btn').style.display='none';
-            document.getElementById('stopBtn').style.display = 'flex';
-            document.getElementById('progArea').style.display='block';
-            document.getElementById('resArea').style.display='none';
-            
-            if(pollInterval) clearInterval(pollInterval);
-            
-            pollInterval = setInterval(async () => {
-                try {
-                    const p = await (await fetch(`/api/progress?jobId=${jobId}`)).json();
-                    
-                    if(!p || !p.id) {
-                        clearInterval(pollInterval);
-                        return;
-                    }
-                    
-                    document.getElementById('barFill').style.width = p.percent+'%';
-                    document.getElementById('statusTxt').innerText = p.status;
-                    
-                    if(p.percent > 0 && p.percent < 100) {
-                        document.getElementById('timerBadge').style.display = 'inline-flex';
-                        document.getElementById('etaTxt').innerText = p.eta || "--:--";
-                    }
-                    
-                    // Check if complete
-                    if(p.status === 'complete' && p.download_url) {
-                        clearInterval(pollInterval);
-                        document.getElementById('statusTxt').innerText = "✅ تم الانتهاء! جاري التحميل...";
-                        
-                        // Download and show video
-                        const vidRes = await fetch(p.download_url);
-                        if(vidRes.ok) {
-                            const b = await vidRes.blob();
-                            const u = URL.createObjectURL(b);
-                            
-                            document.getElementById('player').src = u;
-                            document.getElementById('dlLink').href = u;
-                            document.getElementById('dlLink').setAttribute('download', `Quran_video.mp4`);
-                            
-                            document.getElementById('progArea').style.display='none';
-                            document.getElementById('resArea').style.display='block';
-                            document.getElementById('stopBtn').style.display='none';
-                            document.getElementById('btn').style.display='flex';
-                            
-                            // Refresh history
-                            loadServerHistory();
-                            
-                            // Show notification
-                            showNotification('تم إنشاء الفيديو بنجاح! 🎉');
-                        }
-                    } else if(p.status === 'error') {
-                        clearInterval(pollInterval);
-                        alert('حدث خطأ: ' + (p.error || 'غير معروف'));
-                        document.getElementById('stopBtn').style.display='none';
-                        document.getElementById('btn').style.display='flex';
-                        document.getElementById('progArea').style.display='none';
-                    }
-                } catch(err) {
-                    console.error('Polling error:', err);
-                }
-            }, 1500);
-        }
-        
-        // --- 🆕 دالة الإشعارات ---
-        function showNotification(message) {
-            // Check if browser supports notifications
-            if('Notification' in window && Notification.permission === 'granted') {
-                new Notification('صانع الريلز القرآني', {
-                    body: message,
-                    icon: 'https://ibb.co/zWy3WBhD'
-                });
-            } else if('Notification' in window && Notification.permission !== 'denied') {
-                Notification.requestPermission().then(permission => {
-                    if(permission === 'granted') {
-                        new Notification('صانع الريلز القرآني', { body: message });
-                    }
-                });
-            }
-            
-            // Also show in-page notification
-            const notif = document.createElement('div');
-            notif.style.cssText = `
-                position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-                background: linear-gradient(135deg, #2ecc71, #27ae60); color: white;
-                padding: 15px 25px; border-radius: 10px; font-weight: bold; z-index: 9999;
-                box-shadow: 0 5px 20px rgba(0,0,0,0.3); animation: slideDown 0.5s;
-            `;
-            notif.innerText = message;
-            document.body.appendChild(notif);
-            setTimeout(() => notif.remove(), 5000);
-        }
-        
-        // --- 🆕 دالة عرض الفيديو ---
-        async function previewVideo(downloadUrl) {
-            try {
-                // Show loading
-                document.getElementById('resArea').style.display = 'none';
-                document.getElementById('progArea').style.display = 'block';
-                document.getElementById('statusTxt').innerText = 'جاري تحميل الفيديو للعرض...';
-                document.getElementById('barFill').style.width = '50%';
-                
-                const res = await fetch(downloadUrl);
-                if(!res.ok) throw new Error('فشل تحميل الفيديو');
-                
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                
-                // Update player
-                document.getElementById('player').src = url;
-                document.getElementById('dlLink').href = url;
-                
-                // Hide progress, show result
-                document.getElementById('progArea').style.display = 'none';
-                document.getElementById('resArea').style.display = 'block';
-                
-                // Scroll to video player
-                document.getElementById('resArea').scrollIntoView({ behavior: 'smooth' });
-                
-            } catch(err) {
-                alert('حدث خطأ أثناء عرض الفيديو: ' + err.message);
-                document.getElementById('progArea').style.display = 'none';
-            }
-        }
-
-        function clearHistory() { 
-            if(confirm('هل تريد مسح كل السجل؟ لا يمكن التراجع عن هذا الإجراء.')) {
-                const sessionId = window.SESSION_ID || localStorage.getItem('quran_session_id');
-                fetch('/api/history/clear', { 
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId: sessionId })
-                })
-                    .then(res => res.json())
-                    .then(data => {
-                        if(data.ok) {
-                            loadServerHistory();
-                            // Hide history section if empty
-                            document.getElementById('histSection').style.display = 'none';
-                            showNotification('تم مسح السجل بالكامل');
-                        }
-                    })
-                    .catch(err => {
-                        console.error('Clear history error:', err);
-                        alert('حدث خطأ أثناء مسح السجل');
-                    });
-            }
-        }
-        
-        document.getElementById('vForm').onsubmit = async (e) => {
-            e.preventDefault();
-            
-            const pkElement = document.getElementById('pexelsKey');
-            const pk = pkElement ? pkElement.value : "";
-            if(pk) localStorage.setItem('user_pexels_key', pk);
-
-            document.getElementById('btn').style.display='none';
-            document.getElementById('stopBtn').style.display = 'flex';
-            document.getElementById('progArea').style.display='block';
-            document.getElementById('resArea').style.display='none';
-            document.getElementById('timerBadge').style.display = 'none';
-
-            const sty = JSON.parse(localStorage.getItem('quran_app_styles_v2')) || defSet;
-
-            try {
-                const res = await fetch('/api/generate', {
-                    method:'POST', headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({
-                        sessionId: window.SESSION_ID || localStorage.getItem('quran_session_id'),
-                        pexelsKey: pk, reciter: rSelect.value, surah: sSelect.value,
-                        startAyah: startAyah.value, endAyah: endAyah.value,
-                        quality: qSelect.value, fps: fpsSelect.value,
-                        bgQuery: document.getElementById('useSearch').checked ? document.getElementById('bgQuery').value : "",
-                        dynamicBg: document.getElementById('dynamicBg').checked,
-                        useGlow: document.getElementById('useGlow').checked,
-                        useVignette: document.getElementById('useVignette').checked,
-                        style: sty
-                    })
-                });
-                const d = await res.json();
-                if(d.error) throw new Error(d.error);
-                currentJobId = d.jobId;
-
-                pollInterval = setInterval(async () => {
-                    try {
-                        const p = await (await fetch(`/api/progress?jobId=${currentJobId}`)).json();
-                        document.getElementById('barFill').style.width = p.percent+'%';
-                        document.getElementById('statusTxt').innerText = p.status;
-                        
-                        if(p.percent > 0 && p.percent < 100) {
-                            document.getElementById('timerBadge').style.display = 'inline-flex';
-                            document.getElementById('etaTxt').innerText = p.eta || "--:--";
-                        }
-
-                        if(p.is_complete) {
-                            clearInterval(pollInterval);
-                            document.getElementById('statusTxt').innerText = "جاري جلب الفيديو...";
-                            
-                            setTimeout(async () => {
-                                try {
-                                    const vidRes = await fetch(`/api/download?jobId=${currentJobId}`);
-                                    if(!vidRes.ok) throw new Error("تأخر الملف قليلاً، حاول مجدداً");
-                                    
-                                    const b = await vidRes.blob();
-                                    const u = URL.createObjectURL(b);
-                                    
-                                    document.getElementById('player').src = u;
-                                    document.getElementById('dlLink').href = u;
-                                    document.getElementById('dlLink').setAttribute('download', `Quran_${sSelect.value}_${startAyah.value}.mp4`);
-                                    
-                                    document.getElementById('progArea').style.display='none';
-                                    document.getElementById('resArea').style.display='block';
-                                    document.getElementById('stopBtn').style.display='none';
-                                    document.getElementById('btn').style.display='flex';
-                                    
-                                    // --- كود الحفظ الجديد (يخزن كل التفاصيل) ---
-                                    const now = new Date();
-                                    const timeStr = now.toLocaleDateString('ar-EG') + ' | ' + now.toLocaleTimeString('ar-EG');
-                                    
-                                    const h = JSON.parse(localStorage.getItem('q_hist')||'[]');
-                                    h.unshift({
-                                        t: `${sSelect.options[sSelect.selectedIndex].text} (آية ${startAyah.value}-${endAyah.value})`,
-                                        u: u,
-                                        r: rSelect.options[rSelect.selectedIndex].text,
-                                        q: qSelect.value,
-                                        f: fpsSelect.value,
-                                        d: timeStr
-                                    });
-                                    localStorage.setItem('q_hist', JSON.stringify(h.slice(0,5))); 
-                                    loadHistory();
-                                    // --------------------------------------------
-                                    
-                                } catch (innerErr) {
-                                    alert("حدث خطأ أثناء جلب الملف: " + innerErr.message);
-                                    document.getElementById('btn').style.display='flex';
-                                }
-                            }, 1500);
-                        }
-                    } catch(err) {
-                        clearInterval(pollInterval);
-                        alert(err.message);
-                        document.getElementById('stopBtn').style.display = 'none';
-                        document.getElementById('btn').style.display = 'flex';
-                    }
-                }, 1000);
-            } catch(err) { 
-                alert(err.message); 
-                document.getElementById('stopBtn').style.display = 'none'; 
-                document.getElementById('btn').style.display = 'flex'; 
-            }
-        };
     </script>
 </body>
 </html>
