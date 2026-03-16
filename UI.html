@@ -1177,6 +1177,7 @@
         let VERSE_COUNTS = {};
         let currentJobId = null;
         let pollInterval = null;
+        let SESSION_ID = null;  // معرف الجلسة
 
         const defaultSettings = {
             arColor: '#ffffff',
@@ -1190,9 +1191,35 @@
         };
 
         // ═══════════════════════════════════════
+        // 🔑 Session Management
+        // ═══════════════════════════════════════
+        function getOrCreateSessionId() {
+            // محاولة استرجاع session_id من localStorage
+            let sessionId = localStorage.getItem('quran_session_id');
+            
+            // لو مش موجود أو قديم (أكثر من 30 يوم)، إنشاء واحد جديد
+            const sessionAge = localStorage.getItem('quran_session_age');
+            const thirtyDays = 30 * 24 * 60 * 60 * 1000; // 30 يوم بالـ milliseconds
+            
+            if (!sessionId || !sessionAge || (Date.now() - parseInt(sessionAge)) > thirtyDays) {
+                // إنشاء session_id جديد
+                sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('quran_session_id', sessionId);
+                localStorage.setItem('quran_session_age', Date.now().toString());
+                console.log('🆕 New session created:', sessionId);
+            }
+            
+            return sessionId;
+        }
+
+        // ═══════════════════════════════════════
         // 🚀 Initialization
         // ═══════════════════════════════════════
         window.onload = async () => {
+            // إنشاء أو استرجاع session_id
+            SESSION_ID = getOrCreateSessionId();
+            console.log('📱 Session ID:', SESSION_ID);
+            
             initTabs();
             loadSettings();
             initAyahValidation();
@@ -1355,6 +1382,7 @@
             const style = getStyleSettings();
             
             const payload = {
+                sessionId: SESSION_ID,  // إضافة session_id
                 reciter: reciterSelect.value,
                 surah: parseInt(surahSelect.value),
                 startAyah: parseInt(startAyah.value),
@@ -1479,7 +1507,8 @@
         // ═══════════════════════════════════════
         async function loadHistory() {
             try {
-                const res = await fetch('/api/history');
+                // إضافة session_id للطلب
+                const res = await fetch(`/api/history?sessionId=${encodeURIComponent(SESSION_ID)}`);
                 const data = await res.json();
                 
                 const list = document.getElementById('historyList');
@@ -1567,7 +1596,11 @@
             if (!confirm('مسح كل السجل؟ لا يمكن التراجع.')) return;
             
             try {
-                const res = await fetch('/api/history/clear', { method: 'POST' });
+                const res = await fetch('/api/history/clear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId: SESSION_ID })  // إرسال session_id
+                });
                 const data = await res.json();
                 
                 if (data.ok) {
@@ -1710,7 +1743,8 @@
         // ═══════════════════════════════════════
         async function checkRunningJob() {
             try {
-                const res = await fetch('/api/my-jobs?status=processing');
+                // إضافة session_id للطلب
+                const res = await fetch(`/api/my-jobs?status=processing&sessionId=${encodeURIComponent(SESSION_ID)}`);
                 const data = await res.json();
                 
                 if (data.ok && data.jobs && data.jobs.length > 0) {

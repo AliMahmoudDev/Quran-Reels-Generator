@@ -113,11 +113,11 @@ def close_db(exception):
         db.close()
 
 def init_db():
-    """Initialize database tables"""
+    """Initialize database tables with session support"""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
-    # Jobs table - for persistence across restarts
+    # Jobs table - for persistence across restarts (مع دعم session_id)
     c.execute('''CREATE TABLE IF NOT EXISTS jobs (
         id TEXT PRIMARY KEY,
         status TEXT NOT NULL DEFAULT 'pending',
@@ -129,10 +129,11 @@ def init_db():
         created_at REAL,
         completed_at REAL,
         config_json TEXT,
-        workspace TEXT
+        workspace TEXT,
+        session_id TEXT
     )''')
     
-    # History table - for user download history
+    # History table - for user download history (مع دعم session_id)
     c.execute('''CREATE TABLE IF NOT EXISTS history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         job_id TEXT,
@@ -145,6 +146,7 @@ def init_db():
         fps TEXT,
         download_filename TEXT,
         created_at REAL,
+        session_id TEXT,
         FOREIGN KEY (job_id) REFERENCES jobs(id)
     )''')
     
@@ -180,17 +182,30 @@ def init_db():
         FOREIGN KEY (job_id) REFERENCES jobs(id)
     )''')
     
+    # Migration: إضافة session_id للجداول القديمة لو مش موجودة
+    try:
+        c.execute("SELECT session_id FROM jobs LIMIT 1")
+    except sqlite3.OperationalError:
+        c.execute("ALTER TABLE jobs ADD COLUMN session_id TEXT")
+        print("✅ Added session_id to jobs table")
+    
+    try:
+        c.execute("SELECT session_id FROM history LIMIT 1")
+    except sqlite3.OperationalError:
+        c.execute("ALTER TABLE history ADD COLUMN session_id TEXT")
+        print("✅ Added session_id to history table")
+    
     conn.commit()
     conn.close()
     print("✅ Database initialized successfully!")
 
-def db_create_job(job_id, workspace, config=None):
-    """Create a new job in database"""
+def db_create_job(job_id, workspace, config=None, session_id=None):
+    """Create a new job in database with session support"""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute('''INSERT INTO jobs (id, status, percent, created_at, workspace, config_json)
-                VALUES (?, ?, ?, ?, ?, ?)''', 
-              (job_id, 'pending', 0, time.time(), workspace, json.dumps(config) if config else None))
+    c.execute('''INSERT INTO jobs (id, status, percent, created_at, workspace, config_json, session_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)''', 
+              (job_id, 'pending', 0, time.time(), workspace, json.dumps(config) if config else None, session_id))
     conn.commit()
     conn.close()
 
@@ -248,25 +263,36 @@ def db_get_pending_jobs():
     conn.close()
     return [dict(row) for row in rows]
 
-def db_add_history(job_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, filename):
-    """Add entry to history"""
+def db_add_history(job_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, filename, session_id=None):
+    """Add entry to history with session support"""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute('''INSERT INTO history (job_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, download_filename, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-              (job_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, filename, time.time()))
+    c.execute('''INSERT INTO history (job_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, download_filename, created_at, session_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+              (job_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, filename, time.time(), session_id))
     conn.commit()
     conn.close()
 
-def db_get_history(limit=20):
-    """Get history entries"""
+def db_get_history(limit=20, session_id=None):
+    """Get history entries filtered by session"""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
-    c.execute('''SELECT h.*, j.output_path, j.status 
-                 FROM history h 
-                 LEFT JOIN jobs j ON h.job_id = j.id 
-                 ORDER BY h.created_at DESC LIMIT ?''', (limit,))
+    
+    if session_id:
+        # فلترة حسب session_id
+        c.execute('''SELECT h.*, j.output_path, j.status 
+                     FROM history h 
+                     LEFT JOIN jobs j ON h.job_id = j.id 
+                     WHERE h.session_id = ?
+                     ORDER BY h.created_at DESC LIMIT ?''', (session_id, limit))
+    else:
+        # بدون فلترة (للتوافق مع الإصدارات القديمة)
+        c.execute('''SELECT h.*, j.output_path, j.status 
+                     FROM history h 
+                     LEFT JOIN jobs j ON h.job_id = j.id 
+                     ORDER BY h.created_at DESC LIMIT ?''', (limit,))
+    
     rows = c.fetchall()
     conn.close()
     return [dict(row) for row in rows]
@@ -422,8 +448,8 @@ JOBS = {}  # RAM cache for fast access
 JOBS_LOCK = threading.Lock()
 
 # ==========================================
-def create_job(config=None):
-    """Create a new job - stores in RAM and SQLite"""
+def create_job(config=None, session_id=None):
+    """Create a new job - stores in RAM and SQLite with session support"""
     job_id = str(uuid.uuid4())
     job_dir = os.path.join(BASE_TEMP_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
@@ -441,11 +467,12 @@ def create_job(config=None):
             'error': None, 
             'should_stop': False, 
             'created_at': time.time(), 
-            'workspace': job_dir
+            'workspace': job_dir,
+            'session_id': session_id
         }
     
     # Store in SQLite for persistence
-    db_create_job(job_id, job_dir, config)
+    db_create_job(job_id, job_dir, config, session_id)
     
     return job_id
 
@@ -639,8 +666,9 @@ def get_text(surah, ayah):
     try:
         t = requests.get(f'https://api.alquran.cloud/v1/ayah/{surah}:{ayah}/quran-simple').json()['data']['text']
         if surah not in [1, 9] and ayah == 1:
-            t = re.sub(r'^بِسْمِ [^ ]+ [^ ]+[^ ]+', '', t).strip()
-            t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
+            # إصلاح: حذف البسملة كاملة (بسم الله الرحمن الرحيم)
+            # النمط يطابق 4 كلمات: بسم + الله + الرحمن + الرحيم
+            t = re.sub(r'^بِسْمِ \S+ \S+ \S+\s*', '', t).strip()
         return t
     except: return "Text Error"
 
@@ -984,11 +1012,12 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 reciter = config.get('reciter', 'Unknown')
                 quality = config.get('quality', '720')
                 fps = config.get('fps', '20')
+                session_id = config.get('session_id')  # استخراج session_id
                 
                 title = f"{SURAH_NAMES[surah-1] if surah <= len(SURAH_NAMES) else 'سورة'} (آية {start_ayah}-{end_ayah})"
                 filename = f"Quran_{surah}_{start_ayah}.mp4"
                 
-                db_add_history(job_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, filename)
+                db_add_history(job_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, filename, session_id)
             except Exception as e:
                 print(f"Error adding to history: {e}")
 
@@ -1058,6 +1087,9 @@ def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "API Running
 def gen():
     d = request.json
     
+    # استخراج session_id من الطلب
+    session_id = d.get('sessionId')
+    
     # Create job with config for persistence
     config = {
         'surah': int(d['surah']),
@@ -1071,10 +1103,11 @@ def gen():
         'useGlow': d.get('useGlow', False),
         'useVignette': d.get('useVignette', False),
         'pexelsKey': d.get('pexelsKey', ''),
-        'style': d.get('style', {})
+        'style': d.get('style', {}),
+        'session_id': session_id
     }
     
-    job_id = create_job(config)
+    job_id = create_job(config, session_id)
     style_settings = d.get('style', {}) 
     
     # Update status to processing
@@ -1140,9 +1173,10 @@ def cancel_process():
 
 @app.route('/api/history')
 def get_history():
-    """Get user's video history from database"""
+    """Get user's video history from database filtered by session"""
     limit = request.args.get('limit', 20, type=int)
-    history = db_get_history(limit)
+    session_id = request.args.get('sessionId')  # استخراج session_id من الطلب
+    history = db_get_history(limit, session_id)
     
     result = []
     for h in history:
@@ -1202,30 +1236,63 @@ def delete_history_item(history_id):
 
 @app.route('/api/history/clear', methods=['POST'])
 def clear_all_history():
-    """Clear all history"""
+    """Clear history for current session only"""
+    data = request.json or {}
+    session_id = data.get('sessionId')
+    
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
-    # Get all workspaces to clean up files
-    c.execute("SELECT workspace FROM jobs WHERE workspace IS NOT NULL")
-    workspaces = c.fetchall()
+    if session_id:
+        # حذف history للجلسة الحالية فقط
+        c.execute("SELECT job_id FROM history WHERE session_id = ?", (session_id,))
+        job_ids = [row[0] for row in c.fetchall()]
+        
+        # حذف ملفات الفيديو والـ workspaces
+        for job_id in job_ids:
+            c.execute("SELECT workspace, output_path FROM jobs WHERE id = ?", (job_id,))
+            job_row = c.fetchone()
+            if job_row:
+                workspace, output_path = job_row
+                if workspace and os.path.exists(workspace):
+                    try:
+                        shutil.rmtree(workspace, ignore_errors=True)
+                    except:
+                        pass
+                if output_path and os.path.exists(output_path):
+                    try:
+                        os.remove(output_path)
+                    except:
+                        pass
+        
+        # حذف من history و jobs للجلسة فقط
+        c.execute("DELETE FROM history WHERE session_id = ?", (session_id,))
+        c.execute("DELETE FROM jobs WHERE session_id = ?", (session_id,))
+    else:
+        # حذف الكل (للتوافق مع الإصدارات القديمة)
+        c.execute("SELECT workspace FROM jobs WHERE workspace IS NOT NULL")
+        workspaces = c.fetchall()
+        
+        for ws in workspaces:
+            if ws[0] and os.path.exists(ws[0]):
+                try:
+                    shutil.rmtree(ws[0], ignore_errors=True)
+                except:
+                    pass
+        
+        c.execute("DELETE FROM history")
+        c.execute("DELETE FROM jobs")
     
-    for ws in workspaces:
-        if ws[0] and os.path.exists(ws[0]):
-            try:
-                shutil.rmtree(ws[0], ignore_errors=True)
-            except:
-                pass
-    
-    # Delete all history and jobs
-    c.execute("DELETE FROM history")
-    c.execute("DELETE FROM jobs")
     conn.commit()
     conn.close()
     
-    # Also clear RAM
+    # Also clear RAM for this session
     with JOBS_LOCK:
-        JOBS.clear()
+        if session_id:
+            # حذف jobs الخاصة بالجلسة فقط
+            JOBS.pop(job_id, None)
+        else:
+            JOBS.clear()
     
     return jsonify({'ok': True})
 
@@ -1233,25 +1300,44 @@ def clear_all_history():
 def get_my_jobs():
     """Get all jobs for current session (from SQLite)"""
     status = request.args.get('status')  # pending, processing, complete, error
-    jobs = db_get_all_jobs(status=status, limit=50)
+    session_id = request.args.get('sessionId')
+    
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    
+    if session_id:
+        if status:
+            c.execute("SELECT * FROM jobs WHERE session_id = ? AND status = ? ORDER BY created_at DESC LIMIT 50", (session_id, status))
+        else:
+            c.execute("SELECT * FROM jobs WHERE session_id = ? ORDER BY created_at DESC LIMIT 50", (session_id,))
+    else:
+        if status:
+            c.execute("SELECT * FROM jobs WHERE status = ? ORDER BY created_at DESC LIMIT 50", (status,))
+        else:
+            c.execute("SELECT * FROM jobs ORDER BY created_at DESC LIMIT 50")
+    
+    rows = c.fetchall()
+    conn.close()
     
     result = []
-    for j in jobs:
+    for j in rows:
+        j_dict = dict(j)
         item = {
-            'id': j['id'],
-            'status': j['status'],
-            'percent': j['percent'],
-            'eta': j['eta'],
-            'createdAt': j['created_at'],
-            'completedAt': j['completed_at'],
+            'id': j_dict['id'],
+            'status': j_dict['status'],
+            'percent': j_dict['percent'],
+            'eta': j_dict['eta'],
+            'createdAt': j_dict['created_at'],
+            'completedAt': j_dict['completed_at'],
         }
         
         # Add download URL if complete
-        if j['status'] == 'complete' and j['output_path'] and os.path.exists(j['output_path']):
-            item['downloadUrl'] = f"/api/download?jobId={j['id']}"
+        if j_dict['status'] == 'complete' and j_dict['output_path'] and os.path.exists(j_dict['output_path']):
+            item['downloadUrl'] = f"/api/download?jobId={j_dict['id']}"
         
-        if j['error']:
-            item['error'] = j['error']
+        if j_dict['error']:
+            item['error'] = j_dict['error']
         
         result.append(item)
     
