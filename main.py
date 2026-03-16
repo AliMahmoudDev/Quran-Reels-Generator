@@ -195,6 +195,19 @@ def init_db():
         c.execute("ALTER TABLE history ADD COLUMN session_id TEXT")
         print("✅ Added session_id to history table")
     
+    # Migration: إضافة output_path و error لـ batch_items
+    try:
+        c.execute("SELECT output_path FROM batch_items LIMIT 1")
+    except sqlite3.OperationalError:
+        c.execute("ALTER TABLE batch_items ADD COLUMN output_path TEXT")
+        print("✅ Added output_path to batch_items table")
+    
+    try:
+        c.execute("SELECT error FROM batch_items LIMIT 1")
+    except sqlite3.OperationalError:
+        c.execute("ALTER TABLE batch_items ADD COLUMN error TEXT")
+        print("✅ Added error to batch_items table")
+    
     conn.commit()
     conn.close()
     print("✅ Database initialized successfully!")
@@ -1450,6 +1463,323 @@ def recover_pending_jobs():
             db_update_job(job_id, status='error', error=str(e))
     
     print(f"🚀 Resume complete - {len(pending)} jobs restarted")
+
+# ==========================================
+# 📦 Batch Export System
+# ==========================================
+
+BATCH_QUEUE = []  # قائمة الانتظار
+BATCH_QUEUE_LOCK = threading.Lock()
+ACTIVE_BATCHES = {}  # الباتشات النشطة
+
+def process_batch_queue():
+    """معالجة الباتشات في الخلفية - فيديو واحد في المرة"""
+    while True:
+        time.sleep(2)  # انتظار قصير بين الفحوصات
+        
+        with BATCH_QUEUE_LOCK:
+            if not BATCH_QUEUE:
+                continue
+            
+            # الحصول على أول باتش في الانتظار
+            batch_id = BATCH_QUEUE[0]
+        
+        # التحقق من الباتش
+        batch = db_get_batch(batch_id)
+        if not batch:
+            with BATCH_QUEUE_LOCK:
+                if batch_id in BATCH_QUEUE:
+                    BATCH_QUEUE.remove(batch_id)
+            continue
+        
+        # لو الباتش شغال خلاص
+        if batch['status'] == 'running':
+            continue
+        
+        # بدء معالجة الباتش
+        db_update_batch(batch_id, status='running', started_at=time.time())
+        print(f"📦 Processing batch: {batch_id}")
+        
+        items = db_get_batch_items(batch_id)
+        
+        for item in items:
+            # التحقق من الإيقاف
+            batch = db_get_batch(batch_id)
+            if batch and batch.get('status') == 'cancelled':
+                print(f"⚠️ Batch {batch_id} cancelled")
+                break
+            
+            job_id = item['job_id']
+            
+            # الحصول على الـ config
+            job = db_get_job(job_id)
+            if not job or not job.get('config_json'):
+                db_update_batch_item(batch_id, job_id, status='error', error='Config missing')
+                db_update_batch(batch_id, failed_jobs=batch['failed_jobs'] + 1)
+                continue
+            
+            config = json.loads(job['config_json'])
+            
+            # تحديث حالة الـ item
+            db_update_batch_item(batch_id, job_id, status='processing')
+            db_update_batch(batch_id, current_job_id=job_id, current_job_index=item['position'])
+            
+            print(f"  🎬 Processing video {item['position'] + 1}/{len(items)}: Surah {item['surah']}, Ayah {item['start_ayah']}")
+            
+            try:
+                # معالجة الفيديو
+                style_settings = config.get('style', {})
+                
+                build_video_task(
+                    job_id,
+                    config.get('pexelsKey', ''),
+                    config.get('reciter', ''),
+                    item['surah'],
+                    item['start_ayah'],
+                    item['end_ayah'],
+                    config.get('quality', '720'),
+                    config.get('bgQuery', ''),
+                    int(config.get('fps', 20)),
+                    config.get('dynamicBg', False),
+                    config.get('useGlow', False),
+                    config.get('useVignette', False),
+                    style_settings
+                )
+                
+                # تحديث حالة الـ item
+                db_update_batch_item(batch_id, job_id, status='complete', output_path=job.get('output_path'))
+                db_update_batch(batch_id, completed_jobs=batch['completed_jobs'] + 1)
+                print(f"  ✅ Video {item['position'] + 1} complete")
+                
+            except Exception as e:
+                print(f"  ❌ Video {item['position'] + 1} failed: {e}")
+                db_update_batch_item(batch_id, job_id, status='error', error=str(e))
+                db_update_batch(batch_id, failed_jobs=batch['failed_jobs'] + 1)
+        
+        # إنهاء الباتش
+        batch = db_get_batch(batch_id)
+        db_update_batch(batch_id, status='complete', completed_at=time.time())
+        print(f"📦 Batch {batch_id} complete: {batch['completed_jobs']}/{batch['total_jobs']} videos")
+        
+        # إزالة من قائمة الانتظار
+        with BATCH_QUEUE_LOCK:
+            if batch_id in BATCH_QUEUE:
+                BATCH_QUEUE.remove(batch_id)
+
+# تشغيل معالج الباتشات في الخلفية
+threading.Thread(target=process_batch_queue, daemon=True).start()
+
+def recover_pending_batches():
+    """استئناف الباتشات المعلقة"""
+    pending = db_get_pending_batches()
+    
+    if not pending:
+        return
+    
+    print(f"📦 Found {len(pending)} pending batches - resuming...")
+    
+    for batch in pending:
+        batch_id = batch['id']
+        
+        with BATCH_QUEUE_LOCK:
+            if batch_id not in BATCH_QUEUE:
+                BATCH_QUEUE.append(batch_id)
+        
+        print(f"  ✅ Batch {batch_id} queued for processing")
+
+@app.route('/api/batch/create', methods=['POST'])
+def create_batch():
+    """إنشاء باتش جديد من فيديوهات متعددة"""
+    d = request.json
+    
+    items = d.get('items', [])  # قائمة الفيديوهات [{surah, startAyah, endAyah}, ...]
+    session_id = d.get('sessionId')
+    random_selection = d.get('randomSelection', False)
+    random_count = d.get('randomCount', 5)
+    
+    if not items and not random_selection:
+        return jsonify({'ok': False, 'error': 'No items provided'}), 400
+    
+    # لو اختيار عشوائي
+    if random_selection:
+        items = []
+        available_surahs = list(VERSE_COUNTS.keys())
+        
+        for _ in range(random_count):
+            surah = random.choice(available_surahs)
+            max_ayah = VERSE_COUNTS[surah]
+            start = random.randint(1, max(1, max_ayah - 4))
+            end = min(start + random.randint(2, 5), max_ayah)
+            items.append({
+                'surah': surah,
+                'startAyah': start,
+                'endAyah': end
+            })
+    
+    if not items:
+        return jsonify({'ok': False, 'error': 'No items to process'}), 400
+    
+    # إنشاء الباتش
+    batch_id = str(uuid.uuid4())
+    
+    config = {
+        'reciter': d.get('reciter'),
+        'quality': d.get('quality', '720'),
+        'fps': d.get('fps', 20),
+        'dynamicBg': d.get('dynamicBg', True),
+        'useGlow': d.get('useGlow', True),
+        'useVignette': d.get('useVignette', True),
+        'bgQuery': d.get('bgQuery', ''),
+        'pexelsKey': d.get('pexelsKey', ''),
+        'style': d.get('style', {}),
+        'session_id': session_id
+    }
+    
+    db_create_batch(batch_id, len(items), config)
+    
+    # إنشاء الـ jobs والـ items
+    for i, item in enumerate(items):
+        job_config = config.copy()
+        job_config['surah'] = item['surah']
+        job_config['startAyah'] = item['startAyah']
+        job_config['endAyah'] = item['endAyah']
+        
+        job_id = create_job(job_config, session_id)
+        db_add_batch_item(batch_id, job_id, i, item['surah'], item['startAyah'], item['endAyah'])
+    
+    # إضافة للقائمة
+    with BATCH_QUEUE_LOCK:
+        BATCH_QUEUE.append(batch_id)
+    
+    print(f"📦 Created batch {batch_id} with {len(items)} videos")
+    
+    return jsonify({
+        'ok': True,
+        'batchId': batch_id,
+        'totalJobs': len(items),
+        'items': items
+    })
+
+@app.route('/api/batch/status')
+def get_batch_status():
+    """الحصول على حالة الباتش"""
+    batch_id = request.args.get('batchId')
+    
+    if not batch_id:
+        return jsonify({'ok': False, 'error': 'batchId required'}), 400
+    
+    batch = db_get_batch(batch_id)
+    if not batch:
+        return jsonify({'ok': False, 'error': 'Batch not found'}), 404
+    
+    items = db_get_batch_items(batch_id)
+    
+    # إضافة معلومات كل فيديو
+    items_info = []
+    for item in items:
+        job = db_get_job(item['job_id'])
+        items_info.append({
+            'position': item['position'],
+            'surah': item['surah'],
+            'startAyah': item['start_ayah'],
+            'endAyah': item['end_ayah'],
+            'status': item['status'],
+            'jobId': item['job_id'],
+            'percent': job.get('percent', 0) if job else 0,
+            'downloadUrl': f"/api/download?jobId={item['job_id']}" if item['status'] == 'complete' and job and job.get('output_path') else None
+        })
+    
+    return jsonify({
+        'ok': True,
+        'batch': {
+            'id': batch['id'],
+            'status': batch['status'],
+            'totalJobs': batch['total_jobs'],
+            'completedJobs': batch['completed_jobs'],
+            'failedJobs': batch['failed_jobs'],
+            'currentJobIndex': batch['current_job_index'],
+            'createdAt': batch['created_at'],
+            'startedAt': batch.get('started_at'),
+            'completedAt': batch.get('completed_at'),
+            'items': items_info
+        }
+    })
+
+@app.route('/api/batch/list')
+def list_batches():
+    """الحصول على قائمة الباتشات للجلسة"""
+    session_id = request.args.get('sessionId')
+    
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    
+    if session_id:
+        # الحصول على jobs الخاصة بالجلسة ثم الباتشات
+        c.execute('''
+            SELECT DISTINCT b.* FROM batch_jobs b
+            JOIN batch_items bi ON b.id = bi.batch_id
+            JOIN jobs j ON bi.job_id = j.id
+            WHERE j.session_id = ?
+            ORDER BY b.created_at DESC LIMIT 20
+        ''', (session_id,))
+    else:
+        c.execute("SELECT * FROM batch_jobs ORDER BY created_at DESC LIMIT 20")
+    
+    rows = c.fetchall()
+    conn.close()
+    
+    batches = []
+    for row in rows:
+        b = dict(row)
+        batches.append({
+            'id': b['id'],
+            'status': b['status'],
+            'totalJobs': b['total_jobs'],
+            'completedJobs': b['completed_jobs'],
+            'failedJobs': b['failed_jobs'],
+            'createdAt': b['created_at'],
+            'completedAt': b.get('completed_at')
+        })
+    
+    return jsonify({'ok': True, 'batches': batches})
+
+@app.route('/api/batch/cancel', methods=['POST'])
+def cancel_batch():
+    """إلغاء باتش"""
+    d = request.json
+    batch_id = d.get('batchId')
+    
+    if not batch_id:
+        return jsonify({'ok': False, 'error': 'batchId required'}), 400
+    
+    batch = db_get_batch(batch_id)
+    if not batch:
+        return jsonify({'ok': False, 'error': 'Batch not found'}), 404
+    
+    if batch['status'] in ['complete', 'cancelled']:
+        return jsonify({'ok': False, 'error': 'Cannot cancel completed batch'}), 400
+    
+    db_update_batch(batch_id, status='cancelled', completed_at=time.time())
+    
+    # إيقاف الـ job الحالي
+    if batch.get('current_job_id'):
+        with JOBS_LOCK:
+            if batch['current_job_id'] in JOBS:
+                JOBS[batch['current_job_id']]['should_stop'] = True
+    
+    # إزالة من القائمة
+    with BATCH_QUEUE_LOCK:
+        if batch_id in BATCH_QUEUE:
+            BATCH_QUEUE.remove(batch_id)
+    
+    return jsonify({'ok': True})
+
+# استئناف الباتشات المعلقة عند بدء التشغيل
+try:
+    recover_pending_batches()
+except Exception as e:
+    print(f"⚠️ Failed to recover pending batches: {e}")
 
 threading.Thread(target=background_cleanup, daemon=True).start()
 

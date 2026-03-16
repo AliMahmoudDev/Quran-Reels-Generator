@@ -923,6 +923,7 @@
         ═════════════════════════════════════ -->
         <nav class="tabs-nav">
             <button class="tab-btn active" data-tab="main">🏠 الرئيسية</button>
+            <button class="tab-btn" data-tab="batch">📦 دفعة متعددة</button>
             <button class="tab-btn" data-tab="history">📜 السجل</button>
             <button class="tab-btn" data-tab="settings">⚙️ إعدادات</button>
         </nav>
@@ -1072,6 +1073,145 @@
                     <div class="result-actions">
                         <a class="btn-secondary btn-download" id="downloadLink" download>⬇️ تحميل</a>
                         <button class="btn-secondary" onclick="resetForm()">🔄 فيديو جديد</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 📦 Batch Tab -->
+            <div class="tab-panel" id="batch-panel">
+                <div class="batch-header">
+                    <h3>📦 إنشاء دفعة فيديوهات</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">
+                        اختر عدة سور/آيات وسيتم إنشاؤها بالترتيب
+                    </p>
+                </div>
+
+                <!-- خيارات الدفعة -->
+                <div class="form-group">
+                    <label class="form-label">🎤 القارئ</label>
+                    <select class="form-select" id="batchReciterSelect"></select>
+                </div>
+
+                <!-- طريقة الاختيار -->
+                <div class="toggle-group" style="margin-bottom: 18px;">
+                    <div class="toggle-item">
+                        <div class="toggle-info">
+                            <h4>🎲 اختيار عشوائي</h4>
+                            <span>اختيار سور وآيات عشوائية</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="randomSelection" onchange="toggleRandomMode()">
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- الاختيار العشوائي -->
+                <div id="randomOptions" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">🔢 عدد الفيديوهات</label>
+                        <div class="ayah-num-display" style="justify-content: center; gap: 10px;">
+                            <button type="button" onclick="adjustRandomCount(-1)">−</button>
+                            <input type="number" id="randomCount" value="5" min="1" max="50" style="width: 80px;">
+                            <button type="button" onclick="adjustRandomCount(1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- الاختيار اليدوي -->
+                <div id="manualSelection">
+                    <div class="form-group">
+                        <label class="form-label">📖 السورة</label>
+                        <select class="form-select" id="batchSurahSelect"></select>
+                    </div>
+
+                    <div class="ayah-selector">
+                        <div class="ayah-selector-header">
+                            <span class="ayah-selector-title">📍 نطاق الآيات</span>
+                        </div>
+                        <div class="ayah-selector-range">
+                            <div class="ayah-num-display">
+                                <button type="button" onclick="adjustBatchAyah('batchStartAyah', -1)">−</button>
+                                <input type="number" id="batchStartAyah" value="1" min="1">
+                                <button type="button" onclick="adjustBatchAyah('batchStartAyah', 1)">+</button>
+                            </div>
+                            <span class="ayah-separator">←</span>
+                            <div class="ayah-num-display">
+                                <button type="button" onclick="adjustBatchAyah('batchEndAyah', -1)">−</button>
+                                <input type="number" id="batchEndAyah" value="5" min="1">
+                                <button type="button" onclick="adjustBatchAyah('batchEndAyah', 1)">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn-secondary" style="width: 100%; margin-top: 12px;" onclick="addToBatchList()">
+                        ➕ إضافة للقائمة
+                    </button>
+                </div>
+
+                <!-- قائمة الفيديوهات المحددة -->
+                <div class="batch-list-section" style="margin-top: 20px;">
+                    <div class="history-header" style="margin-bottom: 12px;">
+                        <h4 style="font-size: 0.95rem;">📋 قائمة الفيديوهات (<span id="batchCount">0</span>)</h4>
+                        <button class="btn-secondary" style="width: auto; height: 32px; padding: 0 10px; font-size: 0.75rem;" onclick="clearBatchList()">🗑️ مسح</button>
+                    </div>
+                    <div id="batchList" style="max-height: 300px; overflow-y: auto;">
+                        <div class="history-empty" id="batchListEmpty">
+                            <p style="font-size: 0.85rem;">لم تتم إضافة أي فيديوهات</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- خيارات إضافية -->
+                <div class="toggle-group" style="margin-top: 18px;">
+                    <div class="toggle-item">
+                        <div class="toggle-info">
+                            <h4>تغيير الخلفية مع الآيات</h4>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="batchDynamicBg" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-item">
+                        <div class="toggle-info">
+                            <h4>توهج النص</h4>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="batchUseGlow" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-item">
+                        <div class="toggle-info">
+                            <h4>تعتيم سينمائي</h4>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="batchUseVignette" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- زر بدء الدفعة -->
+                <button type="button" class="btn-primary" style="margin-top: 20px;" onclick="startBatchGeneration()">
+                    🚀 بدء إنشاء الدفعة
+                </button>
+
+                <!-- حالة الدفعة -->
+                <div id="batchStatusSection" style="display: none; margin-top: 20px;">
+                    <div class="progress-section active">
+                        <div class="progress-ring">
+                            <svg width="140" height="140">
+                                <circle class="bg" cx="70" cy="70" r="65"></circle>
+                                <circle class="fill" id="batchProgressCircle" cx="70" cy="70" r="65"></circle>
+                            </svg>
+                            <div class="progress-percent" id="batchProgressPercent">0%</div>
+                        </div>
+                        <div class="progress-status" id="batchProgressStatus">جاري التحضير...</div>
+                        <div style="margin-top: 12px; font-size: 0.85rem; color: var(--text-muted);">
+                            <span id="batchCompletedCount">0</span> / <span id="batchTotalCount">0</span> فيديو
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1766,6 +1906,315 @@
                 console.log('No running jobs');
             }
         }
+
+        // ═══════════════════════════════════════
+        // 📦 Batch System
+        // ═══════════════════════════════════════
+        let batchItems = [];  // قائمة الفيديوهات المحددة
+        let currentBatchId = null;
+
+        function toggleRandomMode() {
+            const isRandom = document.getElementById('randomSelection').checked;
+            document.getElementById('randomOptions').style.display = isRandom ? 'block' : 'none';
+            document.getElementById('manualSelection').style.display = isRandom ? 'none' : 'block';
+        }
+
+        function adjustRandomCount(delta) {
+            const input = document.getElementById('randomCount');
+            let val = parseInt(input.value) + delta;
+            if (val < 1) val = 1;
+            if (val > 50) val = 50;
+            input.value = val;
+        }
+
+        function adjustBatchAyah(id, delta) {
+            const input = document.getElementById(id);
+            const surah = parseInt(document.getElementById('batchSurahSelect').value);
+            const max = VERSE_COUNTS[surah] || 286;
+            let val = parseInt(input.value) + delta;
+            
+            if (val < 1) val = 1;
+            if (val > max) val = max;
+            input.value = val;
+            
+            // التأكد من أن البداية <= النهاية
+            const start = parseInt(document.getElementById('batchStartAyah').value);
+            const end = parseInt(document.getElementById('batchEndAyah').value);
+            if (id === 'batchStartAyah' && start > end) {
+                document.getElementById('batchEndAyah').value = start;
+            }
+            if (id === 'batchEndAyah' && end < start) {
+                document.getElementById('batchStartAyah').value = end;
+            }
+        }
+
+        function addToBatchList() {
+            const surah = parseInt(document.getElementById('batchSurahSelect').value);
+            const startAyah = parseInt(document.getElementById('batchStartAyah').value);
+            const endAyah = parseInt(document.getElementById('batchEndAyah').value);
+            const surahName = document.getElementById('batchSurahSelect').options[document.getElementById('batchSurahSelect').selectedIndex].text;
+            
+            // التحقق من التكرار
+            const exists = batchItems.some(item => 
+                item.surah === surah && item.startAyah === startAyah && item.endAyah === endAyah
+            );
+            
+            if (exists) {
+                showToast('هذا الفيديو موجود بالفعل في القائمة', 'error');
+                return;
+            }
+            
+            batchItems.push({
+                surah,
+                startAyah,
+                endAyah,
+                surahName: surahName.replace(/^\d+\.\s*/, '')
+            });
+            
+            renderBatchList();
+            showToast(`تمت الإضافة: ${surahName} (آية ${startAyah}-${endAyah})`, 'success');
+        }
+
+        function removeFromBatchList(index) {
+            batchItems.splice(index, 1);
+            renderBatchList();
+        }
+
+        function clearBatchList() {
+            batchItems = [];
+            renderBatchList();
+        }
+
+        function renderBatchList() {
+            const listEl = document.getElementById('batchList');
+            const emptyEl = document.getElementById('batchListEmpty');
+            const countEl = document.getElementById('batchCount');
+            
+            countEl.textContent = batchItems.length;
+            
+            if (batchItems.length === 0) {
+                emptyEl.style.display = 'block';
+                listEl.innerHTML = '';
+                listEl.appendChild(emptyEl);
+                return;
+            }
+            
+            emptyEl.style.display = 'none';
+            listEl.innerHTML = batchItems.map((item, index) => `
+                <div class="batch-item" style="
+                    background: var(--bg-card);
+                    border: 1px solid var(--border);
+                    border-radius: 10px;
+                    padding: 12px;
+                    margin-bottom: 8px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                ">
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.95rem;">
+                            ${item.surahName}
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">
+                            آية ${item.startAyah} ← ${item.endAyah}
+                        </div>
+                    </div>
+                    <button onclick="removeFromBatchList(${index})" style="
+                        background: none;
+                        border: none;
+                        color: var(--danger);
+                        font-size: 1.2rem;
+                        cursor: pointer;
+                    ">✕</button>
+                </div>
+            `).join('');
+        }
+
+        async function startBatchGeneration() {
+            const isRandom = document.getElementById('randomSelection').checked;
+            const randomCount = parseInt(document.getElementById('randomCount').value);
+            
+            // التحقق
+            if (!isRandom && batchItems.length === 0) {
+                showToast('أضف فيديوهات للقائمة أولاً', 'error');
+                return;
+            }
+            
+            // جمع الإعدادات
+            const reciter = document.getElementById('batchReciterSelect').value;
+            
+            const payload = {
+                sessionId: SESSION_ID,
+                reciter: reciter,
+                quality: document.getElementById('qualitySelect')?.value || '720',
+                fps: parseInt(document.getElementById('fpsSelect')?.value || 20),
+                dynamicBg: document.getElementById('batchDynamicBg').checked,
+                useGlow: document.getElementById('batchUseGlow').checked,
+                useVignette: document.getElementById('batchUseVignette').checked,
+                bgQuery: '',
+                pexelsKey: localStorage.getItem('user_pexels_key') || '',
+                style: getStyleSettings(),
+                randomSelection: isRandom,
+                randomCount: randomCount,
+                items: isRandom ? [] : batchItems.map(item => ({
+                    surah: item.surah,
+                    startAyah: item.startAyah,
+                    endAyah: item.endAyah
+                }))
+            };
+            
+            try {
+                showToast('جاري إنشاء الدفعة...', 'success');
+                
+                const res = await fetch('/api/batch/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await res.json();
+                
+                if (data.ok) {
+                    currentBatchId = data.batchId;
+                    showToast(`تم إنشاء دفعة من ${data.totalJobs} فيديو`, 'success');
+                    
+                    // عرض حالة التقدم
+                    document.getElementById('batchStatusSection').style.display = 'block';
+                    document.getElementById('batchTotalCount').textContent = data.totalJobs;
+                    
+                    // بدء مراقبة التقدم
+                    startBatchPolling(data.batchId);
+                    
+                    // مسح القائمة
+                    if (!isRandom) {
+                        batchItems = [];
+                        renderBatchList();
+                    }
+                } else {
+                    showToast(data.error || 'فشل إنشاء الدفعة', 'error');
+                }
+            } catch (err) {
+                console.error('Batch creation error:', err);
+                showToast('حدث خطأ في الاتصال', 'error');
+            }
+        }
+
+        let batchPollInterval = null;
+
+        function startBatchPolling(batchId) {
+            if (batchPollInterval) clearInterval(batchPollInterval);
+            
+            batchPollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/batch/status?batchId=${batchId}`);
+                    const data = await res.json();
+                    
+                    if (data.ok) {
+                        updateBatchProgress(data.batch);
+                        
+                        if (data.batch.status === 'complete' || data.batch.status === 'cancelled') {
+                            clearInterval(batchPollInterval);
+                            
+                            if (data.batch.status === 'complete') {
+                                showToast(`تم إنشاء ${data.batch.completedJobs} فيديو بنجاح!`, 'success');
+                                loadHistory();  // تحديث السجل
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error('Batch polling error:', err);
+                }
+            }, 2000);
+        }
+
+        function updateBatchProgress(batch) {
+            const total = batch.totalJobs;
+            const completed = batch.completedJobs;
+            const failed = batch.failedJobs;
+            const percent = Math.round(((completed + failed) / total) * 100);
+            
+            // تحديث الدائرة
+            const circle = document.getElementById('batchProgressCircle');
+            const circumference = 2 * Math.PI * 65;
+            if (circle) {
+                circle.style.strokeDashoffset = circumference - (percent / 100) * circumference;
+            }
+            
+            // تحديث النصوص
+            document.getElementById('batchProgressPercent').textContent = `${percent}%`;
+            document.getElementById('batchCompletedCount').textContent = completed + failed;
+            
+            // تحديث الحالة
+            const statusEl = document.getElementById('batchProgressStatus');
+            if (batch.status === 'running') {
+                statusEl.textContent = `جاري المعالجة... (${batch.currentJobIndex + 1}/${total})`;
+            } else if (batch.status === 'complete') {
+                statusEl.textContent = `✅ اكتمل!`;
+            } else if (batch.status === 'cancelled') {
+                statusEl.textContent = `⚠️ تم الإلغاء`;
+            }
+        }
+
+        // تحديث السور عند تحميل صفحة Batch
+        function initBatchPage() {
+            // نسخ قائمة السور للـ batch
+            const batchSurahSelect = document.getElementById('batchSurahSelect');
+            const mainSurahSelect = document.getElementById('surahSelect');
+            
+            if (batchSurahSelect && mainSurahSelect) {
+                batchSurahSelect.innerHTML = mainSurahSelect.innerHTML;
+                
+                // تحديث عدد الآيات عند تغيير السورة
+                batchSurahSelect.addEventListener('change', () => {
+                    const max = VERSE_COUNTS[parseInt(batchSurahSelect.value)] || 286;
+                    document.getElementById('batchStartAyah').value = 1;
+                    document.getElementById('batchEndAyah').value = Math.min(5, max);
+                });
+            }
+            
+            // نسخ قائمة القراء للـ batch
+            const batchReciterSelect = document.getElementById('batchReciterSelect');
+            const mainReciterSelect = document.getElementById('reciterSelect');
+            
+            if (batchReciterSelect && mainReciterSelect) {
+                batchReciterSelect.innerHTML = mainReciterSelect.innerHTML;
+            }
+        }
+
+        // استدعاء عند التبديل لتبويب Batch
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.dataset.tab === 'batch') {
+                    initBatchPage();
+                }
+            });
+        });
+
+        // التحقق من الباتشات النشطة عند التحميل
+        async function checkActiveBatch() {
+            try {
+                const res = await fetch(`/api/batch/list?sessionId=${encodeURIComponent(SESSION_ID)}`);
+                const data = await res.json();
+                
+                if (data.ok && data.batches) {
+                    const activeBatch = data.batches.find(b => 
+                        b.status === 'pending' || b.status === 'running'
+                    );
+                    
+                    if (activeBatch) {
+                        currentBatchId = activeBatch.id;
+                        document.getElementById('batchStatusSection').style.display = 'block';
+                        document.getElementById('batchTotalCount').textContent = activeBatch.totalJobs;
+                        startBatchPolling(activeBatch.id);
+                    }
+                }
+            } catch (err) {
+                console.log('No active batches');
+            }
+        }
+
+        // استدعاء عند التحميل
+        setTimeout(checkActiveBatch, 1000);
     </script>
 </body>
 </html>
