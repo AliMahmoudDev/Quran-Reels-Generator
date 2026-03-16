@@ -639,8 +639,9 @@ def get_text(surah, ayah):
     try:
         t = requests.get(f'https://api.alquran.cloud/v1/ayah/{surah}:{ayah}/quran-simple').json()['data']['text']
         if surah not in [1, 9] and ayah == 1:
-            t = re.sub(r'^بِسْمِ [^ ]+ [^ ]+[^ ]+', '', t).strip()
-            t = t.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").strip()
+            # إصلاح: حذف البسملة كاملة (بسم الله الرحمن الرحيم)
+            # النمط يطابق 4 كلمات: بسم + الله + الرحمن + الرحيم
+            t = re.sub(r'^بِسْمِ \S+ \S+ \S+\s*', '', t).strip()
         return t
     except: return "Text Error"
 
