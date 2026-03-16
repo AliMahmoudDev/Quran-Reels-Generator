@@ -14,9 +14,3 @@ numpy
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
-
-# نظام الحماية من المحتوى غير اللائق
-opencv-python-headless>=4.8.0
-ultralytics>=8.0.0
-deepface>=0.0.90
-tf-keras>=2.16.0
