@@ -1288,10 +1288,16 @@ def get_or_create_session():
     """Get existing session or create new one"""
     session_id = request.args.get('sessionId')
     
-    # If session_id provided, just verify it's valid format (always accept it)
-    # This allows users to keep their session even if they have no history yet
-    if session_id and len(session_id) > 10:
-        return jsonify({'ok': True, 'sessionId': session_id, 'exists': True})
+    # If session_id provided, verify it exists (any jobs with this session)
+    if session_id:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM history WHERE session_id = ?", (session_id,))
+        count = c.fetchone()[0]
+        conn.close()
+        
+        if count > 0:
+            return jsonify({'ok': True, 'sessionId': session_id, 'exists': True})
     
     # Create new session
     import secrets
@@ -1624,44 +1630,20 @@ def recover_pending_jobs():
     if pending:
         print(f"🔄 Recovered {len(pending)} pending jobs")
 
-# ==========================================
-# 🚀 Application Startup
-# ==========================================
+threading.Thread(target=background_cleanup, daemon=True).start()
 
-# Initialize database at module load time (required for gunicorn/HF)
-init_db()
-
-# Don't start threads at module level - let gunicorn handle it
-# Threads will be started on first request via before_request
-_THREADS_STARTED = False
-_THREADS_LOCK = threading.Lock()
-
-def start_background_threads():
-    """Start background threads - safe for gunicorn"""
-    global _THREADS_STARTED
-    with _THREADS_LOCK:
-        if _THREADS_STARTED:
-            return
-        _THREADS_STARTED = True
-    
-    try:
-        print("🧵 Starting background daemon threads...")
-        threading.Thread(target=background_cleanup, daemon=True).start()
-        threading.Thread(target=batch_processor_thread, daemon=True).start()
-        print("✅ Background threads started!")
-    except Exception as e:
-        print(f"⚠️ Error starting background threads: {e}")
-
-# Start threads on first request (works with gunicorn preload)
-@app.before_request
-def _on_first_request():
-    if not _THREADS_STARTED:
-        start_background_threads()
+# Start batch processor thread
+threading.Thread(target=batch_processor_thread, daemon=True).start()
 
 if __name__ == "__main__":
+    # Initialize database on startup
+    init_db()
+    
+    # Recover any pending jobs from previous session
+    recover_pending_jobs()
+    
     print("🚀 Quran Reels Generator starting...")
     print("📦 Batch export system enabled!")
-    start_background_threads()
     app.run(host='0.0.0.0', port=7860, threaded=True)
 
 

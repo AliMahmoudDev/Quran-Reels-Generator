@@ -965,8 +965,21 @@
                     console.log('⚠️ Local session created:', sessionId);
                 }
             } else {
-                // Session exists - just use it, no need to verify every time
-                console.log('✅ Using existing session:', sessionId);
+                // Verify session exists on server
+                try {
+                    const verifyRes = await fetch(`/api/session?sessionId=${sessionId}`);
+                    const verifyData = await verifyRes.json();
+                    if (!verifyData.ok) {
+                        // Session invalid, create new one
+                        localStorage.removeItem('quran_session_id');
+                        sessionId = null;
+                        window.location.reload();
+                        return;
+                    }
+                    console.log('✅ Session verified:', sessionId);
+                } catch(e) {
+                    console.log('⚠️ Could not verify session, using existing:', sessionId);
+                }
             }
             
             // Store globally

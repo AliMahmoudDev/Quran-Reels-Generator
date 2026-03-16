@@ -1,37 +1,41 @@
 # استخدام بايثون 3.9
 FROM python:3.9
 
-# 1. تحديث النظام وتثبيت المكتبات الضرورية
+# 1. تحديث النظام وتثبيت مكتبات الرسم الضرورية للنصوص العربية
+# libfribidi-dev و libharfbuzz-dev هما السر لظهور العربي بشكل صحيح في Pillow
 RUN apt-get update && \
     apt-get install -y \
     ffmpeg \
-    git \
     libfribidi-dev \
     libharfbuzz-dev \
     libraqm-dev \
-    fonts-liberation \
-    fonts-kacst \
     && rm -rf /var/lib/apt/lists/*
-
+# تأكد من وجود هذه المكتبات فقط للأساسيات
+RUN apt-get update && apt-get install -y ffmpeg libfribidi0 && rm -rf /var/lib/apt/lists/*
 # 2. إعداد مجلد العمل
 WORKDIR /app
 
-# 3. نسخ جميع الملفات من الـ repo (HuggingFace بيقللها تلقائياً)
-COPY . .
+# 3. نسخ مجلد الخطوط (تأكد أن اسمه fonts بنفس الحالة)
+COPY fonts /app/fonts
 
-# 4. تثبيت المتطلبات
+# 4. نسخ المتطلبات وتثبيتها
+COPY requirements.txt .
+# ملاحظة: أحياناً نحتاج لإعادة تثبيت Pillow ليتعرف على المكتبات الجديدة
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 5. صلاحيات المجلدات (مهم لـ Hugging Face)
-RUN mkdir -p temp_workspaces vision cache_mp3quran local_bgs && \
-    chmod -R 777 /app
+# 5. نسخ باقي كود التطبيق
+COPY . .
+
+# 6. صلاحيات المجلدات (مهم لـ Hugging Face)
+RUN mkdir -p temp_videos temp_audio vision && \
+    chmod -R 777 temp_videos temp_audio vision /app
 
 ENV PYTHONIOENCODING=utf-8
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 
-# 6. المنفذ
+# 7. المنفذ
 EXPOSE 7860
 
-# 7. التشغيل
-CMD ["gunicorn", "main:app", "--workers", "1", "--threads", "4", "--timeout", "300", "--preload", "--bind", "0.0.0.0:7860"]
+# 8. التشغيل
+CMD ["gunicorn", "main:app", "--workers", "1", "--threads", "2", "--timeout", "120", "--bind", "0.0.0.0:7860"]
