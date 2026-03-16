@@ -1589,40 +1589,17 @@ def recover_pending_batches():
 
 @app.route('/api/batch/create', methods=['POST'])
 def create_batch():
-    """إنشاء باتش جديد من فيديوهات متعددة"""
+    """إنشاء باتش جديد من فيديوهات متعددة - كل فيديو بإعداداته الخاصة"""
     d = request.json
     
-    items = d.get('items', [])  # قائمة الفيديوهات [{surah, startAyah, endAyah}, ...]
+    items = d.get('items', [])  # قائمة الفيديوهات [{surah, startAyah, endAyah, reciter, dynamicBg, useGlow, useVignette}, ...]
     session_id = d.get('sessionId')
-    random_selection = d.get('randomSelection', False)
-    random_count = d.get('randomCount', 5)
-    
-    if not items and not random_selection:
-        return jsonify({'ok': False, 'error': 'No items provided'}), 400
-    
-    # لو اختيار عشوائي
-    if random_selection:
-        items = []
-        available_surahs = list(VERSE_COUNTS.keys())
-        
-        for _ in range(random_count):
-            surah = random.choice(available_surahs)
-            max_ayah = VERSE_COUNTS[surah]
-            start = random.randint(1, max(1, max_ayah - 4))
-            end = min(start + random.randint(2, 5), max_ayah)
-            items.append({
-                'surah': surah,
-                'startAyah': start,
-                'endAyah': end
-            })
     
     if not items:
-        return jsonify({'ok': False, 'error': 'No items to process'}), 400
+        return jsonify({'ok': False, 'error': 'No items provided'}), 400
     
-    # إنشاء الباتش
-    batch_id = str(uuid.uuid4())
-    
-    config = {
+    # الإعدادات العامة (fallback)
+    global_config = {
         'reciter': d.get('reciter'),
         'quality': d.get('quality', '720'),
         'fps': d.get('fps', 20),
@@ -1635,14 +1612,27 @@ def create_batch():
         'session_id': session_id
     }
     
-    db_create_batch(batch_id, len(items), config)
+    # إنشاء الباتش
+    batch_id = str(uuid.uuid4())
+    db_create_batch(batch_id, len(items), global_config)
     
     # إنشاء الـ jobs والـ items
     for i, item in enumerate(items):
-        job_config = config.copy()
+        # دمج الإعدادات الخاصة بالـ item مع الإعدادات العامة
+        job_config = global_config.copy()
         job_config['surah'] = item['surah']
         job_config['startAyah'] = item['startAyah']
         job_config['endAyah'] = item['endAyah']
+        
+        # الإعدادات الخاصة بالـ item (لو موجودة)
+        if item.get('reciter'):
+            job_config['reciter'] = item['reciter']
+        if item.get('dynamicBg') is not None:
+            job_config['dynamicBg'] = item['dynamicBg']
+        if item.get('useGlow') is not None:
+            job_config['useGlow'] = item['useGlow']
+        if item.get('useVignette') is not None:
+            job_config['useVignette'] = item['useVignette']
         
         job_id = create_job(job_config, session_id)
         db_add_batch_item(batch_id, job_id, i, item['surah'], item['startAyah'], item['endAyah'])
