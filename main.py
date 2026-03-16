@@ -89,9 +89,7 @@ UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
 
 # Master Temp Directory
 BASE_TEMP_DIR = os.path.join(EXEC_DIR, "temp_workspaces")
-OUTPUTS_DIR = os.path.join(EXEC_DIR, "outputs")
 os.makedirs(BASE_TEMP_DIR, exist_ok=True)
-os.makedirs(OUTPUTS_DIR, exist_ok=True)
 os.makedirs(VISION_DIR, exist_ok=True)
 
 # ==========================================
@@ -129,13 +127,15 @@ def init_db():
         created_at REAL,
         completed_at REAL,
         config_json TEXT,
-        workspace TEXT
+        workspace TEXT,
+        session_id TEXT
     )''')
     
     # History table - for user download history
     c.execute('''CREATE TABLE IF NOT EXISTS history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         job_id TEXT,
+        session_id TEXT,
         title TEXT,
         reciter TEXT,
         surah INTEGER,
@@ -144,9 +144,29 @@ def init_db():
         quality TEXT,
         fps TEXT,
         download_filename TEXT,
+        output_path TEXT,
+        status TEXT DEFAULT 'complete',
         created_at REAL,
         FOREIGN KEY (job_id) REFERENCES jobs(id)
     )''')
+    
+    # Add session_id column to existing tables if not exists
+    try:
+        c.execute("ALTER TABLE jobs ADD COLUMN session_id TEXT")
+    except:
+        pass
+    try:
+        c.execute("ALTER TABLE history ADD COLUMN session_id TEXT")
+    except:
+        pass
+    try:
+        c.execute("ALTER TABLE history ADD COLUMN output_path TEXT")
+    except:
+        pass
+    try:
+        c.execute("ALTER TABLE history ADD COLUMN status TEXT DEFAULT 'complete'")
+    except:
+        pass
     
     # Batch jobs table - for batch export
     c.execute('''CREATE TABLE IF NOT EXISTS batch_jobs (
@@ -184,13 +204,13 @@ def init_db():
     conn.close()
     print("✅ Database initialized successfully!")
 
-def db_create_job(job_id, workspace, config=None):
+def db_create_job(job_id, workspace, config=None, session_id=None):
     """Create a new job in database"""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute('''INSERT INTO jobs (id, status, percent, created_at, workspace, config_json)
-                VALUES (?, ?, ?, ?, ?, ?)''', 
-              (job_id, 'pending', 0, time.time(), workspace, json.dumps(config) if config else None))
+    c.execute('''INSERT INTO jobs (id, status, percent, created_at, workspace, config_json, session_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)''', 
+              (job_id, 'pending', 0, time.time(), workspace, json.dumps(config) if config else None, session_id))
     conn.commit()
     conn.close()
 
@@ -248,25 +268,34 @@ def db_get_pending_jobs():
     conn.close()
     return [dict(row) for row in rows]
 
-def db_add_history(job_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, filename):
+def db_add_history(job_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, filename, session_id=None, output_path=None, status='complete'):
     """Add entry to history"""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute('''INSERT INTO history (job_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, download_filename, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-              (job_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, filename, time.time()))
+    c.execute('''INSERT INTO history (job_id, session_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, download_filename, output_path, status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+              (job_id, session_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, filename, output_path, status, time.time()))
     conn.commit()
     conn.close()
 
-def db_get_history(limit=20):
-    """Get history entries"""
+def db_get_history(limit=20, session_id=None):
+    """Get history entries - filtered by session_id if provided"""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
-    c.execute('''SELECT h.*, j.output_path, j.status 
-                 FROM history h 
-                 LEFT JOIN jobs j ON h.job_id = j.id 
-                 ORDER BY h.created_at DESC LIMIT ?''', (limit,))
+    
+    if session_id:
+        c.execute('''SELECT h.*, j.output_path, j.status 
+                     FROM history h 
+                     LEFT JOIN jobs j ON h.job_id = j.id 
+                     WHERE h.session_id = ?
+                     ORDER BY h.created_at DESC LIMIT ?''', (session_id, limit))
+    else:
+        c.execute('''SELECT h.*, j.output_path, j.status 
+                     FROM history h 
+                     LEFT JOIN jobs j ON h.job_id = j.id 
+                     ORDER BY h.created_at DESC LIMIT ?''', (limit,))
+    
     rows = c.fetchall()
     conn.close()
     return [dict(row) for row in rows]
@@ -283,17 +312,9 @@ def db_cleanup_old_jobs(hours=24):
     
     # Clean up files
     for job in old_jobs:
-        # حذف مجلد العمل المؤقت
         if job['workspace'] and os.path.exists(job['workspace']):
             try:
                 shutil.rmtree(job['workspace'], ignore_errors=True)
-            except:
-                pass
-        
-        # حذف ملف الفيديو النهائي من outputs
-        if job['output_path'] and os.path.exists(job['output_path']):
-            try:
-                os.remove(job['output_path'])
             except:
                 pass
     
@@ -303,7 +324,7 @@ def db_cleanup_old_jobs(hours=24):
     
     conn.commit()
     conn.close()
-    print(f"🧹 Cleaned up {len(old_jobs)} old jobs and their video files")
+    print(f"🧹 Cleaned up {len(old_jobs)} old jobs")
 
 # ==========================================
 # 📦 Batch Job Management Functions
@@ -422,6 +443,14 @@ JOBS = {}  # RAM cache for fast access
 JOBS_LOCK = threading.Lock()
 
 # ==========================================
+# 📦 Batch Management
+# ==========================================
+BATCHES = {}  # RAM cache for batch status
+BATCHES_LOCK = threading.Lock()
+BATCH_QUEUE = []  # Queue of batch IDs to process
+BATCH_QUEUE_LOCK = threading.Lock()
+CURRENT_BATCH = None  # Currently running batch
+
 def create_job(config=None):
     """Create a new job - stores in RAM and SQLite"""
     job_id = str(uuid.uuid4())
@@ -588,34 +617,24 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     
     check_stop(job_id)
     seg = AudioSegment.from_file(full_audio_path)[t['start']:t['end']]
-    
-    # 🎯 جعل الـ threshold أكثر حساسية عشان ميعتبرش الصدى صمت
-    # كان -25، خليناه -35 عشان يسيب الصوت الخافت (الصدى والمد)
-    silence_thresh = seg.dBFS - 35
+    silence_thresh = seg.dBFS - 25 # جعلنا المقص ألطف
 
     start_trim = detect_leading_silence(seg, silence_threshold=silence_thresh)
     end_trim = detect_leading_silence(seg.reverse(), silence_threshold=silence_thresh)
     duration = len(seg)
     
-    # 🚀 قص 30ms إضافية من أول الآية عشان نتأكد مفيش تسريب
-    aggressive_start_trim = max(0, start_trim + 250)
+    # 🚀 التعديل السحري: إضافة مقص إجباري في البداية لقتل "التسريب"
+    aggressive_start_trim = max(0,start_trim- 30)  # قص 150 ملي ثانية إضافية من أول الآية
     
-    # 🎵 مساحة أمان أكبر للصدى في الآخر
-    # هنسيب 800ms من الآخر بدل 500ms عشان الصدى والمد
-    safe_buffer = 800
+    # ترك مساحة أمان في النهاية للحفاظ على صدى الشيخ
+    # 🧪 تجربة البتر: هنجبره يقص 300 ملي ثانية زيادة من آخر الآية عشان نكتشف مصدر الصوت!
+    experiment_cut = 500
     
-    # لو الصمت المكتشف أكبر من الـ buffer، نقص الفرق بس
-    # لو الصمت المكتشف أصغر، نقص الصمت كله وسيب الصوت
-    if end_trim > safe_buffer:
-        # فيه صمت كافي - نقص جزء منه
-        safe_end_trim = end_trim - safe_buffer
-    else:
-        # الصوت قريب من النهاية - مفيش صمت كافي، نسيبه زي ما هو
-        safe_end_trim = 0
+    # لاحظ خلينا الـ end_trim يزيد عليه 300 ملي ثانية عشان ياكل من آخر الصوت
+    safe_end_trim = max(0,end_trim-experiment_cut )
     
-    if duration - aggressive_start_trim - safe_end_trim > 200: 
-        # 🎵 Fade out ناعم 200ms بدل 50ms
-        seg = seg[aggressive_start_trim:duration-safe_end_trim].fade_out(100)
+    if duration - start_trim - safe_end_trim > 200: 
+        seg = seg[start_trim:duration-safe_end_trim].fade_out(50)
         
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
     seg.export(out, format="mp3")
@@ -772,7 +791,7 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
 # ==========================================
 # ⚡ Optimized Video Builder (Segmented / Chunked)
 # ==========================================
-def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, style):
+def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, style, session_id=None):
     job = get_job(job_id)
     if not job:
         raise Exception(f"Job {job_id} not found - cannot process video")
@@ -868,16 +887,8 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 if t_end - current_audio_time <= 0.05: 
                     t_end = min(current_audio_time + 0.1, full_audioclip.duration)
 
-                # 2. قص الصوت - fade بس في أول وآخر chunk في الآية
-                chunk_audio = full_audioclip.subclip(current_audio_time, t_end)
-                
-                # fade in بس في أول سطر
-                if chunk_idx == 0:
-                    chunk_audio = chunk_audio.audio_fadein(0.05)
-                
-                # fade out بس في آخر سطر
-                if chunk_idx == len(ar_chunks) - 1:
-                    chunk_audio = chunk_audio.audio_fadeout(0.05)
+                # 2. قص الصوت أولاً
+                chunk_audio = full_audioclip.subclip(current_audio_time, t_end).audio_fadein(0.05).audio_fadeout(0.05)
                 
                 # 🚀 3. الحل الجذري: نعتمد وقت الصوت الفعلي كأساس لوقت الفيديو!
                 actual_duration = chunk_audio.duration
@@ -931,8 +942,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         update_job_status(job_id, 85, "Merging All Chunks...")
         final_video = concatenate_videoclips(final_segments, method="compose")
         
-        # حفظ الفيديو النهائي في مجلد outputs
-        final_output_path = os.path.join(OUTPUTS_DIR, f"{job_id}.mp4")
+        out_p = os.path.join(workspace, f"out_{job_id}.mp4")
         temp_mix_path = os.path.join(workspace, f"temp_mix_{job_id}.mp4")
         
         update_job_status(job_id, 90, "Rendering Video (Mixing)...")
@@ -954,24 +964,24 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             f'-af "{STUDIO_DRY_FILTER}" '
             f'-c:v copy '
             f'-c:a aac -b:a 192k '
-            f'"{final_output_path}"'
+            f'"{out_p}"'
         )
         
         if os.system(cmd) != 0: 
             # في حال فشل الفلتر لأي سبب، نستخدم النسخة الأصلية
-            shutil.move(temp_mix_path, final_output_path)
+            shutil.move(temp_mix_path, out_p)
         else:
             if os.path.exists(temp_mix_path): os.remove(temp_mix_path)
 
         with JOBS_LOCK: 
             if job_id in JOBS:
-                JOBS[job_id].update({'output_path': final_output_path, 'is_complete': True, 'is_running': False, 'percent': 100, 'status': "complete"})
+                JOBS[job_id].update({'output_path': out_p, 'is_complete': True, 'is_running': False, 'percent': 100, 'status': "complete"})
             else:
                 # أضف للـ RAM لو مش موجودة
-                JOBS[job_id] = {'id': job_id, 'output_path': final_output_path, 'is_complete': True, 'is_running': False, 'percent': 100, 'status': "complete"}
+                JOBS[job_id] = {'id': job_id, 'output_path': out_p, 'is_complete': True, 'is_running': False, 'percent': 100, 'status': "complete"}
         
         # Update in SQLite and add to history
-        db_update_job(job_id, output_path=final_output_path, status='complete', percent=100, completed_at=time.time())
+        db_update_job(job_id, output_path=out_p, status='complete', percent=100, completed_at=time.time())
         
         # Get config from DB to add to history
         db_job = db_get_job(job_id)
@@ -984,11 +994,13 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 reciter = config.get('reciter', 'Unknown')
                 quality = config.get('quality', '720')
                 fps = config.get('fps', '20')
+                sess_id = config.get('session_id')
                 
                 title = f"{SURAH_NAMES[surah-1] if surah <= len(SURAH_NAMES) else 'سورة'} (آية {start_ayah}-{end_ayah})"
                 filename = f"Quran_{surah}_{start_ayah}.mp4"
                 
-                db_add_history(job_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, filename)
+                db_add_history(job_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, filename, 
+                              session_id=sess_id, output_path=final_output_path, status='complete')
             except Exception as e:
                 print(f"Error adding to history: {e}")
 
@@ -1020,36 +1032,6 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             for s in final_segments: s.close()
         except: pass
         gc.collect()
-        
-        # 🧹 حذف جميع الملفات المؤقتة
-        try:
-            # حذف مجلد العمل المؤقت بالكامل
-            if workspace and os.path.exists(workspace):
-                shutil.rmtree(workspace, ignore_errors=True)
-                print(f"🧹 Cleaned workspace: {job_id}")
-            
-            # حذف ملفات الـ cache بعد كل عملية
-            # cache_mp3quran - ملفات الصوت المحملة
-            cache_mp3_dir = os.path.join(EXEC_DIR, "cache_mp3quran")
-            if os.path.exists(cache_mp3_dir):
-                shutil.rmtree(cache_mp3_dir, ignore_errors=True)
-                os.makedirs(cache_mp3_dir, exist_ok=True)
-                print(f"🧹 Cleaned cache_mp3quran")
-            
-            # vision - فيديوهات الخلفية المحملة من Pexels
-            if os.path.exists(VISION_DIR):
-                for f in os.listdir(VISION_DIR):
-                    fpath = os.path.join(VISION_DIR, f)
-                    try:
-                        if os.path.isfile(fpath):
-                            os.remove(fpath)
-                        elif os.path.isdir(fpath):
-                            shutil.rmtree(fpath, ignore_errors=True)
-                    except: pass
-                print(f"🧹 Cleaned vision backgrounds")
-                
-        except Exception as cleanup_err:
-            print(f"⚠️ Cleanup error: {cleanup_err}")
 
 @app.route('/')
 def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "API Running"
@@ -1057,6 +1039,9 @@ def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "API Running
 @app.route('/api/generate', methods=['POST'])
 def gen():
     d = request.json
+    
+    # Get session_id from request
+    session_id = d.get('sessionId')
     
     # Create job with config for persistence
     config = {
@@ -1071,7 +1056,8 @@ def gen():
         'useGlow': d.get('useGlow', False),
         'useVignette': d.get('useVignette', False),
         'pexelsKey': d.get('pexelsKey', ''),
-        'style': d.get('style', {})
+        'style': d.get('style', {}),
+        'session_id': session_id
     }
     
     job_id = create_job(config)
@@ -1084,7 +1070,7 @@ def gen():
         target=build_video_task, 
         args=(
             job_id, 
-            d['pexelsKey'], 
+            d.get('pexelsKey', ''), 
             d['reciter'], 
             int(d['surah']), 
             int(d['startAyah']), 
@@ -1095,7 +1081,8 @@ def gen():
             d.get('dynamicBg',False), 
             d.get('useGlow',False), 
             d.get('useVignette',False),
-            style_settings
+            style_settings,
+            session_id
         ), 
         daemon=True
     ).start()
@@ -1140,9 +1127,11 @@ def cancel_process():
 
 @app.route('/api/history')
 def get_history():
-    """Get user's video history from database"""
+    """Get user's video history from database - filtered by session_id"""
     limit = request.args.get('limit', 20, type=int)
-    history = db_get_history(limit)
+    session_id = request.args.get('sessionId')  # Get session_id from request
+    
+    history = db_get_history(limit, session_id)
     
     result = []
     for h in history:
@@ -1171,12 +1160,17 @@ def get_history():
 
 @app.route('/api/history/<int:history_id>', methods=['DELETE'])
 def delete_history_item(history_id):
-    """Delete a single history item"""
+    """Delete a single history item - only if belongs to session"""
+    session_id = request.args.get('sessionId')  # Get session_id from request
+    
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
     # Get the history item first to clean up files
-    c.execute("SELECT job_id FROM history WHERE id = ?", (history_id,))
+    if session_id:
+        c.execute("SELECT job_id FROM history WHERE id = ? AND session_id = ?", (history_id, session_id))
+    else:
+        c.execute("SELECT job_id FROM history WHERE id = ?", (history_id,))
     row = c.fetchone()
     
     if row:
@@ -1202,14 +1196,34 @@ def delete_history_item(history_id):
 
 @app.route('/api/history/clear', methods=['POST'])
 def clear_all_history():
-    """Clear all history"""
+    """Clear all history for current session"""
+    session_id = request.json.get('sessionId') if request.json else None
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
-    # Get all workspaces to clean up files
-    c.execute("SELECT workspace FROM jobs WHERE workspace IS NOT NULL")
-    workspaces = c.fetchall()
+    if session_id:
+        # Get workspaces for this session only
+        c.execute('''SELECT j.workspace FROM jobs j
+                    JOIN history h ON j.id = h.job_id
+                    WHERE h.session_id = ? AND j.workspace IS NOT NULL''', (session_id,))
+        workspaces = c.fetchall()
+        
+        # Delete from history for this session
+        c.execute("DELETE FROM history WHERE session_id = ?", (session_id,))
+        
+        # Delete jobs that belong to this session
+        c.execute("DELETE FROM jobs WHERE session_id = ?", (session_id,))
+    else:
+        # No session - clear all (fallback)
+        c.execute("SELECT workspace FROM jobs WHERE workspace IS NOT NULL")
+        workspaces = c.fetchall()
+        c.execute("DELETE FROM history")
+        c.execute("DELETE FROM jobs")
     
+    conn.commit()
+    conn.close()
+    
+    # Clean up workspace files
     for ws in workspaces:
         if ws[0] and os.path.exists(ws[0]):
             try:
@@ -1217,15 +1231,15 @@ def clear_all_history():
             except:
                 pass
     
-    # Delete all history and jobs
-    c.execute("DELETE FROM history")
-    c.execute("DELETE FROM jobs")
-    conn.commit()
-    conn.close()
-    
-    # Also clear RAM
+    # Also clear RAM for these jobs
     with JOBS_LOCK:
-        JOBS.clear()
+        if session_id:
+            # Remove only jobs for this session
+            keys_to_remove = [k for k, v in JOBS.items() if v.get('session_id') == session_id]
+            for k in keys_to_remove:
+                JOBS.pop(k, None)
+        else:
+            JOBS.clear()
     
     return jsonify({'ok': True})
 
@@ -1265,12 +1279,329 @@ def get_job_by_id(job_id):
         return jsonify({'error': 'Job not found'}), 404
     return jsonify(job)
 
+# ==========================================
+# 🔑 Session Management
+# ==========================================
+
+@app.route('/api/session', methods=['GET'])
+def get_or_create_session():
+    """Get existing session or create new one"""
+    session_id = request.args.get('sessionId')
+    
+    # If session_id provided, just verify it's valid format (always accept it)
+    # This allows users to keep their session even if they have no history yet
+    if session_id and len(session_id) > 10:
+        return jsonify({'ok': True, 'sessionId': session_id, 'exists': True})
+    
+    # Create new session
+    import secrets
+    new_session_id = secrets.token_hex(16)  # 32 char hex string
+    return jsonify({'ok': True, 'sessionId': new_session_id, 'exists': False})
+
 @app.route('/api/config')
 def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 'reciters': RECITERS_MAP})
 
 # ==========================================
-# 🔧 Utility Functions
+# 📦 Batch Export API Endpoints
 # ==========================================
+
+@app.route('/api/batch/create', methods=['POST'])
+def create_batch_export():
+    """Create a new batch export job"""
+    d = request.json
+    
+    # Parse batch items
+    items = d.get('items', [])
+    if not items:
+        return jsonify({'error': 'No items provided'}), 400
+    
+    # Validate items
+    for item in items:
+        surah = item.get('surah')
+        if not surah or surah < 1 or surah > 114:
+            return jsonify({'error': f'Invalid surah: {surah}'}), 400
+    
+    # Create batch
+    batch_id = str(uuid.uuid4())
+    
+    # Common config for all items
+    common_config = {
+        'reciter': d.get('reciter'),
+        'quality': d.get('quality', '720'),
+        'fps': d.get('fps', 20),
+        'pexelsKey': d.get('pexelsKey', ''),
+        'bgQuery': d.get('bgQuery', ''),
+        'dynamicBg': d.get('dynamicBg', False),
+        'useGlow': d.get('useGlow', False),
+        'useVignette': d.get('useVignette', False),
+        'style': d.get('style', {})
+    }
+    
+    # Create batch in DB
+    db_create_batch(batch_id, len(items), common_config)
+    
+    # Create individual jobs and batch items
+    for i, item in enumerate(items):
+        job_id = str(uuid.uuid4())
+        job_dir = os.path.join(BASE_TEMP_DIR, job_id)
+        os.makedirs(job_dir, exist_ok=True)
+        
+        # Create job
+        config = {
+            **common_config,
+            'surah': item['surah'],
+            'startAyah': item.get('startAyah', 1),
+            'endAyah': item.get('endAyah', item.get('startAyah', 1)),
+            'reciter': item.get('reciter', common_config.get('reciter'))  # Override reciter if provided
+        }
+        
+        db_create_job(job_id, job_dir, config)
+        db_add_batch_item(batch_id, job_id, i, item['surah'], 
+                          item.get('startAyah', 1), item.get('endAyah', item.get('startAyah', 1)))
+    
+    # Add to batch queue
+    with BATCH_QUEUE_LOCK:
+        BATCH_QUEUE.append(batch_id)
+    
+    # Initialize batch in RAM
+    with BATCHES_LOCK:
+        BATCHES[batch_id] = {
+            'id': batch_id,
+            'status': 'pending',
+            'total_jobs': len(items),
+            'completed_jobs': 0,
+            'failed_jobs': 0,
+            'current_job_index': 0,
+            'current_job_id': None
+        }
+    
+    return jsonify({'ok': True, 'batchId': batch_id, 'totalJobs': len(items)})
+
+@app.route('/api/batch/<batch_id>')
+def get_batch_status(batch_id):
+    """Get batch status and progress"""
+    batch = db_get_batch(batch_id)
+    if not batch:
+        return jsonify({'error': 'Batch not found'}), 404
+    
+    # Get batch items
+    items = db_get_batch_items(batch_id)
+    
+    # Calculate overall progress
+    total = batch['total_jobs']
+    completed = batch['completed_jobs']
+    failed = batch['failed_jobs']
+    
+    # Calculate percent (each job contributes equally)
+    percent = int((completed + failed) / total * 100) if total > 0 else 0
+    
+    # Build response
+    result = {
+        'id': batch['id'],
+        'status': batch['status'],
+        'totalJobs': total,
+        'completedJobs': completed,
+        'failedJobs': failed,
+        'currentJobIndex': batch['current_job_index'],
+        'currentJobId': batch['current_job_id'],
+        'percent': percent,
+        'createdAt': batch['created_at'],
+        'startedAt': batch['started_at'],
+        'completedAt': batch['completed_at'],
+        'items': []
+    }
+    
+    # Add item details
+    for item in items:
+        item_data = {
+            'position': item['position'],
+            'surah': item['surah'],
+            'surahName': SURAH_NAMES[item['surah'] - 1] if item['surah'] <= len(SURAH_NAMES) else '',
+            'startAyah': item['start_ayah'],
+            'endAyah': item['end_ayah'],
+            'status': item['status'],
+            'jobId': item['job_id']
+        }
+        
+        # Add download URL if complete
+        if item['status'] == 'complete' and item['output_path']:
+            item_data['downloadUrl'] = f"/api/download?jobId={item['job_id']}"
+        
+        if item['error']:
+            item_data['error'] = item['error']
+        
+        result['items'].append(item_data)
+    
+    return jsonify(result)
+
+@app.route('/api/batch/list')
+def list_batches():
+    """List all batches"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("SELECT * FROM batch_jobs ORDER BY created_at DESC LIMIT 20")
+    rows = c.fetchall()
+    conn.close()
+    
+    result = []
+    for row in rows:
+        batch = dict(row)
+        result.append({
+            'id': batch['id'],
+            'status': batch['status'],
+            'totalJobs': batch['total_jobs'],
+            'completedJobs': batch['completed_jobs'],
+            'failedJobs': batch['failed_jobs'],
+            'createdAt': batch['created_at'],
+            'completedAt': batch['completed_at']
+        })
+    
+    return jsonify({'ok': True, 'batches': result})
+
+@app.route('/api/batch/<batch_id>/cancel', methods=['POST'])
+def cancel_batch(batch_id):
+    """Cancel a batch job"""
+    batch = db_get_batch(batch_id)
+    if not batch:
+        return jsonify({'error': 'Batch not found'}), 404
+    
+    if batch['status'] not in ('pending', 'running'):
+        return jsonify({'error': 'Batch already completed'}), 400
+    
+    # Update batch status
+    db_update_batch(batch_id, status='cancelled')
+    
+    # Cancel current job if any
+    if batch['current_job_id']:
+        with JOBS_LOCK:
+            if batch['current_job_id'] in JOBS:
+                JOBS[batch['current_job_id']]['should_stop'] = True
+        db_update_job(batch['current_job_id'], should_stop=1, status='cancelled')
+    
+    return jsonify({'ok': True})
+
+@app.route('/api/batch/<batch_id>/download-zip')
+def download_batch_zip(batch_id):
+    """Download all completed videos as a ZIP file"""
+    batch = db_get_batch(batch_id)
+    if not batch:
+        return jsonify({'error': 'Batch not found'}), 404
+    
+    if batch['status'] != 'complete':
+        return jsonify({'error': 'Batch not complete'}), 400
+    
+    items = db_get_batch_items(batch_id)
+    
+    # Create temp zip file
+    zip_path = os.path.join(BASE_TEMP_DIR, f"batch_{batch_id}.zip")
+    
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for item in items:
+            if item['status'] == 'complete' and item['output_path'] and os.path.exists(item['output_path']):
+                # Add to zip with a nice filename
+                surah_name = SURAH_NAMES[item['surah'] - 1] if item['surah'] <= len(SURAH_NAMES) else f"Surah{item['surah']}"
+                filename = f"{surah_name}_{item['start_ayah']}-{item['end_ayah']}.mp4"
+                zipf.write(item['output_path'], filename)
+    
+    return send_file(zip_path, as_attachment=True, download_name=f"quran_batch_{batch_id[:8]}.zip")
+
+def process_batch(batch_id):
+    """Process a batch job (runs in background thread)"""
+    global CURRENT_BATCH
+    
+    batch = db_get_batch(batch_id)
+    if not batch:
+        return
+    
+    config = json.loads(batch['config_json']) if batch['config_json'] else {}
+    items = db_get_batch_items(batch_id)
+    
+    # Update batch status
+    db_update_batch(batch_id, status='running', started_at=time.time())
+    CURRENT_BATCH = batch_id
+    
+    for i, item in enumerate(items):
+        # Check if batch was cancelled
+        batch = db_get_batch(batch_id)
+        if batch['status'] == 'cancelled':
+            break
+        
+        job_id = item['job_id']
+        
+        # Update batch current job
+        db_update_batch(batch_id, current_job_id=job_id, current_job_index=i)
+        
+        # Get job config
+        job = db_get_job(job_id)
+        job_config = json.loads(job['config_json']) if job['config_json'] else {}
+        
+        # Merge configs
+        merged_config = {**config, **job_config}
+        
+        # Run the video build
+        try:
+            build_video_task(
+                job_id,
+                merged_config.get('pexelsKey', ''),
+                merged_config.get('reciter', ''),
+                merged_config.get('surah', 1),
+                merged_config.get('startAyah', 1),
+                merged_config.get('endAyah', 1),
+                merged_config.get('quality', '720'),
+                merged_config.get('bgQuery', ''),
+                merged_config.get('fps', 20),
+                merged_config.get('dynamicBg', False),
+                merged_config.get('useGlow', False),
+                merged_config.get('useVignette', False),
+                merged_config.get('style', {})
+            )
+            
+            # Check result
+            job = db_get_job(job_id)
+            if job['status'] == 'complete':
+                db_update_batch(batch_id, completed_jobs=batch['completed_jobs'] + 1)
+                db_update_batch_item(batch_id, job_id, status='complete', output_path=job['output_path'])
+                batch = db_get_batch(batch_id)  # Refresh
+            else:
+                db_update_batch(batch_id, failed_jobs=batch['failed_jobs'] + 1)
+                db_update_batch_item(batch_id, job_id, status='error', error=job.get('error', 'Unknown error'))
+                batch = db_get_batch(batch_id)  # Refresh
+                
+        except Exception as e:
+            db_update_batch(batch_id, failed_jobs=batch['failed_jobs'] + 1)
+            db_update_batch_item(batch_id, job_id, status='error', error=str(e))
+            batch = db_get_batch(batch_id)  # Refresh
+    
+    # Mark batch as complete
+    db_update_batch(batch_id, status='complete', completed_at=time.time(), current_job_id=None)
+    CURRENT_BATCH = None
+    print(f"✅ Batch {batch_id} completed!")
+
+def batch_processor_thread():
+    """Background thread that processes batch jobs"""
+    global CURRENT_BATCH
+    
+    while True:
+        time.sleep(2)  # Check every 2 seconds
+        
+        # Skip if already processing
+        if CURRENT_BATCH:
+            continue
+        
+        # Get next batch from queue
+        with BATCH_QUEUE_LOCK:
+            if not BATCH_QUEUE:
+                continue
+            batch_id = BATCH_QUEUE.pop(0)
+        
+        # Process the batch
+        try:
+            process_batch(batch_id)
+        except Exception as e:
+            print(f"❌ Batch processing error: {e}")
+            db_update_batch(batch_id, status='error')
+            CURRENT_BATCH = None
 
 def background_cleanup():
     """Cleanup old jobs and files every 10 minutes"""
@@ -1283,101 +1614,54 @@ def background_cleanup():
             print(f"Cleanup error: {e}")
 
 def recover_pending_jobs():
-    """Resume pending/processing jobs on server restart"""
+    """Recover pending/processing jobs on server restart"""
     pending = db_get_pending_jobs()
-    
-    if not pending:
-        return
-    
-    print(f"🔄 Found {len(pending)} pending jobs - resuming...")
-    
     for job in pending:
-        job_id = job['id']
-        
-        # Check if workspace still exists
-        workspace = job.get('workspace')
-        if not workspace or not os.path.exists(workspace):
-            print(f"⚠️ Job {job_id} workspace missing - marking as error")
-            db_update_job(job_id, status='error', error='Workspace deleted')
-            continue
-        
-        # Get config
-        config_json = job.get('config_json')
-        if not config_json:
-            print(f"⚠️ Job {job_id} has no config - marking as error")
-            db_update_job(job_id, status='error', error='Config missing')
-            continue
-        
-        try:
-            config = json.loads(config_json)
-            
-            # Reset job status
-            db_update_job(job_id, status='pending', percent=0)
-            
-            # Re-add to RAM
-            with JOBS_LOCK:
-                JOBS[job_id] = {
-                    'id': job_id,
-                    'percent': 0,
-                    'status': 'pending',
-                    'eta': '--:--',
-                    'is_running': True,
-                    'is_complete': False,
-                    'output_path': None,
-                    'error': None,
-                    'should_stop': False,
-                    'created_at': job.get('created_at', time.time()),
-                    'workspace': workspace
-                }
-            
-            # Start processing in background
-            style_settings = config.get('style', {})
-            
-            def start_job(jid, cfg, style):
-                threading.Thread(
-                    target=build_video_task,
-                    args=(
-                        jid,
-                        cfg.get('pexelsKey', ''),
-                        cfg.get('reciter', ''),
-                        int(cfg.get('surah', 1)),
-                        int(cfg.get('startAyah', 1)),
-                        int(cfg.get('endAyah', 0)),
-                        cfg.get('quality', '720'),
-                        cfg.get('bgQuery', ''),
-                        int(cfg.get('fps', 20)),
-                        cfg.get('dynamicBg', False),
-                        cfg.get('useGlow', False),
-                        cfg.get('useVignette', False),
-                        style
-                    ),
-                    daemon=True
-                ).start()
-            
-            # Delay start to allow server to fully initialize
-            threading.Timer(2.0, start_job, args=(job_id, config, style_settings)).start()
-            
-            print(f"✅ Job {job_id} resumed successfully")
-            
-        except Exception as e:
-            print(f"❌ Failed to resume job {job_id}: {e}")
-            db_update_job(job_id, status='error', error=str(e))
+        # Mark as error since we can't resume video processing
+        db_update_job(job['id'], status='error', error='Server restarted')
+        print(f"⚠️ Job {job['id']} marked as error due to server restart")
     
-    print(f"🚀 Resume complete - {len(pending)} jobs restarted")
+    if pending:
+        print(f"🔄 Recovered {len(pending)} pending jobs")
 
-threading.Thread(target=background_cleanup, daemon=True).start()
+# ==========================================
+# 🚀 Application Startup
+# ==========================================
 
-# Initialize database on module load (important for gunicorn/production)
+# Initialize database at module load time (required for gunicorn/HF)
 init_db()
 
-# Recover any pending jobs from previous session
-try:
-    recover_pending_jobs()
-except Exception as e:
-    print(f"⚠️ Failed to recover pending jobs: {e}")
+# Don't start threads at module level - let gunicorn handle it
+# Threads will be started on first request via before_request
+_THREADS_STARTED = False
+_THREADS_LOCK = threading.Lock()
+
+def start_background_threads():
+    """Start background threads - safe for gunicorn"""
+    global _THREADS_STARTED
+    with _THREADS_LOCK:
+        if _THREADS_STARTED:
+            return
+        _THREADS_STARTED = True
+    
+    try:
+        print("🧵 Starting background daemon threads...")
+        threading.Thread(target=background_cleanup, daemon=True).start()
+        threading.Thread(target=batch_processor_thread, daemon=True).start()
+        print("✅ Background threads started!")
+    except Exception as e:
+        print(f"⚠️ Error starting background threads: {e}")
+
+# Start threads on first request (works with gunicorn preload)
+@app.before_request
+def _on_first_request():
+    if not _THREADS_STARTED:
+        start_background_threads()
 
 if __name__ == "__main__":
     print("🚀 Quran Reels Generator starting...")
+    print("📦 Batch export system enabled!")
+    start_background_threads()
     app.run(host='0.0.0.0', port=7860, threaded=True)
 
 
