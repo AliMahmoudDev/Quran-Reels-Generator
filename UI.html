@@ -1271,9 +1271,12 @@
             <!-- ⚙️ Settings Tab -->
             <div class="tab-panel" id="settings-panel">
                 <!-- Preview -->
-                <div class="preview-box">
-                    <div class="preview-ar" id="previewAr">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
-                    <div class="preview-en" id="previewEn">In the name of Allah, the Entirely Merciful</div>
+                <div class="preview-box" id="previewBox">
+                    <img id="previewImage" style="max-width: 100%; height: auto; display: none;" />
+                    <div id="previewContent">
+                        <div class="preview-ar" id="previewAr">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
+                        <div class="preview-en" id="previewEn">In the name of Allah, the Entirely Merciful</div>
+                    </div>
                 </div>
 
                 <!-- Font Selection -->
@@ -1285,6 +1288,7 @@
                             <select id="arFontSelect" class="font-select" onchange="updatePreview()">
                                 <option value="Arabic Default">Arabic Default (ناسخ عصري)</option>
                                 <option value="Amiri">Amiri (قرآني كلاسيكي)</option>
+                                <option value="Tajawal">Tajawal (عصري أنيق)</option>
                             </select>
                         </div>
                     </div>
@@ -1870,37 +1874,73 @@
         }
 
         function updatePreview() {
-            const ar = document.getElementById('previewAr');
-            const en = document.getElementById('previewEn');
-            
-            // تطبيق الخطوط
-            const arFont = document.getElementById('arFontSelect').value;
-            const enFont = document.getElementById('enFontSelect').value;
-            
-            // تطبيق الخط العربي
-            if (arFont === 'Amiri') {
-                ar.style.fontFamily = "'Amiri', serif";
-            } else {
-                ar.style.fontFamily = "'Arabic', 'Amiri', serif";
-            }
-            
-            // تطبيق الخط الإنجليزي
-            const enFonts = {
-                'Montserrat': "'Montserrat', sans-serif",
-                'Roboto': "'Roboto', sans-serif",
-                'Lato': "'Lato', sans-serif"
+            // استخدام الـ API الجديد لمعاينة الخطوط
+            const previewData = {
+                arFont: document.getElementById('arFontSelect').value,
+                enFont: document.getElementById('enFontSelect').value,
+                arColor: document.getElementById('arColor').value,
+                enColor: document.getElementById('enColor').value,
+                arSize: document.getElementById('arSize').value,
+                enSize: document.getElementById('enSize').value,
+                arOutC: document.getElementById('arOutlineColor').value,
+                arOutW: document.getElementById('arOutlineWidth').value,
+                enOutC: document.getElementById('enOutlineColor').value,
+                enOutW: document.getElementById('enOutlineWidth').value,
+                text: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+                enText: 'In the name of Allah, the Entirely Merciful'
             };
-            en.style.fontFamily = enFonts[enFont] || "'Montserrat', sans-serif";
             
-            ar.style.color = document.getElementById('arColor').value;
-            ar.style.fontSize = `${1.5 * parseFloat(document.getElementById('arSize').value)}rem`;
-            const arOutline = parseInt(document.getElementById('arOutlineWidth').value) / 5;
-            ar.style.webkitTextStroke = arOutline > 0 ? `${arOutline}px ${document.getElementById('arOutlineColor').value}` : 'none';
-            
-            en.style.color = document.getElementById('enColor').value;
-            en.style.fontSize = `${0.85 * parseFloat(document.getElementById('enSize').value)}rem`;
-            const enOutline = parseInt(document.getElementById('enOutlineWidth').value) / 5;
-            en.style.webkitTextStroke = enOutline > 0 ? `${enOutline}px ${document.getElementById('enOutlineColor').value}` : 'none';
+            // إرسال طلب للـ API
+            fetch('/api/preview-font', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(previewData)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok && data.preview) {
+                    const previewImage = document.getElementById('previewImage');
+                    const previewContent = document.getElementById('previewContent');
+                    
+                    previewImage.src = data.preview;
+                    previewImage.style.display = 'block';
+                    previewContent.style.display = 'none';
+                }
+            })
+            .catch(err => {
+                console.log('Preview API not available, using fallback');
+                // Fallback للعرض العادي
+                const ar = document.getElementById('previewAr');
+                const en = document.getElementById('previewEn');
+                
+                const arFont = document.getElementById('arFontSelect').value;
+                const enFont = document.getElementById('enFontSelect').value;
+                
+                if (arFont === 'Amiri') {
+                    ar.style.fontFamily = "'Amiri', serif";
+                } else if (arFont === 'Tajawal') {
+                    ar.style.fontFamily = "'Tajawal', sans-serif";
+                } else {
+                    ar.style.fontFamily = "'Amiri', serif";
+                }
+                
+                const enFonts = {
+                    'Montserrat': "'Montserrat', sans-serif",
+                    'Roboto': "'Roboto', sans-serif",
+                    'Lato': "'Lato', sans-serif"
+                };
+                en.style.fontFamily = enFonts[enFont] || "'Montserrat', sans-serif";
+                
+                ar.style.color = document.getElementById('arColor').value;
+                ar.style.fontSize = `${1.5 * parseFloat(document.getElementById('arSize').value)}rem`;
+                const arOutline = parseInt(document.getElementById('arOutlineWidth').value) / 5;
+                ar.style.webkitTextStroke = arOutline > 0 ? `${arOutline}px ${document.getElementById('arOutlineColor').value}` : 'none';
+                
+                en.style.color = document.getElementById('enColor').value;
+                en.style.fontSize = `${0.85 * parseFloat(document.getElementById('enSize').value)}rem`;
+                const enOutline = parseInt(document.getElementById('enOutlineWidth').value) / 5;
+                en.style.webkitTextStroke = enOutline > 0 ? `${enOutline}px ${document.getElementById('enOutlineColor').value}` : 'none';
+            });
         }
 
         function saveAllSettings() {
