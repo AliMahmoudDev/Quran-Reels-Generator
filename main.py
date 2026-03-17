@@ -1490,7 +1490,7 @@ def process_batch_queue():
                     # التحقق من الباتش
                     batch = db_get_batch(batch_id)
                     if not batch:
-                        print(f"⚠️ Batch {batch_id} not found in database, removing from queue")
+                        print(f"⚠️ Batch {batch_id[:8]}... not found in database, removing from queue")
                         BATCH_QUEUE.remove(batch_id)
                         continue
                     
@@ -1502,11 +1502,18 @@ def process_batch_queue():
                         BATCH_QUEUE.remove(batch_id)
                         continue
                     
-                    # لو الباتش شغال - نستنى شوية
+                    # لو الباتش شغال - نتأكد إنه فعلاً شغال
+                    # لو مش شغال فعلاً (زيادات في started_at) نعمله reset
                     if batch['status'] == 'running':
-                        print(f"⏳ Batch {batch_id[:8]}... already running, waiting...")
-                        time.sleep(3)
-                        continue
+                        started_at = batch.get('started_at')
+                        if started_at and (time.time() - started_at) > 300:  # أكتر من 5 دقايق
+                            print(f"🔄 Batch {batch_id[:8]}... stuck for >5min, resetting to pending")
+                            db_update_batch(batch_id, status='pending')
+                            continue
+                        else:
+                            print(f"⏳ Batch {batch_id[:8]}... already running, waiting...")
+                            time.sleep(3)
+                            continue
                     
                     # لو الباتش pending - نبدأ المعالجة فوراً
                     print(f"🎬 Starting batch processing: {batch_id[:8]}...")
@@ -1605,16 +1612,22 @@ def recover_pending_batches():
     if not pending:
         return
     
-    print(f"📦 Found {len(pending)} pending batches - resuming...")
+    print(f"📦 Found {len(pending)} pending/running batches - checking...")
     
     for batch in pending:
         batch_id = batch['id']
+        
+        # لو الباتش في حالة running - نعمله reset لـ pending
+        # لأن مفيش معالجة شغالة حالياً (السيرفر لسه شغال)
+        if batch['status'] == 'running':
+            print(f"  🔄 Resetting stuck batch {batch_id[:8]}... from 'running' to 'pending'")
+            db_update_batch(batch_id, status='pending')
         
         with BATCH_QUEUE_LOCK:
             if batch_id not in BATCH_QUEUE:
                 BATCH_QUEUE.append(batch_id)
         
-        print(f"  ✅ Batch {batch_id} queued for processing")
+        print(f"  ✅ Batch {batch_id[:8]}... queued for processing")
 
 @app.route('/api/batch/create', methods=['POST'])
 def create_batch():
