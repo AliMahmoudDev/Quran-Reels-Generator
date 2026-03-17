@@ -1546,15 +1546,24 @@ def process_batch_queue():
                     style_settings
                 )
                 
+                # إعادة الحصول على الـ job بعد المعالجة للحصول على output_path الصحيح
+                updated_job = db_get_job(job_id)
+                output_path = updated_job.get('output_path') if updated_job else None
+                
                 # تحديث حالة الـ item
-                db_update_batch_item(batch_id, job_id, status='complete', output_path=job.get('output_path'))
-                db_update_batch(batch_id, completed_jobs=batch['completed_jobs'] + 1)
-                print(f"  ✅ Video {item['position'] + 1} complete")
+                db_update_batch_item(batch_id, job_id, status='complete', output_path=output_path)
+                
+                # تحديث الـ batch counter
+                batch = db_get_batch(batch_id)
+                db_update_batch(batch_id, completed_jobs=(batch['completed_jobs'] or 0) + 1)
+                print(f"  ✅ Video {item['position'] + 1} complete - saved to: {output_path}")
                 
             except Exception as e:
                 print(f"  ❌ Video {item['position'] + 1} failed: {e}")
                 db_update_batch_item(batch_id, job_id, status='error', error=str(e))
-                db_update_batch(batch_id, failed_jobs=batch['failed_jobs'] + 1)
+                # تحديث الـ batch counter
+                batch = db_get_batch(batch_id)
+                db_update_batch(batch_id, failed_jobs=(batch['failed_jobs'] or 0) + 1)
         
         # إنهاء الباتش
         batch = db_get_batch(batch_id)
