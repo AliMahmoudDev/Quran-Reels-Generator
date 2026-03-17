@@ -1780,6 +1780,11 @@
 
         function showYoutubeUploadDialog(jobId, defaultTitle) {
             // إنشاء الـ dialog
+            // حساب أقرب وقت للجدولة (بعد ساعة من الآن)
+            const now = new Date();
+            now.setHours(now.getHours() + 1);
+            const minScheduleTime = now.toISOString().slice(0, 16);
+            
             const dialog = document.createElement('div');
             dialog.id = 'youtubeDialog';
             dialog.innerHTML = `
@@ -1809,16 +1814,25 @@
                         
                         <div class="form-group">
                             <label class="form-label">🔒 الخصوصية</label>
-                            <select id="ytPrivacy" class="form-select">
+                            <select id="ytPrivacy" class="form-select" onchange="toggleScheduleOption()">
                                 <option value="unlisted">🔗 غير مدرج (للأصدقاء فقط)</option>
                                 <option value="private">🔐 خاص</option>
                                 <option value="public">🌍 عام</option>
+                                <option value="scheduled">📅 مجدول (عام في وقت محدد)</option>
                             </select>
+                        </div>
+                        
+                        <div id="scheduleOptions" style="display: none; margin-top: 12px; padding: 16px; background: var(--bg-input); border-radius: 8px;">
+                            <label class="form-label" style="margin-bottom: 8px;">📆 وقت النشر المجدول</label>
+                            <input type="datetime-local" id="ytScheduleTime" class="form-input" min="${minScheduleTime}" style="width: 100%;">
+                            <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">
+                                ⚠️ يجب أن يكون الوقت على الأقل ساعة من الآن
+                            </p>
                         </div>
                         
                         <div style="margin-top: 20px; display: flex; gap: 10px;">
                             <button onclick="uploadToYoutube('${jobId}')" class="btn-primary" style="flex: 1;">
-                                📤 نشر الآن
+                                <span id="uploadBtnText">📤 نشر الآن</span>
                             </button>
                             <button onclick="closeYoutubeDialog()" class="btn-secondary" style="flex: 1;">
                                 إلغاء
@@ -1834,6 +1848,20 @@
             
             document.body.appendChild(dialog);
         }
+        
+        function toggleScheduleOption() {
+            const privacy = document.getElementById('ytPrivacy')?.value;
+            const scheduleOptions = document.getElementById('scheduleOptions');
+            const uploadBtnText = document.getElementById('uploadBtnText');
+            
+            if (privacy === 'scheduled') {
+                scheduleOptions.style.display = 'block';
+                uploadBtnText.textContent = '📅 جدولة النشر';
+            } else {
+                scheduleOptions.style.display = 'none';
+                uploadBtnText.textContent = '📤 نشر الآن';
+            }
+        }
 
         function closeYoutubeDialog() {
             const dialog = document.getElementById('youtubeDialog');
@@ -1844,7 +1872,26 @@
             const title = document.getElementById('ytTitle')?.value || 'فيديو قرآني';
             const description = document.getElementById('ytDescription')?.value || '';
             const tags = document.getElementById('ytTags')?.value.split(',').map(t => t.trim()).filter(t => t) || [];
-            const privacyStatus = document.getElementById('ytPrivacy')?.value || 'unlisted';
+            let privacyStatus = document.getElementById('ytPrivacy')?.value || 'unlisted';
+            const scheduleTime = document.getElementById('ytScheduleTime')?.value || null;
+            
+            // التحقق من وقت الجدولة
+            if (privacyStatus === 'scheduled') {
+                if (!scheduleTime) {
+                    showToast('⚠️ الرجاء اختيار وقت للجدولة', 'error');
+                    return;
+                }
+                // التحقق أن الوقت بعد ساعة على الأقل
+                const scheduledDate = new Date(scheduleTime);
+                const now = new Date();
+                const diffHours = (scheduledDate - now) / (1000 * 60 * 60);
+                if (diffHours < 1) {
+                    showToast('⚠️ يجب أن يكون وقت الجدولة بعد ساعة على الأقل', 'error');
+                    return;
+                }
+                // للجدولة، نرفع الفيديو كـ private أولاً
+                privacyStatus = 'scheduled';
+            }
             
             const progressEl = document.getElementById('youtubeUploadProgress');
             if (progressEl) progressEl.style.display = 'block';
@@ -1859,7 +1906,8 @@
                         title: title,
                         description: description,
                         tags: tags,
-                        privacyStatus: privacyStatus
+                        privacyStatus: privacyStatus,
+                        scheduleTime: scheduleTime
                     })
                 });
                 
@@ -1867,12 +1915,19 @@
                 
                 if (data.ok) {
                     closeYoutubeDialog();
-                    showToast('✅ تم نشر الفيديو بنجاح!', 'success');
+                    if (privacyStatus === 'scheduled') {
+                        showToast('✅ تم جدولة الفيديو بنجاح!', 'success');
+                    } else {
+                        showToast('✅ تم نشر الفيديو بنجاح!', 'success');
+                    }
                     
                     // عرض رابط الفيديو
                     if (data.videoUrl) {
                         setTimeout(() => {
-                            if (confirm(`تم النشر بنجاح!\n\nهل تريد فتح الفيديو؟\n${data.videoUrl}`)) {
+                            const message = privacyStatus === 'scheduled' 
+                                ? `تم جدولة الفيديو!\n\nسيُنشر في: ${new Date(scheduleTime).toLocaleString('ar-EG')}\n\nهل تريد فتح الفيديو؟\n${data.videoUrl}`
+                                : `تم النشر بنجاح!\n\nهل تريد فتح الفيديو؟\n${data.videoUrl}`;
+                            if (confirm(message)) {
                                 window.open(data.videoUrl, '_blank');
                             }
                         }, 500);

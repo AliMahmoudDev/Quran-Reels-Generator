@@ -2111,9 +2111,10 @@ def youtube_redirect_uri():
 
 @app.route('/api/youtube/upload', methods=['POST'])
 def youtube_upload():
-    """رفع فيديو على YouTube"""
+    """رفع فيديو على YouTube مع دعم الجدولة"""
     from googleapiclient.http import MediaFileUpload
     from googleapiclient.errors import HttpError
+    from datetime import datetime
     
     data = request.json
     session_id = data.get('sessionId')
@@ -2121,7 +2122,8 @@ def youtube_upload():
     title = data.get('title', '')
     description = data.get('description', '')
     tags = data.get('tags', [])
-    privacy_status = data.get('privacyStatus', 'unlisted')  # public, unlisted, private
+    privacy_status = data.get('privacyStatus', 'unlisted')  # public, unlisted, private, scheduled
+    schedule_time = data.get('scheduleTime')  # ISO format datetime string
     
     if not session_id or not job_id:
         return jsonify({'ok': False, 'error': 'Missing sessionId or jobId'}), 400
@@ -2141,6 +2143,21 @@ def youtube_upload():
         return jsonify({'ok': False, 'error': 'Not authorized with YouTube', 'needsAuth': True}), 401
     
     try:
+        # تحديد حالة الخصوصية الفعلية
+        actual_privacy = privacy_status
+        publish_at = None
+        
+        if privacy_status == 'scheduled' and schedule_time:
+            # للجدولة: نرفع كـ private مع تحديد publishAt
+            actual_privacy = 'private'
+            # تحويل الوقت لـ ISO 8601 format
+            try:
+                scheduled_dt = datetime.fromisoformat(schedule_time.replace('Z', '+00:00'))
+                # YouTube يتطلب UTC
+                publish_at = scheduled_dt.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+            except:
+                return jsonify({'ok': False, 'error': 'Invalid schedule time format'}), 400
+        
         # إعداد الـ body
         body = {
             'snippet': {
@@ -2150,10 +2167,21 @@ def youtube_upload():
                 'categoryId': '22'  # People & Blogs
             },
             'status': {
-                'privacyStatus': privacy_status,
+                'privacyStatus': actual_privacy,
                 'selfDeclaredMadeForKids': False
             }
         }
+        
+        # إضافة publishAt للجدولة
+        if publish_at:
+            body['status']['publishAt'] = publish_at
+            # للجدولة، يجب أن يكون الفيديو public
+            body['status']['privacyStatus'] = 'public'
+        
+        print(f"[YouTube] Uploading video: {title[:50]}...")
+        print(f"[YouTube] Privacy: {body['status']['privacyStatus']}")
+        if publish_at:
+            print(f"[YouTube] Scheduled for: {publish_at}")
         
         # رفع الفيديو
         media = MediaFileUpload(
