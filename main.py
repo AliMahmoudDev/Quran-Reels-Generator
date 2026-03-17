@@ -87,6 +87,31 @@ FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
 VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
 
+# ==========================================
+# 🔤 Available Fonts Configuration
+# ==========================================
+AVAILABLE_FONTS = {
+    'arabic': {
+        'Amiri': {'file': 'Amiri.ttf', 'name': 'Amiri', 'style': 'قرآني كلاسيكي'},
+        'Arabic Default': {'file': 'Arabic.ttf', 'name': 'Arabic', 'style': 'ناسخ عصري'},
+    },
+    'english': {
+        'Montserrat': {'file': 'English.otf', 'name': 'Montserrat', 'style': 'أنيق حديث'},
+        'Roboto': {'file': 'Roboto.woff2', 'name': 'Roboto', 'style': 'واضح بسيط'},
+        'Lato': {'file': 'Lato.woff2', 'name': 'Lato', 'style': 'أناقة عصرية'},
+    }
+}
+
+def get_font_path(font_name, font_type='arabic'):
+    """Get font file path by name"""
+    fonts = AVAILABLE_FONTS.get(font_type, {})
+    if font_name in fonts:
+        return os.path.join(FONT_DIR, fonts[font_name]['file'])
+    # Return default
+    if font_type == 'arabic':
+        return FONT_PATH_ARABIC
+    return FONT_PATH_ENGLISH
+
 # Master Temp Directory
 BASE_TEMP_DIR = os.path.join(EXEC_DIR, "temp_workspaces")
 OUTPUTS_DIR = os.path.join(EXEC_DIR, "outputs")
@@ -572,6 +597,22 @@ class ScopedQuranLogger(ProgressBarLogger):
 # 🛠️ Helper Functions & Optimization
 # ==========================================
 
+def get_font_path(font_name, font_type='arabic'):
+    """الحصول على مسار الخط بناءً على اسمه"""
+    fonts = AVAILABLE_FONTS.get(font_type, {})
+    if font_name in fonts:
+        font_info = fonts[font_name]
+        font_file = font_info.get('file', '')
+        if font_file:
+            font_path = os.path.join(FONT_DIR, font_file)
+            if os.path.exists(font_path):
+                return font_path
+    
+    # Return default
+    if font_type == 'arabic':
+        return FONT_PATH_ARABIC
+    return FONT_PATH_ENGLISH
+
 @lru_cache(maxsize=10)
 def get_cached_font(font_path, size):
     try: return ImageFont.truetype(font_path, size)
@@ -715,10 +756,14 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
     stroke_w = int(style.get('arOutW', '4'))
     has_shadow = style.get('arShadow', False)
     shadow_c = style.get('arShadowC', '#000000')
+    
+    # دعم الخط المخصص
+    font_name = style.get('arFont', 'Arabic Default')
+    font_path = get_font_path(font_name, 'arabic')
 
     # الخط كبير لأنه سطر واحد
     final_fs = int(55 * scale_factor * size_mult)
-    font = get_cached_font(FONT_PATH_ARABIC, final_fs)
+    font = get_cached_font(font_path, final_fs)
     
     img = Image.new('RGBA', (target_w, int(180 * scale_factor * size_mult)), (0,0,0,0))
     draw = ImageDraw.Draw(img)
@@ -744,9 +789,13 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, 
     stroke_w = int(style.get('enOutW', '3'))
     has_shadow = style.get('enShadow', False)
     shadow_c = style.get('enShadowC', '#000000')
+    
+    # دعم الخط المخصص
+    font_name = style.get('enFont', 'Montserrat')
+    font_path = get_font_path(font_name, 'english')
 
     final_fs = int(32 * scale_factor * size_mult)
-    font = get_cached_font(FONT_PATH_ENGLISH, final_fs)
+    font = get_cached_font(font_path, final_fs)
     
     h = int(150 * size_mult)
     img = Image.new('RGBA', (target_w, h), (0,0,0,0))
@@ -929,7 +978,8 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 end_en = int((chunk_idx + 1) * avg_en_per_ar)
                 if chunk_idx == len(ar_chunks) - 1:
                     en_chunk = " ".join(en_words[start_en:])
-                    display_ar = f"{ar_chunk} ({ayah})" 
+                    # استخدام الأقواس القرآنية ﴿ ﴾ بدل الأقواس العادية
+                    display_ar = f"{ar_chunk} ﴿{ayah}﴾" 
                 else:
                     en_chunk = " ".join(en_words[start_en:end_en])
                     display_ar = ar_chunk
@@ -1365,7 +1415,12 @@ def get_job_by_id(job_id):
     return jsonify(job)
 
 @app.route('/api/config')
-def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 'reciters': RECITERS_MAP})
+def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 'reciters': RECITERS_MAP, 'fonts': AVAILABLE_FONTS})
+
+@app.route('/api/fonts')
+def get_fonts_list():
+    """الحصول على قائمة الخطوط المتاحة"""
+    return jsonify({'ok': True, 'fonts': AVAILABLE_FONTS})
 
 # ==========================================
 # 🔧 Utility Functions
@@ -1478,126 +1533,137 @@ def process_batch_queue():
     
     while True:
         try:
-            # انتظار قصير جداً لو مفيش باتشات
+            batch_id = None
+            should_wait = False
+            
+            # الحصول على batch_id من الـ queue (تحت lock سريع)
             with BATCH_QUEUE_LOCK:
                 if not BATCH_QUEUE:
-                    # لا يوجد باتشات - نستنى شوية
+                    # لا يوجد باتشات
                     pass
                 else:
-                    # فيه باتشات - ناخد أول واحدة
                     batch_id = BATCH_QUEUE[0]
-                    
-                    # التحقق من الباتش
-                    batch = db_get_batch(batch_id)
-                    if not batch:
-                        print(f"⚠️ Batch {batch_id[:8]}... not found in database, removing from queue")
-                        BATCH_QUEUE.remove(batch_id)
-                        continue
-                    
-                    print(f"📊 Batch {batch_id[:8]}... status: {batch['status']}")
-                    
-                    # لو الباتش مكتمل أو ملغي - نحذفه من القائمة
-                    if batch['status'] in ['complete', 'cancelled']:
-                        print(f"✅ Batch {batch_id[:8]}... is {batch['status']}, removing from queue")
-                        BATCH_QUEUE.remove(batch_id)
-                        continue
-                    
-                    # لو الباتش شغال - نتأكد إنه فعلاً شغال
-                    # لو مش شغال فعلاً (زيادات في started_at) نعمله reset
-                    if batch['status'] == 'running':
-                        started_at = batch.get('started_at')
-                        if started_at and (time.time() - started_at) > 300:  # أكتر من 5 دقايق
-                            print(f"🔄 Batch {batch_id[:8]}... stuck for >5min, resetting to pending")
-                            db_update_batch(batch_id, status='pending')
-                            continue
-                        else:
-                            print(f"⏳ Batch {batch_id[:8]}... already running, waiting...")
-                            time.sleep(3)
-                            continue
-                    
-                    # لو الباتش pending - نبدأ المعالجة فوراً
-                    print(f"🎬 Starting batch processing: {batch_id[:8]}...")
-                    db_update_batch(batch_id, status='running', started_at=time.time())
-                    
-                    # معالجة الـ items
-                    items = db_get_batch_items(batch_id)
-                    print(f"  📋 Found {len(items)} items to process")
-                    
-                    for item in items:
-                        try:
-                            # التحقق من الإيقاف
-                            batch = db_get_batch(batch_id)
-                            if batch and batch.get('status') == 'cancelled':
-                                print(f"⚠️ Batch {batch_id[:8]}... cancelled")
-                                break
-                            
-                            job_id = item['job_id']
-                            
-                            # الحصول على الـ config
-                            job = db_get_job(job_id)
-                            if not job or not job.get('config_json'):
-                                print(f"  ❌ Job {job_id[:8]}... has no config")
-                                db_update_batch_item(batch_id, job_id, status='error', error='Config missing')
-                                batch = db_get_batch(batch_id)
-                                db_update_batch(batch_id, failed_jobs=(batch['failed_jobs'] or 0) + 1)
-                                continue
-                            
-                            config = json.loads(job['config_json'])
-                            
-                            # تحديث حالة الـ item
-                            db_update_batch_item(batch_id, job_id, status='processing')
-                            db_update_batch(batch_id, current_job_id=job_id, current_job_index=item['position'])
-                            
-                            print(f"  🎬 Processing video {item['position'] + 1}/{len(items)}: Surah {item['surah']}, Ayah {item['start_ayah']}")
-                            
-                            # معالجة الفيديو
-                            style_settings = config.get('style', {})
-                            
-                            build_video_task(
-                                job_id,
-                                config.get('pexelsKey', ''),
-                                config.get('reciter', ''),
-                                item['surah'],
-                                item['start_ayah'],
-                                item['end_ayah'],
-                                config.get('quality', '720'),
-                                config.get('bgQuery', ''),
-                                int(config.get('fps', 20)),
-                                config.get('dynamicBg', False),
-                                config.get('useGlow', False),
-                                config.get('useVignette', False),
-                                style_settings
-                            )
-                            
-                            # إعادة الحصول على الـ job بعد المعالجة
-                            updated_job = db_get_job(job_id)
-                            output_path = updated_job.get('output_path') if updated_job else None
-                            
-                            # تحديث حالة الـ item
-                            db_update_batch_item(batch_id, job_id, status='complete', output_path=output_path)
-                            
-                            # تحديث الـ batch counter
-                            batch = db_get_batch(batch_id)
-                            db_update_batch(batch_id, completed_jobs=(batch['completed_jobs'] or 0) + 1)
-                            print(f"  ✅ Video {item['position'] + 1} complete!")
-                            
-                        except Exception as item_error:
-                            print(f"  ❌ Video {item.get('position', '?') + 1} failed: {item_error}")
-                            traceback.print_exc()
-                            db_update_batch_item(batch_id, item['job_id'], status='error', error=str(item_error))
-                            batch = db_get_batch(batch_id)
-                            db_update_batch(batch_id, failed_jobs=(batch['failed_jobs'] or 0) + 1)
-                    
-                    # إنهاء الباتش
-                    batch = db_get_batch(batch_id)
-                    db_update_batch(batch_id, status='complete', completed_at=time.time())
-                    print(f"📦 Batch {batch_id[:8]}... complete: {batch['completed_jobs']}/{batch['total_jobs']} videos")
-                    
-                    # إزالة من قائمة الانتظار
+            
+            # لو مفيش باتشات - نستنى شوية
+            if not batch_id:
+                time.sleep(1)
+                continue
+            
+            # التحقق من الباتش (بره الـ lock)
+            batch = db_get_batch(batch_id)
+            if not batch:
+                print(f"⚠️ Batch {batch_id[:8]}... not found in database, removing from queue")
+                with BATCH_QUEUE_LOCK:
                     if batch_id in BATCH_QUEUE:
                         BATCH_QUEUE.remove(batch_id)
+                continue
             
-            # استراحة قصيرة بين الدورات
+            print(f"📊 Batch {batch_id[:8]}... status: {batch['status']}")
+            
+            # لو الباتش مكتمل أو ملغي - نحذفه من القائمة
+            if batch['status'] in ['complete', 'cancelled']:
+                print(f"✅ Batch {batch_id[:8]}... is {batch['status']}, removing from queue")
+                with BATCH_QUEUE_LOCK:
+                    if batch_id in BATCH_QUEUE:
+                        BATCH_QUEUE.remove(batch_id)
+                continue
+            
+            # لو الباتش شغال - نتأكد إنه فعلاً شغال
+            if batch['status'] == 'running':
+                started_at = batch.get('started_at')
+                if started_at and (time.time() - started_at) > 300:  # أكتر من 5 دقايق
+                    print(f"🔄 Batch {batch_id[:8]}... stuck for >5min, resetting to pending")
+                    db_update_batch(batch_id, status='pending')
+                    continue
+                else:
+                    print(f"⏳ Batch {batch_id[:8]}... already running, waiting...")
+                    time.sleep(3)
+                    continue
+            
+            # لو الباتش pending - نبدأ المعالجة فوراً
+            print(f"🎬 Starting batch processing: {batch_id[:8]}...")
+            db_update_batch(batch_id, status='running', started_at=time.time())
+            
+            # معالجة الـ items
+            items = db_get_batch_items(batch_id)
+            print(f"  📋 Found {len(items)} items to process")
+            
+            for item in items:
+                try:
+                    # التحقق من الإيقاف
+                    batch = db_get_batch(batch_id)
+                    if batch and batch.get('status') == 'cancelled':
+                        print(f"⚠️ Batch {batch_id[:8]}... cancelled")
+                        break
+                    
+                    job_id = item['job_id']
+                    
+                    # الحصول على الـ config
+                    job = db_get_job(job_id)
+                    if not job or not job.get('config_json'):
+                        print(f"  ❌ Job {job_id[:8]}... has no config")
+                        db_update_batch_item(batch_id, job_id, status='error', error='Config missing')
+                        batch = db_get_batch(batch_id)
+                        db_update_batch(batch_id, failed_jobs=(batch['failed_jobs'] or 0) + 1)
+                        continue
+                    
+                    config = json.loads(job['config_json'])
+                    
+                    # تحديث حالة الـ item
+                    db_update_batch_item(batch_id, job_id, status='processing')
+                    db_update_batch(batch_id, current_job_id=job_id, current_job_index=item['position'])
+                    
+                    print(f"  🎬 Processing video {item['position'] + 1}/{len(items)}: Surah {item['surah']}, Ayah {item['start_ayah']}")
+                    
+                    # معالجة الفيديو
+                    style_settings = config.get('style', {})
+                    
+                    build_video_task(
+                        job_id,
+                        config.get('pexelsKey', ''),
+                        config.get('reciter', ''),
+                        item['surah'],
+                        item['start_ayah'],
+                        item['end_ayah'],
+                        config.get('quality', '720'),
+                        config.get('bgQuery', ''),
+                        int(config.get('fps', 20)),
+                        config.get('dynamicBg', False),
+                        config.get('useGlow', False),
+                        config.get('useVignette', False),
+                        style_settings
+                    )
+                    
+                    # إعادة الحصول على الـ job بعد المعالجة
+                    updated_job = db_get_job(job_id)
+                    output_path = updated_job.get('output_path') if updated_job else None
+                    
+                    # تحديث حالة الـ item
+                    db_update_batch_item(batch_id, job_id, status='complete', output_path=output_path)
+                    
+                    # تحديث الـ batch counter
+                    batch = db_get_batch(batch_id)
+                    db_update_batch(batch_id, completed_jobs=(batch['completed_jobs'] or 0) + 1)
+                    print(f"  ✅ Video {item['position'] + 1} complete!")
+                    
+                except Exception as item_error:
+                    print(f"  ❌ Video {item.get('position', '?') + 1} failed: {item_error}")
+                    traceback.print_exc()
+                    db_update_batch_item(batch_id, item['job_id'], status='error', error=str(item_error))
+                    batch = db_get_batch(batch_id)
+                    db_update_batch(batch_id, failed_jobs=(batch['failed_jobs'] or 0) + 1)
+            
+            # إنهاء الباتش
+            batch = db_get_batch(batch_id)
+            db_update_batch(batch_id, status='complete', completed_at=time.time())
+            print(f"📦 Batch {batch_id[:8]}... complete: {batch['completed_jobs']}/{batch['total_jobs']} videos")
+            
+            # إزالة من قائمة الانتظار
+            with BATCH_QUEUE_LOCK:
+                if batch_id in BATCH_QUEUE:
+                    BATCH_QUEUE.remove(batch_id)
+            
+            # استراحة قصيرة بين الباتشات
             time.sleep(1)
                     
         except Exception as batch_error:

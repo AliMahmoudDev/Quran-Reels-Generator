@@ -785,6 +785,41 @@
             accent-color: var(--accent);
         }
 
+        .font-select {
+            padding: 8px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.85rem;
+            cursor: pointer;
+            min-width: 180px;
+        }
+
+        .font-select:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .btn-secondary {
+            flex: 1;
+            height: 48px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
         /* ═══════════════════════════════════════
            🔔 Toast Notifications
         ═══════════════════════════════════════ */
@@ -1241,6 +1276,30 @@
                     <div class="preview-en" id="previewEn">In the name of Allah, the Entirely Merciful</div>
                 </div>
 
+                <!-- Font Selection -->
+                <div class="settings-section">
+                    <h4>🔤 الخطوط</h4>
+                    <div class="settings-row">
+                        <span class="settings-label">الخط العربي</span>
+                        <div class="settings-controls">
+                            <select id="arFontSelect" class="font-select" onchange="updatePreview()">
+                                <option value="Arabic Default">Arabic Default (ناسخ عصري)</option>
+                                <option value="Amiri">Amiri (قرآني كلاسيكي)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">الخط الإنجليزي</span>
+                        <div class="settings-controls">
+                            <select id="enFontSelect" class="font-select" onchange="updatePreview()">
+                                <option value="Montserrat">Montserrat (أنيق حديث)</option>
+                                <option value="Roboto">Roboto (واضح بسيط)</option>
+                                <option value="Lato">Lato (أناقة عصرية)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Arabic Settings -->
                 <div class="settings-section">
                     <h4>النص العربي</h4>
@@ -1331,7 +1390,10 @@
             enColor: '#FFD700',
             enSize: '1',
             enOutlineColor: '#000000',
-            enOutlineWidth: '3'
+            enOutlineWidth: '3',
+            // الخطوط الافتراضية
+            arFont: 'Arabic Default',
+            enFont: 'Montserrat'
         };
 
         // ═══════════════════════════════════════
@@ -1776,7 +1838,10 @@
                 enColor: document.getElementById('enColor')?.value || '#FFD700',
                 enSize: document.getElementById('enSize')?.value || '1',
                 enOutC: document.getElementById('enOutlineColor')?.value || '#000000',
-                enOutW: document.getElementById('enOutlineWidth')?.value || '3'
+                enOutW: document.getElementById('enOutlineWidth')?.value || '3',
+                // إضافة الخطوط
+                arFont: document.getElementById('arFontSelect')?.value || 'Arabic Default',
+                enFont: document.getElementById('enFontSelect')?.value || 'Montserrat'
             };
         }
 
@@ -1787,6 +1852,14 @@
                 const el = document.getElementById(key);
                 if (el) el.value = value;
             });
+            
+            // تحميل الخطوط المحفوظة
+            if (saved.arFont) {
+                document.getElementById('arFontSelect').value = saved.arFont;
+            }
+            if (saved.enFont) {
+                document.getElementById('enFontSelect').value = saved.enFont;
+            }
             
             const pexelsKey = localStorage.getItem('user_pexels_key');
             if (pexelsKey) {
@@ -1799,6 +1872,25 @@
         function updatePreview() {
             const ar = document.getElementById('previewAr');
             const en = document.getElementById('previewEn');
+            
+            // تطبيق الخطوط
+            const arFont = document.getElementById('arFontSelect').value;
+            const enFont = document.getElementById('enFontSelect').value;
+            
+            // تطبيق الخط العربي
+            if (arFont === 'Amiri') {
+                ar.style.fontFamily = "'Amiri', serif";
+            } else {
+                ar.style.fontFamily = "'Arabic', 'Amiri', serif";
+            }
+            
+            // تطبيق الخط الإنجليزي
+            const enFonts = {
+                'Montserrat': "'Montserrat', sans-serif",
+                'Roboto': "'Roboto', sans-serif",
+                'Lato': "'Lato', sans-serif"
+            };
+            en.style.fontFamily = enFonts[enFont] || "'Montserrat', sans-serif";
             
             ar.style.color = document.getElementById('arColor').value;
             ar.style.fontSize = `${1.5 * parseFloat(document.getElementById('arSize').value)}rem`;
@@ -1817,6 +1909,10 @@
              'enColor', 'enSize', 'enOutlineColor', 'enOutlineWidth'].forEach(key => {
                 settings[key] = document.getElementById(key).value;
             });
+            
+            // حفظ الخطوط
+            settings.arFont = document.getElementById('arFontSelect').value;
+            settings.enFont = document.getElementById('enFontSelect').value;
             
             localStorage.setItem('quran_app_styles_v2', JSON.stringify(settings));
             
