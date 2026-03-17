@@ -1321,7 +1321,7 @@
         let VERSE_COUNTS = {};
         let currentJobId = null;
         let pollInterval = null;
-        let SESSION_ID = null;  // معرف الجلسة
+        let SESSION_ID = null;
 
         const defaultSettings = {
             arColor: '#ffffff',
@@ -1338,15 +1338,11 @@
         // 🔑 Session Management
         // ═══════════════════════════════════════
         function getOrCreateSessionId() {
-            // محاولة استرجاع session_id من localStorage
             let sessionId = localStorage.getItem('quran_session_id');
-            
-            // لو مش موجود أو قديم (أكثر من 30 يوم)، إنشاء واحد جديد
             const sessionAge = localStorage.getItem('quran_session_age');
-            const thirtyDays = 30 * 24 * 60 * 60 * 1000; // 30 يوم بالـ milliseconds
+            const thirtyDays = 30 * 24 * 60 * 60 * 1000;
             
             if (!sessionId || !sessionAge || (Date.now() - parseInt(sessionAge)) > thirtyDays) {
-                // إنشاء session_id جديد
                 sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                 localStorage.setItem('quran_session_id', sessionId);
                 localStorage.setItem('quran_session_age', Date.now().toString());
@@ -1360,7 +1356,6 @@
         // 🚀 Initialization
         // ═══════════════════════════════════════
         window.onload = async () => {
-            // إنشاء أو استرجاع session_id
             SESSION_ID = getOrCreateSessionId();
             console.log('📱 Session ID:', SESSION_ID);
             
@@ -1377,11 +1372,9 @@
             const endInput = document.getElementById('endAyah');
             const surahInput = document.getElementById('surahSelect');
             
-            // validation عند الخروج من الـ input
             startInput?.addEventListener('blur', () => validateAyahInput('startAyah'));
             endInput?.addEventListener('blur', () => validateAyahInput('endAyah'));
             
-            // عند الضغط على Enter
             startInput?.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -1397,7 +1390,6 @@
                 }
             });
             
-            // عند تغيير السورة
             surahInput?.addEventListener('change', () => {
                 const max = VERSE_COUNTS[parseInt(surahInput.value)] || 286;
                 startInput.value = 1;
@@ -1465,11 +1457,9 @@
             const max = VERSE_COUNTS[surah] || 286;
             let val = parseInt(input.value);
             
-            // لو فاضي أو مش رقم
             if (isNaN(val) || val < 1) {
                 val = 1;
             }
-            // لو أكبر من عدد آيات السورة
             if (val > max) {
                 val = max;
                 showToast(`هذه السورة بها ${max} آية فقط`, 'error');
@@ -1485,12 +1475,10 @@
             const start = parseInt(startAyah.value);
             const end = parseInt(endAyah.value);
             
-            // تأكد إن البداية <= النهاية
             if (start > end) {
                 endAyah.value = start;
             }
             
-            // تأكد إن النهاية <= max
             if (end > max) {
                 endAyah.value = max;
             }
@@ -1526,7 +1514,7 @@
             const style = getStyleSettings();
             
             const payload = {
-                sessionId: SESSION_ID,  // إضافة session_id
+                sessionId: SESSION_ID,
                 reciter: reciterSelect.value,
                 surah: parseInt(surahSelect.value),
                 startAyah: parseInt(startAyah.value),
@@ -1651,7 +1639,6 @@
         // ═══════════════════════════════════════
         async function loadHistory() {
             try {
-                // إضافة session_id للطلب
                 const res = await fetch(`/api/history?sessionId=${encodeURIComponent(SESSION_ID)}`);
                 const data = await res.json();
                 
@@ -1743,7 +1730,7 @@
                 const res = await fetch('/api/history/clear', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId: SESSION_ID })  // إرسال session_id
+                    body: JSON.stringify({ sessionId: SESSION_ID })
                 });
                 const data = await res.json();
                 
@@ -1863,7 +1850,6 @@
             localStorage.setItem('theme', isLight ? 'light' : 'dark');
         }
 
-        // Load saved theme
         if (localStorage.getItem('theme') === 'light') {
             document.body.classList.add('light-theme');
             document.getElementById('themeBtn').textContent = '☀️';
@@ -1887,7 +1873,6 @@
         // ═══════════════════════════════════════
         async function checkRunningJob() {
             try {
-                // إضافة session_id للطلب
                 const res = await fetch(`/api/my-jobs?status=processing&sessionId=${encodeURIComponent(SESSION_ID)}`);
                 const data = await res.json();
                 
@@ -1914,21 +1899,18 @@
         // ═══════════════════════════════════════
         // 📦 Batch System
         // ═══════════════════════════════════════
-        let batchItems = [];  // قائمة الفيديوهات المحددة
+        let batchItems = [];
         let currentBatchId = null;
         let batchCancelled = false;
 
-        // دالة العشوائي الواحدة - زي الصفحة الرئيسية
         function randomizeBatch() {
             const reciterSelect = document.getElementById('batchReciterSelect');
             const surahSelect = document.getElementById('batchSurahSelect');
             
-            // عشوائي للقارئ
             if (reciterSelect.options.length > 0) {
                 reciterSelect.selectedIndex = Math.floor(Math.random() * reciterSelect.options.length);
             }
             
-            // عشوائي للسورة والآيات
             if (surahSelect.options.length > 0) {
                 surahSelect.selectedIndex = Math.floor(Math.random() * surahSelect.options.length);
                 const max = VERSE_COUNTS[parseInt(surahSelect.value)] || 286;
@@ -1948,7 +1930,6 @@
             if (val > max) val = max;
             input.value = val;
             
-            // التأكد من أن البداية <= النهاية
             const start = parseInt(document.getElementById('batchStartAyah').value);
             const end = parseInt(document.getElementById('batchEndAyah').value);
             if (id === 'batchStartAyah' && start > end) {
@@ -1970,7 +1951,6 @@
             const startAyah = parseInt(document.getElementById('batchStartAyah').value);
             const endAyah = parseInt(document.getElementById('batchEndAyah').value);
             
-            // التحقق من التكرار
             const exists = batchItems.some(item => 
                 item.reciter === reciter && item.surah === surah && 
                 item.startAyah === startAyah && item.endAyah === endAyah
@@ -1981,7 +1961,6 @@
                 return;
             }
             
-            // جمع الـ Effects
             const effects = {
                 dynamicBg: document.getElementById('batchDynamicBg').checked,
                 useGlow: document.getElementById('batchUseGlow').checked,
@@ -2035,7 +2014,6 @@
             
             emptyEl.style.display = 'none';
             listEl.innerHTML = batchItems.map((item, index) => {
-                // أيقونات الـ Effects
                 const effectsIcons = [];
                 if (item.effects.dynamicBg) effectsIcons.push('🖼️');
                 if (item.effects.useGlow) effectsIcons.push('✨');
@@ -2124,7 +2102,6 @@
                     currentBatchId = data.batchId;
                     showToast(`تم إنشاء دفعة من ${data.totalJobs} فيديو`, 'success');
                     
-                    // عرض حالة التقدم
                     const statusSection = document.getElementById('batchStatusSection');
                     const totalCount = document.getElementById('batchTotalCount');
                     const completedCount = document.getElementById('batchCompletedCount');
@@ -2133,10 +2110,8 @@
                     if (totalCount) totalCount.textContent = data.totalJobs;
                     if (completedCount) completedCount.textContent = 0;
                     
-                    // بدء مراقبة التقدم
                     startBatchPolling(data.batchId);
                     
-                    // مسح القائمة
                     batchItems = [];
                     renderBatchList();
                 } else {
@@ -2144,8 +2119,6 @@
                 }
             } catch (err) {
                 console.error('Batch creation error:', err);
-                // لا تظهر خطأ إذا كانت العملية قد تكون ناجحة
-                // showToast('حدث خطأ في الاتصال', 'error');
             }
         }
 
@@ -2186,7 +2159,7 @@
                             
                             if (data.batch.status === 'complete') {
                                 showToast(`تم إنشاء ${data.batch.completedJobs} فيديو بنجاح!`, 'success');
-                                loadHistory();  // تحديث السجل
+                                loadHistory();
                             }
                         }
                     }
@@ -2198,22 +2171,19 @@
 
         function updateBatchProgress(batch) {
             const total = batch.totalJobs;
-            const completed = batch.completedJobs;
-            const failed = batch.failedJobs;
-            const percent = Math.round(((completed + failed) / total) * 100);
+            const completed = batch.completedJobs || 0;
+            const failed = batch.failedJobs || 0;
+            const percent = total > 0 ? Math.round(((completed + failed) / total) * 100) : 0;
             
-            // تحديث الدائرة
             const circle = document.getElementById('batchProgressCircle');
             const circumference = 2 * Math.PI * 65;
             if (circle) {
                 circle.style.strokeDashoffset = circumference - (percent / 100) * circumference;
             }
             
-            // تحديث النصوص
             document.getElementById('batchProgressPercent').textContent = `${percent}%`;
             document.getElementById('batchCompletedCount').textContent = completed + failed;
             
-            // تحديث الحالة
             const statusEl = document.getElementById('batchProgressStatus');
             if (batch.status === 'running') {
                 statusEl.textContent = `جاري المعالجة... (${batch.currentJobIndex + 1}/${total})`;
@@ -2221,19 +2191,18 @@
                 statusEl.textContent = `✅ اكتمل!`;
             } else if (batch.status === 'cancelled') {
                 statusEl.textContent = `⚠️ تم الإلغاء`;
+            } else if (batch.status === 'pending') {
+                statusEl.textContent = `⏳ في الانتظار...`;
             }
         }
 
-        // تحديث السور عند تحميل صفحة Batch
         function initBatchPage() {
-            // نسخ قائمة السور للـ batch
             const batchSurahSelect = document.getElementById('batchSurahSelect');
             const mainSurahSelect = document.getElementById('surahSelect');
             
             if (batchSurahSelect && mainSurahSelect) {
                 batchSurahSelect.innerHTML = mainSurahSelect.innerHTML;
                 
-                // تحديث عدد الآيات عند تغيير السورة
                 batchSurahSelect.addEventListener('change', () => {
                     const max = VERSE_COUNTS[parseInt(batchSurahSelect.value)] || 286;
                     document.getElementById('batchStartAyah').value = 1;
@@ -2241,7 +2210,6 @@
                 });
             }
             
-            // نسخ قائمة القراء للـ batch
             const batchReciterSelect = document.getElementById('batchReciterSelect');
             const mainReciterSelect = document.getElementById('reciterSelect');
             
@@ -2250,7 +2218,6 @@
             }
         }
 
-        // استدعاء عند التبديل لتبويب Batch
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 if (btn.dataset.tab === 'batch') {
@@ -2259,7 +2226,6 @@
             });
         });
 
-        // التحقق من الباتشات النشطة عند التحميل
         async function checkActiveBatch() {
             try {
                 const res = await fetch(`/api/batch/list?sessionId=${encodeURIComponent(SESSION_ID)}`);
@@ -2282,7 +2248,6 @@
             }
         }
 
-        // استدعاء عند التحميل
         setTimeout(checkActiveBatch, 1000);
     </script>
 </body>

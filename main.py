@@ -1474,6 +1474,8 @@ ACTIVE_BATCHES = {}  # الباتشات النشطة
 
 def process_batch_queue():
     """معالجة الباتشات في الخلفية - فيديو واحد في المرة"""
+    print("📦 Batch processor thread started and waiting for batches...")
+    
     while True:
         try:
             time.sleep(2)  # انتظار قصير بين الفحوصات
@@ -1484,10 +1486,12 @@ def process_batch_queue():
                 
                 # الحصول على أول باتش في الانتظار
                 batch_id = BATCH_QUEUE[0]
+                print(f"🔍 Found batch in queue: {batch_id}")
             
             # التحقق من الباتش
             batch = db_get_batch(batch_id)
             if not batch:
+                print(f"⚠️ Batch {batch_id} not found in database, removing from queue")
                 with BATCH_QUEUE_LOCK:
                     if batch_id in BATCH_QUEUE:
                         BATCH_QUEUE.remove(batch_id)
@@ -1495,11 +1499,21 @@ def process_batch_queue():
             
             # لو الباتش شغال خلاص
             if batch['status'] == 'running':
+                print(f"⏳ Batch {batch_id} already running, waiting...")
+                time.sleep(5)
+                continue
+            
+            # لو الباتش مكتمل أو ملغي
+            if batch['status'] in ['complete', 'cancelled']:
+                print(f"✅ Batch {batch_id} is {batch['status']}, removing from queue")
+                with BATCH_QUEUE_LOCK:
+                    if batch_id in BATCH_QUEUE:
+                        BATCH_QUEUE.remove(batch_id)
                 continue
             
             # بدء معالجة الباتش
+            print(f"🎬 Starting batch processing: {batch_id}")
             db_update_batch(batch_id, status='running', started_at=time.time())
-            print(f"📦 Processing batch: {batch_id}")
             
             items = db_get_batch_items(batch_id)
             print(f"  📋 Found {len(items)} items to process")
@@ -1591,9 +1605,6 @@ def process_batch_queue():
             except:
                 pass
 
-# تشغيل معالج الباتشات في الخلفية
-threading.Thread(target=process_batch_queue, daemon=True).start()
-
 def recover_pending_batches():
     """استئناف الباتشات المعلقة"""
     pending = db_get_pending_batches()
@@ -1620,7 +1631,10 @@ def create_batch():
     items = d.get('items', [])  # قائمة الفيديوهات [{surah, startAyah, endAyah, reciter, dynamicBg, useGlow, useVignette}, ...]
     session_id = d.get('sessionId')
     
+    print(f"📥 Batch create request received: {len(items)} items")
+    
     if not items:
+        print("❌ No items provided")
         return jsonify({'ok': False, 'error': 'No items provided'}), 400
     
     # الإعدادات العامة (fallback)
@@ -1640,6 +1654,7 @@ def create_batch():
     # إنشاء الباتش
     batch_id = str(uuid.uuid4())
     db_create_batch(batch_id, len(items), global_config)
+    print(f"📦 Created batch: {batch_id}")
     
     # إنشاء الـ jobs والـ items
     for i, item in enumerate(items):
@@ -1661,12 +1676,14 @@ def create_batch():
         
         job_id = create_job(job_config, session_id)
         db_add_batch_item(batch_id, job_id, i, item['surah'], item['startAyah'], item['endAyah'])
+        print(f"  ✅ Created job {i+1}/{len(items)}: {job_id[:8]}...")
     
     # إضافة للقائمة
     with BATCH_QUEUE_LOCK:
         BATCH_QUEUE.append(batch_id)
+        print(f"📋 Added batch {batch_id} to queue. Queue length: {len(BATCH_QUEUE)}")
     
-    print(f"📦 Created batch {batch_id} with {len(items)} videos")
+    print(f"✅ Batch {batch_id} ready with {len(items)} videos")
     
     return jsonify({
         'ok': True,
@@ -1790,22 +1807,40 @@ def cancel_batch():
     
     return jsonify({'ok': True})
 
-# استئناف الباتشات المعلقة عند بدء التشغيل
+# ==========================================
+# 🚀 Application Startup (Correct Order!)
+# ==========================================
+
+# 1. Initialize database FIRST (before any threads)
+print("📦 Initializing database...")
+init_db()
+
+# 2. Recover pending jobs from previous session
+print("🔄 Recovering pending jobs...")
+try:
+    recover_pending_jobs()
+except Exception as e:
+    print(f"⚠️ Failed to recover pending jobs: {e}")
+
+# 3. Recover pending batches
+print("📦 Recovering pending batches...")
 try:
     recover_pending_batches()
 except Exception as e:
     print(f"⚠️ Failed to recover pending batches: {e}")
 
-threading.Thread(target=background_cleanup, daemon=True).start()
+# 4. Start background threads AFTER database is ready
+print("🧵 Starting background threads...")
 
-# Initialize database on module load (important for gunicorn/production)
-init_db()
+# Start batch processor thread
+batch_thread = threading.Thread(target=process_batch_queue, daemon=True, name="BatchProcessor")
+batch_thread.start()
+print("✅ Batch processor thread started")
 
-# Recover any pending jobs from previous session
-try:
-    recover_pending_jobs()
-except Exception as e:
-    print(f"⚠️ Failed to recover pending jobs: {e}")
+# Start cleanup thread
+cleanup_thread = threading.Thread(target=background_cleanup, daemon=True, name="CleanupThread")
+cleanup_thread.start()
+print("✅ Cleanup thread started")
 
 if __name__ == "__main__":
     print("🚀 Quran Reels Generator starting...")
