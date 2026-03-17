@@ -1732,6 +1732,11 @@
             }
             
             if (!status.authorized) {
+                // عرض الـ redirect URI للمستخدم
+                if (status.redirectUri) {
+                    console.log('YouTube Redirect URI:', status.redirectUri);
+                }
+                
                 // فتح نافذة المصادقة
                 const authRes = await fetch(`/api/youtube/auth-url?sessionId=${encodeURIComponent(SESSION_ID)}`);
                 const authData = await authRes.json();
@@ -1749,6 +1754,22 @@
                             setTimeout(() => openYoutubeDialog(jobId, defaultTitle), 500);
                         }
                     });
+                    
+                    // التحقق من إغلاق النافذة (في حالة الخطأ)
+                    const checkClosed = setInterval(() => {
+                        if (youtubeAuthWindow && youtubeAuthWindow.closed) {
+                            clearInterval(checkClosed);
+                            // التحقق من الحالة مرة أخرى بعد إغلاق النافذة
+                            setTimeout(async () => {
+                                const newStatus = await checkYoutubeStatus();
+                                if (!newStatus.authorized && newStatus.redirectUri) {
+                                    // عرض رسالة مساعدة للمستخدم
+                                    showToast('⚠️ قد تحتاج لإضافة الـ Redirect URI في Google Cloud Console', 'error', 8000);
+                                    console.log('أضف هذا URL في Google Cloud Console:', newStatus.redirectUri);
+                                }
+                            }, 1000);
+                        }
+                    }, 500);
                 }
                 return;
             }

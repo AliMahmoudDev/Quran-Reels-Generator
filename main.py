@@ -1832,16 +1832,15 @@ def cancel_batch():
 # يجب استبدال هذه القيم بالقيم الخاصة بك من Google Cloud Console
 YOUTUBE_CLIENT_ID = os.environ.get('YOUTUBE_CLIENT_ID', '')
 YOUTUBE_CLIENT_SECRET = os.environ.get('YOUTUBE_CLIENT_SECRET', '')
+# مهم: يجب ضبط هذا المتغير على URL التطبيق الفعلي
+# مثال: https://username-spacename.hf.space
+YOUTUBE_REDIRECT_URI = os.environ.get('YOUTUBE_REDIRECT_URI', '')
 
 # Scopes المطلوبة
-YOUTUBE_SCOPES = [
-    'https://www.googleapis.com/auth/youtube.upload',
-    'https://www.googleapis.com/auth/youtube'
-]
+YOUTUBE_SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
 
 # تخزين الـ tokens في الذاكرة (يمكن نقله لقاعدة البيانات لاحقاً)
 YOUTUBE_TOKENS = {}  # session_id -> credentials
-YOUTUBE_SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
 
 def get_base_url():
     """الحصول على الـ base URL ديناميكياً من الطلب"""
@@ -1858,8 +1857,32 @@ def get_base_url():
     return f"{proto}://{host}"
 
 def get_youtube_redirect_uri():
-    """الحصول على redirect URI ديناميكي"""
-    return f"{get_base_url()}/api/youtube/callback"
+    """الحصول على redirect URI"""
+    # أولوية لـ environment variable
+    if YOUTUBE_REDIRECT_URI:
+        redirect_uri = YOUTUBE_REDIRECT_URI
+        if not redirect_uri.endswith('/api/youtube/callback'):
+            redirect_uri = redirect_uri.rstrip('/') + '/api/youtube/callback'
+        return redirect_uri
+    
+    # fallback للكشف التلقائي
+    base_url = get_base_url()
+    redirect_uri = f"{base_url}/api/youtube/callback"
+    
+    # طباعة تحذير مهم
+    print(f"""
+    ╔══════════════════════════════════════════════════════════════╗
+    ║ ⚠️  YOUTUBE REDIRECT URI NOTICE                               ║
+    ╠══════════════════════════════════════════════════════════════╣
+    ║ Redirect URI: {redirect_uri:<47} ║
+    ║                                                              ║
+    ║ Add this URL to Google Cloud Console:                        ║
+    ║ APIs & Services > Credentials > OAuth 2.0 Client IDs         ║
+    ║ > Authorized redirect URIs                                   ║
+    ╚══════════════════════════════════════════════════════════════╝
+    """)
+    
+    return redirect_uri
 
 def get_youtube_auth_url(session_id):
     """إنشاء رابط المصادقة"""
@@ -1955,10 +1978,11 @@ def youtube_callback():
         </html>
         '''
     
+    # الحصول على redirect URI ديناميكي (قبل try عشان يبقى متاح في exception)
+    redirect_uri = get_youtube_redirect_uri()
+    print(f"[YouTube] Callback using redirect URI: {redirect_uri}")
+    
     try:
-        # الحصول على redirect URI ديناميكي
-        redirect_uri = get_youtube_redirect_uri()
-        print(f"[YouTube] Callback using redirect URI: {redirect_uri}")
         
         flow = Flow.from_client_config({
             'web': {
@@ -2006,15 +2030,39 @@ def youtube_callback():
         '''
         
     except Exception as e:
+        error_str = str(e)
         print(f"[YouTube] OAuth callback error: {e}")
         import traceback
         traceback.print_exc()
+        
+        # رسالة خاصة لخطأ redirect_uri_mismatch
+        if 'redirect_uri_mismatch' in error_str.lower() or 'mismatch' in error_str.lower():
+            return f'''
+            <html>
+            <head><title>خطأ في الإعدادات</title></head>
+            <body style="font-family:Arial; text-align:center; padding:50px; background:#1a1a1a; color:#fff; direction:rtl;">
+                <h2 style="color:#f59e0b;">⚠️ خطأ في إعدادات Google OAuth</h2>
+                <p>الـ Redirect URI غير مطابق</p>
+                <div style="background:#333; padding:15px; border-radius:8px; margin:20px 0; text-align:left; direction:ltr;">
+                    <p style="margin:0; color:#888;">Redirect URI المطلوب:</p>
+                    <p style="margin:5px 0; color:#22c55e; word-break:break-all;">{redirect_uri}</p>
+                </div>
+                <p style="color:#888; font-size:14px;">
+                    أضف هذا URL في Google Cloud Console:<br>
+                    APIs & Services → Credentials → OAuth 2.0 Client IDs<br>
+                    → Authorized redirect URIs
+                </p>
+                <script>setTimeout(() => window.close(), 10000);</script>
+            </body>
+            </html>
+            '''
+        
         return f'''
         <html>
         <head><title>خطأ</title></head>
-        <body style="font-family:Arial; text-align:center; padding:50px;">
+        <body style="font-family:Arial; text-align:center; padding:50px; background:#1a1a1a; color:#fff;">
             <h2 style="color:red;">❌ حدث خطأ</h2>
-            <p>{str(e)}</p>
+            <p>{error_str}</p>
             <script>setTimeout(() => window.close(), 5000);</script>
         </body>
         </html>
@@ -2030,10 +2078,26 @@ def youtube_status():
     
     authorized = session_id in YOUTUBE_TOKENS
     
+    # الحصول على redirect URI لعرضه للمستخدم
+    current_redirect_uri = get_youtube_redirect_uri()
+    
     return jsonify({
         'ok': True, 
         'configured': bool(YOUTUBE_CLIENT_ID),
-        'authorized': authorized
+        'authorized': authorized,
+        'redirectUri': current_redirect_uri
+    })
+
+@app.route('/api/youtube/redirect-uri')
+def youtube_redirect_uri():
+    """الحصول على redirect URI المطلوب (لل debug)"""
+    return jsonify({
+        'ok': True,
+        'redirectUri': get_youtube_redirect_uri(),
+        'instructions': {
+            'ar': 'أضف هذا URL في Google Cloud Console: APIs & Services > Credentials > OAuth 2.0 Client IDs > Authorized redirect URIs',
+            'en': 'Add this URL to Google Cloud Console: APIs & Services > Credentials > OAuth 2.0 Client IDs > Authorized redirect URIs'
+        }
     })
 
 @app.route('/api/youtube/upload', methods=['POST'])
