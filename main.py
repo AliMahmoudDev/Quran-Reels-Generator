@@ -2114,7 +2114,7 @@ def youtube_upload():
     """رفع فيديو على YouTube مع دعم الجدولة"""
     from googleapiclient.http import MediaFileUpload
     from googleapiclient.errors import HttpError
-    from datetime import datetime
+    from datetime import datetime, timezone, timedelta
     
     data = request.json
     session_id = data.get('sessionId')
@@ -2148,15 +2148,34 @@ def youtube_upload():
         publish_at = None
         
         if privacy_status == 'scheduled' and schedule_time:
-            # للجدولة: نرفع كـ private مع تحديد publishAt
-            actual_privacy = 'private'
-            # تحويل الوقت لـ ISO 8601 format
+            # للجدولة: نحتاج تحويل الوقت المحلي لـ UTC
             try:
-                scheduled_dt = datetime.fromisoformat(schedule_time.replace('Z', '+00:00'))
-                # YouTube يتطلب UTC
-                publish_at = scheduled_dt.strftime('%Y-%m-%dT%H:%M:%S.000Z')
-            except:
-                return jsonify({'ok': False, 'error': 'Invalid schedule time format'}), 400
+                # تحويل الـ string لـ datetime object
+                local_dt = datetime.fromisoformat(schedule_time)
+                
+                # نفترض توقيت مصر (UTC+2 في الشتاء، UTC+3 في الصيف)
+                # نستخدم فرق 2 ساعات كتقريب
+                utc_dt = local_dt - timedelta(hours=2)
+                
+                # تنسيق الوقت بصيغة YouTube المطلوبة
+                publish_at = utc_dt.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+                
+                # التحقق أن الوقت في المستقبل (على الأقل ساعة)
+                now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+                min_time = now_utc + timedelta(hours=1)
+                
+                if utc_dt < min_time:
+                    return jsonify({
+                        'ok': False, 
+                        'error': 'يجب أن يكون وقت الجدولة بعد ساعة على الأقل من الآن'
+                    }), 400
+                
+                print(f"[YouTube] Local time: {local_dt}")
+                print(f"[YouTube] UTC time: {publish_at}")
+                
+            except Exception as e:
+                print(f"[YouTube] Schedule time error: {e}")
+                return jsonify({'ok': False, 'error': f'خطأ في وقت الجدولة: {str(e)}'}), 400
         
         # إعداد الـ body
         body = {
@@ -2172,11 +2191,11 @@ def youtube_upload():
             }
         }
         
-        # إضافة publishAt للجدولة
+        # للجدولة: نرفع الفيديو كـ public مع تحديد publishAt
+        # ملاحظة: publishAt لازم يكون في الـ insert مش update
         if publish_at:
-            body['status']['publishAt'] = publish_at
-            # للجدولة، يجب أن يكون الفيديو public
             body['status']['privacyStatus'] = 'public'
+            body['status']['publishAt'] = publish_at
         
         print(f"[YouTube] Uploading video: {title[:50]}...")
         print(f"[YouTube] Privacy: {body['status']['privacyStatus']}")
@@ -2206,7 +2225,9 @@ def youtube_upload():
             'ok': True,
             'videoId': video_id,
             'videoUrl': video_url,
-            'title': response['snippet']['title']
+            'title': response['snippet']['title'],
+            'scheduled': bool(publish_at),
+            'scheduledTime': publish_at
         })
         
     except HttpError as e:
