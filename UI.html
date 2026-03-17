@@ -1091,6 +1091,71 @@
                         <a class="btn-secondary btn-download" id="downloadLink" download>⬇️ تحميل</a>
                         <button class="btn-secondary" onclick="resetForm()">🔄 فيديو جديد</button>
                     </div>
+                    
+                    <!-- YouTube Upload Section -->
+                    <div id="youtubeUploadSection" style="margin-top: 16px; padding: 16px; background: var(--bg-card); border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                            <span style="font-weight: 600;">📺 نشر على YouTube</span>
+                            <span id="youtubeStatus" style="font-size: 0.8rem; color: var(--text-muted);">جاري الفحص...</span>
+                        </div>
+                        
+                        <!-- YouTube Not Setup -->
+                        <div id="youtubeNeedsSetup" style="display: none; text-align: center; padding: 12px;">
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">
+                                ⚠️ يحتاج إعداد Google API
+                            </p>
+                            <details style="text-align: right; font-size: 0.8rem;">
+                                <summary style="cursor: pointer; color: var(--accent);">كيفية الإعداد؟</summary>
+                                <ol style="margin-top: 8px; padding-right: 20px; color: var(--text-secondary); line-height: 1.8;">
+                                    <li>اذهب إلى <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></li>
+                                    <li>أنشئ مشروع جديد</li>
+                                    <li>فعّل YouTube Data API v3</li>
+                                    <li>أنشئ OAuth 2.0 credentials</li>
+                                    <li>حمّل client_secrets.json وضعه في مجلد المشروع</li>
+                                </ol>
+                            </details>
+                        </div>
+                        
+                        <!-- YouTube Connect Button -->
+                        <div id="youtubeConnectBtn" style="display: none;">
+                            <button class="btn-secondary" style="width: 100%;" onclick="connectYouTube()">
+                                🔗 ربط حساب YouTube
+                            </button>
+                        </div>
+                        
+                        <!-- YouTube Upload Form -->
+                        <div id="youtubeUploadForm" style="display: none;">
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <input type="text" class="form-input" id="youtubeTitle" placeholder="عنوان الفيديو..." style="height: 44px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <textarea class="form-input" id="youtubeDescription" placeholder="وصف الفيديو (اختياري)..." style="height: 80px; padding-top: 12px;"></textarea>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <select class="form-select" id="youtubePrivacy" style="flex: 1; height: 44px;">
+                                    <option value="unlisted">🔒 غير مدرج</option>
+                                    <option value="private">🙈 خاص</option>
+                                    <option value="public">🌐 عام</option>
+                                </select>
+                                <button class="btn-primary" style="flex: 2; height: 44px;" onclick="uploadToYouTube()">
+                                    📤 نشر على YouTube
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Upload Progress -->
+                        <div id="youtubeUploadProgress" style="display: none; text-align: center; padding: 16px;">
+                            <div style="color: var(--accent);">⏳ جاري الرفع...</div>
+                        </div>
+                        
+                        <!-- Upload Success -->
+                        <div id="youtubeUploadSuccess" style="display: none; text-align: center; padding: 16px;">
+                            <div style="color: var(--success); margin-bottom: 8px;">✅ تم النشر بنجاح!</div>
+                            <a id="youtubeVideoLink" href="#" target="_blank" class="btn-secondary" style="display: inline-block;">
+                                ▶️ مشاهدة على YouTube
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -2284,6 +2349,135 @@
 
         // استدعاء عند التحميل
         setTimeout(checkActiveBatch, 1000);
+        
+        // ═══════════════════════════════════════
+        // 📺 YouTube Integration
+        // ═══════════════════════════════════════
+        
+        let youtubeConnected = false;
+        
+        async function checkYouTubeStatus() {
+            try {
+                const res = await fetch(`/api/youtube/status?sessionId=${encodeURIComponent(SESSION_ID)}`);
+                const data = await res.json();
+                
+                if (data.ok) {
+                    if (data.needsSetup) {
+                        document.getElementById('youtubeNeedsSetup').style.display = 'block';
+                        document.getElementById('youtubeStatus').textContent = '⚠️ غير مُعد';
+                        document.getElementById('youtubeStatus').style.color = 'var(--warning)';
+                    } else if (data.connected) {
+                        youtubeConnected = true;
+                        document.getElementById('youtubeUploadForm').style.display = 'block';
+                        document.getElementById('youtubeStatus').textContent = '✅ متصل';
+                        document.getElementById('youtubeStatus').style.color = 'var(--success)';
+                    } else {
+                        document.getElementById('youtubeConnectBtn').style.display = 'block';
+                        document.getElementById('youtubeStatus').textContent = '❌ غير متصل';
+                        document.getElementById('youtubeStatus').style.color = 'var(--danger)';
+                    }
+                }
+            } catch (err) {
+                console.error('YouTube status check error:', err);
+                document.getElementById('youtubeNeedsSetup').style.display = 'block';
+                document.getElementById('youtubeStatus').textContent = '⚠️ خطأ';
+            }
+        }
+        
+        async function connectYouTube() {
+            try {
+                const res = await fetch(`/api/youtube/auth-url?sessionId=${encodeURIComponent(SESSION_ID)}`);
+                const data = await res.json();
+                
+                if (data.ok && data.authUrl) {
+                    // Open OAuth popup
+                    const popup = window.open(data.authUrl, 'YouTube Auth', 'width=600,height=700');
+                    
+                    // Poll for completion
+                    const checkInterval = setInterval(async () => {
+                        if (popup.closed) {
+                            clearInterval(checkInterval);
+                            // Re-check status
+                            await checkYouTubeStatus();
+                        }
+                    }, 500);
+                } else {
+                    showToast(data.error || 'فشل الحصول على رابط التفويض', 'error');
+                }
+            } catch (err) {
+                console.error('YouTube connect error:', err);
+                showToast('حدث خطأ في الاتصال بـ YouTube', 'error');
+            }
+        }
+        
+        async function uploadToYouTube() {
+            if (!currentJobId) {
+                showToast('لا يوجد فيديو للرفع', 'error');
+                return;
+            }
+            
+            const title = document.getElementById('youtubeTitle').value || 'Quran Video';
+            const description = document.getElementById('youtubeDescription').value || '';
+            const privacy = document.getElementById('youtubePrivacy').value;
+            
+            // Show progress
+            document.getElementById('youtubeUploadForm').style.display = 'none';
+            document.getElementById('youtubeUploadProgress').style.display = 'block';
+            document.getElementById('youtubeUploadSuccess').style.display = 'none';
+            
+            try {
+                const res = await fetch('/api/youtube/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: SESSION_ID,
+                        jobId: currentJobId,
+                        title: title,
+                        description: description,
+                        privacy: privacy,
+                        tags: ['قرآن', 'Quran', 'إسلام', 'تلاوة']
+                    })
+                });
+                
+                const data = await res.json();
+                
+                document.getElementById('youtubeUploadProgress').style.display = 'none';
+                
+                if (data.ok) {
+                    document.getElementById('youtubeUploadSuccess').style.display = 'block';
+                    document.getElementById('youtubeVideoLink').href = data.videoUrl;
+                    showToast('تم نشر الفيديو على YouTube!', 'success');
+                } else {
+                    document.getElementById('youtubeUploadForm').style.display = 'block';
+                    
+                    if (data.needsAuth) {
+                        youtubeConnected = false;
+                        document.getElementById('youtubeConnectBtn').style.display = 'block';
+                        showToast('يجب ربط حساب YouTube أولاً', 'error');
+                    } else {
+                        showToast(data.error || 'فشل رفع الفيديو', 'error');
+                    }
+                }
+            } catch (err) {
+                console.error('YouTube upload error:', err);
+                document.getElementById('youtubeUploadProgress').style.display = 'none';
+                document.getElementById('youtubeUploadForm').style.display = 'block';
+                showToast('حدث خطأ أثناء الرفع', 'error');
+            }
+        }
+        
+        // Check YouTube status when showing result
+        const originalShowResult = showResult;
+        showResult = function(data) {
+            originalShowResult(data);
+            // Check YouTube status after showing result
+            setTimeout(() => {
+                checkYouTubeStatus();
+                // Pre-fill title
+                const surahName = surahSelect.options[surahSelect.selectedIndex]?.text || '';
+                document.getElementById('youtubeTitle').value = `قرآن كريم - ${surahName}`;
+            }, 500);
+        };
     </script>
 </body>
 </html>
