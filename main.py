@@ -1832,7 +1832,6 @@ def cancel_batch():
 # يجب استبدال هذه القيم بالقيم الخاصة بك من Google Cloud Console
 YOUTUBE_CLIENT_ID = os.environ.get('YOUTUBE_CLIENT_ID', '')
 YOUTUBE_CLIENT_SECRET = os.environ.get('YOUTUBE_CLIENT_SECRET', '')
-YOUTUBE_REDIRECT_URI = os.environ.get('YOUTUBE_REDIRECT_URI', 'http://localhost:7860/api/youtube/callback')
 
 # Scopes المطلوبة
 YOUTUBE_SCOPES = [
@@ -1842,34 +1841,49 @@ YOUTUBE_SCOPES = [
 
 # تخزين الـ tokens في الذاكرة (يمكن نقله لقاعدة البيانات لاحقاً)
 YOUTUBE_TOKENS = {}  # session_id -> credentials
+YOUTUBE_SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
+
+def get_base_url():
+    """الحصول على الـ base URL ديناميكياً من الطلب"""
+    # أولوية لـ X-Forwarded headers (للـ reverse proxies زي Hugging Face)
+    forwarded_host = request.headers.get('X-Forwarded-Host')
+    forwarded_proto = request.headers.get('X-Forwarded-Proto', 'https')
+    
+    if forwarded_host:
+        return f"{forwarded_proto}://{forwarded_host}"
+    
+    # fallback للـ host العادي
+    host = request.headers.get('Host', 'localhost:7860')
+    proto = 'https' if request.scheme == 'https' else 'http'
+    return f"{proto}://{host}"
+
+def get_youtube_redirect_uri():
+    """الحصول على redirect URI ديناميكي"""
+    return f"{get_base_url()}/api/youtube/callback"
 
 def get_youtube_auth_url(session_id):
     """إنشاء رابط المصادقة"""
     if not YOUTUBE_CLIENT_ID:
         return None
     
-    from google_auth_oauthlib.flow import Flow
+    redirect_uri = get_youtube_redirect_uri()
+    print(f"[YouTube] Using redirect URI: {redirect_uri}")
     
-    flow = Flow.from_client_config({
-        'web': {
-            'client_id': YOUTUBE_CLIENT_ID,
-            'client_secret': YOUTUBE_CLIENT_SECRET,
-            'redirect_uris': [YOUTUBE_REDIRECT_URI],
-            'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
-            'token_uri': 'https://oauth2.googleapis.com/token'
-        }
-    }, scopes=YOUTUBE_SCOPES)
+    # استخدام طريقة بسيطة - URL مباشر
+    from urllib.parse import urlencode, quote
     
-    flow.redirect_uri = YOUTUBE_REDIRECT_URI
+    params = {
+        'client_id': YOUTUBE_CLIENT_ID,
+        'redirect_uri': redirect_uri,
+        'response_type': 'code',
+        'scope': ' '.join(YOUTUBE_SCOPES),
+        'access_type': 'offline',
+        'include_granted_scopes': 'true',
+        'state': session_id
+    }
     
-    # إضافة state للتعرف على الجلسة
-    authorization_url, state = flow.authorization_url(
-        access_type='offline',
-        include_granted_scopes='true',
-        state=session_id
-    )
-    
-    return authorization_url
+    auth_url = f"https://accounts.google.com/o/oauth2/auth?{urlencode(params)}"
+    return auth_url
 
 def get_youtube_service(session_id):
     """الحصول على خدمة YouTube للمستخدم"""
@@ -1942,17 +1956,21 @@ def youtube_callback():
         '''
     
     try:
+        # الحصول على redirect URI ديناميكي
+        redirect_uri = get_youtube_redirect_uri()
+        print(f"[YouTube] Callback using redirect URI: {redirect_uri}")
+        
         flow = Flow.from_client_config({
             'web': {
                 'client_id': YOUTUBE_CLIENT_ID,
                 'client_secret': YOUTUBE_CLIENT_SECRET,
-                'redirect_uris': [YOUTUBE_REDIRECT_URI],
+                'redirect_uris': [redirect_uri],
                 'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
                 'token_uri': 'https://oauth2.googleapis.com/token'
             }
         }, scopes=YOUTUBE_SCOPES)
         
-        flow.redirect_uri = YOUTUBE_REDIRECT_URI
+        flow.redirect_uri = redirect_uri
         flow.fetch_token(authorization_response=request.url)
         
         credentials = flow.credentials
@@ -1966,6 +1984,8 @@ def youtube_callback():
             'client_secret': credentials.client_secret,
             'scopes': credentials.scopes
         }
+        
+        print(f"[YouTube] Token stored for session: {state[:20]}...")
         
         return f'''
         <html>
@@ -1987,6 +2007,8 @@ def youtube_callback():
         
     except Exception as e:
         print(f"[YouTube] OAuth callback error: {e}")
+        import traceback
+        traceback.print_exc()
         return f'''
         <html>
         <head><title>خطأ</title></head>
