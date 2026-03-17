@@ -2173,37 +2173,79 @@ def youtube_upload():
     
     try:
         # تحديد حالة الخصوصية الفعلية
-        actual_privacy = privacy_status
+        # ملاحظة: 'scheduled' ليست قيمة صالحة لـ privacyStatus
+        # للجدولة نستخدم 'private' مع publishAt
+        if privacy_status == 'scheduled':
+            actual_privacy = 'private'  # للجدولة: private أولاً
+        else:
+            actual_privacy = privacy_status
         publish_at = None
         
         if privacy_status == 'scheduled' and schedule_time:
-            # للجدولة: نحتاج تحويل الوقت المحلي لـ UTC
+            # للجدولة: تحويل الوقت المحلي لـ UTC بشكل صحيح
             try:
+                print(f"[YouTube] Raw schedule_time received: {schedule_time}")
+                
                 # تحويل الـ string لـ datetime object
-                local_dt = datetime.fromisoformat(schedule_time)
+                # دعم صيغ متعددة
+                try:
+                    # صيغة ISO مع timezone
+                    local_dt = datetime.fromisoformat(schedule_time.replace('Z', '+00:00'))
+                except:
+                    # صيغة بدون timezone - نفترض توقيت المستخدم المحلي
+                    local_dt = datetime.fromisoformat(schedule_time)
                 
-                # نفترض توقيت مصر (UTC+2 في الشتاء، UTC+3 في الصيف)
-                # نستخدم فرق 2 ساعات كتقريب
-                utc_dt = local_dt - timedelta(hours=2)
+                # الوقت الحالي UTC
+                now_utc = datetime.now(timezone.utc)
                 
-                # تنسيق الوقت بصيغة YouTube المطلوبة
+                # تحويل لـ UTC بشكل صحيح
+                if local_dt.tzinfo is None:
+                    # الوقت بدون timezone - نفترض أنه توقيت محلي للمستخدم
+                    # نعتبره UTC ولكن نتحقق إذا كان في الماضي
+                    utc_dt = local_dt
+                    
+                    # التحقق: إذا كان الوقت أقل من الآن + ساعة، نعتبر أن المستخدم أرسل وقت محلي
+                    # ونحوله من توقيت مصر/السعودية (UTC+2/3) لـ UTC
+                    test_min = now_utc.replace(tzinfo=None) + timedelta(hours=1)
+                    if utc_dt < test_min:
+                        # على الأرجح الوقت محلي، نحوله لـ UTC بافتراض UTC+3
+                        print("[YouTube] Time seems to be local, converting from UTC+3")
+                        utc_dt = local_dt - timedelta(hours=3)
+                else:
+                    # تحويل من التوقيت المحلي لـ UTC
+                    utc_dt = local_dt.astimezone(timezone.utc).replace(tzinfo=None)
+                
+                # تنسيق الوقت بصيغة YouTube المطلوبة (RFC 3339)
                 publish_at = utc_dt.strftime('%Y-%m-%dT%H:%M:%S.000Z')
                 
-                # التحقق أن الوقت في المستقبل (على الأقل ساعة)
-                now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
-                min_time = now_utc + timedelta(hours=1)
+                # التحقق أن الوقت في المستقبل (على الأقل 30 دقيقة للجدولة)
+                # YouTube يتطلب 10 دقائق، لكن نزيد احتياطاً للرفع
+                now_utc_naive = now_utc.replace(tzinfo=None)
+                min_time = now_utc_naive + timedelta(minutes=30)
+                
+                print(f"[YouTube] Parsed UTC time: {utc_dt}")
+                print(f"[YouTube] Current UTC: {now_utc_naive}")
+                print(f"[YouTube] Min allowed: {min_time}")
+                print(f"[YouTube] Final publishAt: {publish_at}")
                 
                 if utc_dt < min_time:
-                    return jsonify({
-                        'ok': False, 
-                        'error': 'يجب أن يكون وقت الجدولة بعد ساعة على الأقل من الآن'
-                    }), 400
+                    # بدل الرفض، نعدل الوقت تلقائياً
+                    utc_dt = now_utc_naive + timedelta(hours=1)
+                    publish_at = utc_dt.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+                    print(f"[YouTube] Time too close, auto-adjusted to: {publish_at}")
                 
-                print(f"[YouTube] Local time: {local_dt}")
-                print(f"[YouTube] UTC time: {publish_at}")
+                # الحد الأقصى للجدولة هو 6 أشهر
+                max_time = now_utc_naive + timedelta(days=180)
+                if utc_dt > max_time:
+                    return jsonify({
+                        'ok': False,
+                        'error': 'لا يمكن جدولة الفيديو لأكثر من 6 أشهر في المستقبل'
+                    }), 400
                 
             except Exception as e:
                 print(f"[YouTube] Schedule time error: {e}")
+                import traceback
+                traceback.print_exc()
                 return jsonify({'ok': False, 'error': f'خطأ في وقت الجدولة: {str(e)}'}), 400
         
         # إعداد الـ body
@@ -2215,16 +2257,16 @@ def youtube_upload():
                 'categoryId': '22'  # People & Blogs
             },
             'status': {
-                'privacyStatus': actual_privacy,
+                'privacyStatus': 'private' if publish_at else actual_privacy,  # للجدولة: private أولاً
                 'selfDeclaredMadeForKids': False
             }
         }
         
-        # للجدولة: نرفع الفيديو كـ public مع تحديد publishAt
-        # ملاحظة: publishAt لازم يكون في الـ insert مش update
+        # للجدولة: نرفع الفيديو كـ private مع تحديد publishAt
+        # YouTube سيقوم بنشره تلقائياً في الوقت المحدد
         if publish_at:
-            body['status']['privacyStatus'] = 'public'
             body['status']['publishAt'] = publish_at
+            print(f"[YouTube] Video will be scheduled for: {publish_at}")
         
         print(f"[YouTube] Uploading video: {title[:50]}...")
         print(f"[YouTube] Privacy: {body['status']['privacyStatus']}")

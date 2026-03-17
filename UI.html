@@ -1873,23 +1873,28 @@
             const description = document.getElementById('ytDescription')?.value || '';
             const tags = document.getElementById('ytTags')?.value.split(',').map(t => t.trim()).filter(t => t) || [];
             let privacyStatus = document.getElementById('ytPrivacy')?.value || 'unlisted';
-            const scheduleTime = document.getElementById('ytScheduleTime')?.value || null;
+            const scheduleTimeLocal = document.getElementById('ytScheduleTime')?.value || null;
             
             // التحقق من وقت الجدولة
+            let scheduleTime = null;
             if (privacyStatus === 'scheduled') {
-                if (!scheduleTime) {
+                if (!scheduleTimeLocal) {
                     showToast('⚠️ الرجاء اختيار وقت للجدولة', 'error');
                     return;
                 }
-                // التحقق أن الوقت بعد ساعة على الأقل
-                const scheduledDate = new Date(scheduleTime);
+                // تحويل الوقت المحلي لـ ISO string مع timezone
+                const scheduledDate = new Date(scheduleTimeLocal);
                 const now = new Date();
-                const diffHours = (scheduledDate - now) / (1000 * 60 * 60);
-                if (diffHours < 1) {
-                    showToast('⚠️ يجب أن يكون وقت الجدولة بعد ساعة على الأقل', 'error');
+                const diffMinutes = (scheduledDate - now) / (1000 * 60);
+                if (diffMinutes < 15) {
+                    showToast('⚠️ يجب أن يكون وقت الجدولة بعد 15 دقيقة على الأقل', 'error');
                     return;
                 }
-                // للجدولة، نرفع الفيديو كـ private أولاً
+                // تحويل لـ ISO string (يتضمن timezone)
+                scheduleTime = scheduledDate.toISOString();
+                console.log('[YouTube] Local time:', scheduleTimeLocal);
+                console.log('[YouTube] UTC time:', scheduleTime);
+                // للجدولة، نرفع الفيديو كـ scheduled
                 privacyStatus = 'scheduled';
             }
             
