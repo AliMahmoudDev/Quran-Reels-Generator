@@ -785,41 +785,6 @@
             accent-color: var(--accent);
         }
 
-        .font-select {
-            padding: 8px 12px;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: 0.85rem;
-            cursor: pointer;
-            min-width: 180px;
-        }
-
-        .font-select:focus {
-            border-color: var(--accent);
-            outline: none;
-        }
-
-        .btn-secondary {
-            flex: 1;
-            height: 48px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: 0.95rem;
-            font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: all 0.2s;
-        }
-
         /* ═══════════════════════════════════════
            🔔 Toast Notifications
         ═══════════════════════════════════════ */
@@ -1271,37 +1236,9 @@
             <!-- ⚙️ Settings Tab -->
             <div class="tab-panel" id="settings-panel">
                 <!-- Preview -->
-                <div class="preview-box" id="previewBox">
-                    <img id="previewImage" style="max-width: 100%; height: auto; display: none;" />
-                    <div id="previewContent">
-                        <div class="preview-ar" id="previewAr">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
-                        <div class="preview-en" id="previewEn">In the name of Allah, the Entirely Merciful</div>
-                    </div>
-                </div>
-
-                <!-- Font Selection -->
-                <div class="settings-section">
-                    <h4>🔤 الخطوط</h4>
-                    <div class="settings-row">
-                        <span class="settings-label">الخط العربي</span>
-                        <div class="settings-controls">
-                            <select id="arFontSelect" class="font-select" onchange="updatePreview()">
-                                <option value="Arabic Default">Arabic Default (ناسخ عصري)</option>
-                                <option value="Amiri">Amiri (قرآني كلاسيكي)</option>
-                                <option value="Tajawal">Tajawal (عصري أنيق)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="settings-row">
-                        <span class="settings-label">الخط الإنجليزي</span>
-                        <div class="settings-controls">
-                            <select id="enFontSelect" class="font-select" onchange="updatePreview()">
-                                <option value="Montserrat">Montserrat (أنيق حديث)</option>
-                                <option value="Roboto">Roboto (واضح بسيط)</option>
-                                <option value="Lato">Lato (أناقة عصرية)</option>
-                            </select>
-                        </div>
-                    </div>
+                <div class="preview-box">
+                    <div class="preview-ar" id="previewAr">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
+                    <div class="preview-en" id="previewEn">In the name of Allah, the Entirely Merciful</div>
                 </div>
 
                 <!-- Arabic Settings -->
@@ -1394,10 +1331,7 @@
             enColor: '#FFD700',
             enSize: '1',
             enOutlineColor: '#000000',
-            enOutlineWidth: '3',
-            // الخطوط الافتراضية
-            arFont: 'Arabic Default',
-            enFont: 'Montserrat'
+            enOutlineWidth: '3'
         };
 
         // ═══════════════════════════════════════
@@ -1744,6 +1678,7 @@
                 actionsHtml = `
                     <button onclick="previewVideo('${item.downloadUrl}')">▶️ عرض</button>
                     <a href="${item.downloadUrl}" download>⬇️ تحميل</a>
+                    <button onclick="openYoutubeDialog('${item.jobId}', '${item.title?.replace(/'/g, "\\'") || 'فيديو قرآني'}')" style="background: #ff0000; color: white; border: none;">📺 يوتيوب</button>
                     <button class="btn-delete" onclick="deleteHistoryItem(${item.id})">🗑️</button>
                 `;
             } else {
@@ -1768,6 +1703,175 @@
                     </div>
                 </div>
             `;
+        }
+
+        // ═══════════════════════════════════════
+        // 📺 YouTube Integration
+        // ═══════════════════════════════════════
+        let youtubeAuthWindow = null;
+        let currentYoutubeJob = null;
+
+        async function checkYoutubeStatus() {
+            try {
+                const res = await fetch(`/api/youtube/status?sessionId=${encodeURIComponent(SESSION_ID)}`);
+                return await res.json();
+            } catch {
+                return { configured: false, authorized: false };
+            }
+        }
+
+        async function openYoutubeDialog(jobId, defaultTitle) {
+            currentYoutubeJob = jobId;
+            
+            // التحقق من حالة YouTube
+            const status = await checkYoutubeStatus();
+            
+            if (!status.configured) {
+                showToast('⚠️ ميزة يوتيوب غير مُعدة. تواصل مع المطور.', 'error');
+                return;
+            }
+            
+            if (!status.authorized) {
+                // فتح نافذة المصادقة
+                const authRes = await fetch(`/api/youtube/auth-url?sessionId=${encodeURIComponent(SESSION_ID)}`);
+                const authData = await authRes.json();
+                
+                if (authData.authUrl) {
+                    showToast('سيتم فتح نافذة المصادقة...', 'success');
+                    youtubeAuthWindow = window.open(authData.authUrl, 'youtube-auth', 'width=500,height=600');
+                    
+                    // الاستماع لرسالة النجاح
+                    window.addEventListener('message', function ytAuthHandler(e) {
+                        if (e.data.type === 'youtube_auth_success') {
+                            showToast('✅ تم ربط يوتيوب بنجاح!', 'success');
+                            window.removeEventListener('message', ytAuthHandler);
+                            // فتح الـ dialog مرة أخرى
+                            setTimeout(() => openYoutubeDialog(jobId, defaultTitle), 500);
+                        }
+                    });
+                }
+                return;
+            }
+            
+            // عرض Dialog النشر
+            showYoutubeUploadDialog(jobId, defaultTitle);
+        }
+
+        function showYoutubeUploadDialog(jobId, defaultTitle) {
+            // إنشاء الـ dialog
+            const dialog = document.createElement('div');
+            dialog.id = 'youtubeDialog';
+            dialog.innerHTML = `
+                <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+                    <div style="background: var(--bg-card); border-radius: 16px; padding: 24px; width: 90%; max-width: 450px; max-height: 90vh; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3 style="color: #ff0000;">📺 نشر على يوتيوب</h3>
+                            <button onclick="closeYoutubeDialog()" style="background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer;">✕</button>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">📌 العنوان</label>
+                            <input type="text" id="ytTitle" class="form-input" value="${defaultTitle}" maxlength="100" placeholder="عنوان الفيديو">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">📝 الوصف</label>
+                            <textarea id="ytDescription" class="form-input" style="height: 100px; resize: vertical;" placeholder="وصف الفيديو (اختياري)">🎬 تم إنشاء هذا الفيديو بواسطة صانع الريلز القرآني
+
+#قرآن #تلاوة #إسلام</textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">🏷️ الكلمات المفتاحية (مفصولة بفاصلة)</label>
+                            <input type="text" id="ytTags" class="form-input" value="قرآن, تلاوة, إسلام, Quran" placeholder="قرآن, تلاوة, إسلام">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">🔒 الخصوصية</label>
+                            <select id="ytPrivacy" class="form-select">
+                                <option value="unlisted">🔗 غير مدرج (للأصدقاء فقط)</option>
+                                <option value="private">🔐 خاص</option>
+                                <option value="public">🌍 عام</option>
+                            </select>
+                        </div>
+                        
+                        <div style="margin-top: 20px; display: flex; gap: 10px;">
+                            <button onclick="uploadToYoutube('${jobId}')" class="btn-primary" style="flex: 1;">
+                                📤 نشر الآن
+                            </button>
+                            <button onclick="closeYoutubeDialog()" class="btn-secondary" style="flex: 1;">
+                                إلغاء
+                            </button>
+                        </div>
+                        
+                        <div id="youtubeUploadProgress" style="display: none; margin-top: 16px; text-align: center;">
+                            <div style="color: var(--accent);">⏳ جاري الرفع... يرجى الانتظار</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(dialog);
+        }
+
+        function closeYoutubeDialog() {
+            const dialog = document.getElementById('youtubeDialog');
+            if (dialog) dialog.remove();
+        }
+
+        async function uploadToYoutube(jobId) {
+            const title = document.getElementById('ytTitle')?.value || 'فيديو قرآني';
+            const description = document.getElementById('ytDescription')?.value || '';
+            const tags = document.getElementById('ytTags')?.value.split(',').map(t => t.trim()).filter(t => t) || [];
+            const privacyStatus = document.getElementById('ytPrivacy')?.value || 'unlisted';
+            
+            const progressEl = document.getElementById('youtubeUploadProgress');
+            if (progressEl) progressEl.style.display = 'block';
+            
+            try {
+                const res = await fetch('/api/youtube/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: SESSION_ID,
+                        jobId: jobId,
+                        title: title,
+                        description: description,
+                        tags: tags,
+                        privacyStatus: privacyStatus
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.ok) {
+                    closeYoutubeDialog();
+                    showToast('✅ تم نشر الفيديو بنجاح!', 'success');
+                    
+                    // عرض رابط الفيديو
+                    if (data.videoUrl) {
+                        setTimeout(() => {
+                            if (confirm(`تم النشر بنجاح!\n\nهل تريد فتح الفيديو؟\n${data.videoUrl}`)) {
+                                window.open(data.videoUrl, '_blank');
+                            }
+                        }, 500);
+                    }
+                } else {
+                    if (data.needsAuth) {
+                        showToast('⚠️ يجب ربط حساب يوتيوب أولاً', 'error');
+                        closeYoutubeDialog();
+                        // إعادة المصادقة
+                        openYoutubeDialog(jobId, title);
+                    } else {
+                        showToast(`❌ ${data.error || 'فشل في الرفع'}`, 'error');
+                    }
+                }
+            } catch (err) {
+                console.error('YouTube upload error:', err);
+                showToast('❌ فشل في الاتصال', 'error');
+            }
+            
+            if (progressEl) progressEl.style.display = 'none';
         }
 
         async function deleteHistoryItem(id) {
@@ -1842,10 +1946,7 @@
                 enColor: document.getElementById('enColor')?.value || '#FFD700',
                 enSize: document.getElementById('enSize')?.value || '1',
                 enOutC: document.getElementById('enOutlineColor')?.value || '#000000',
-                enOutW: document.getElementById('enOutlineWidth')?.value || '3',
-                // إضافة الخطوط
-                arFont: document.getElementById('arFontSelect')?.value || 'Arabic Default',
-                enFont: document.getElementById('enFontSelect')?.value || 'Montserrat'
+                enOutW: document.getElementById('enOutlineWidth')?.value || '3'
             };
         }
 
@@ -1857,14 +1958,6 @@
                 if (el) el.value = value;
             });
             
-            // تحميل الخطوط المحفوظة
-            if (saved.arFont) {
-                document.getElementById('arFontSelect').value = saved.arFont;
-            }
-            if (saved.enFont) {
-                document.getElementById('enFontSelect').value = saved.enFont;
-            }
-            
             const pexelsKey = localStorage.getItem('user_pexels_key');
             if (pexelsKey) {
                 document.getElementById('pexelsKey').value = pexelsKey;
@@ -1874,73 +1967,18 @@
         }
 
         function updatePreview() {
-            // استخدام الـ API الجديد لمعاينة الخطوط
-            const previewData = {
-                arFont: document.getElementById('arFontSelect').value,
-                enFont: document.getElementById('enFontSelect').value,
-                arColor: document.getElementById('arColor').value,
-                enColor: document.getElementById('enColor').value,
-                arSize: document.getElementById('arSize').value,
-                enSize: document.getElementById('enSize').value,
-                arOutC: document.getElementById('arOutlineColor').value,
-                arOutW: document.getElementById('arOutlineWidth').value,
-                enOutC: document.getElementById('enOutlineColor').value,
-                enOutW: document.getElementById('enOutlineWidth').value,
-                text: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
-                enText: 'In the name of Allah, the Entirely Merciful'
-            };
+            const ar = document.getElementById('previewAr');
+            const en = document.getElementById('previewEn');
             
-            // إرسال طلب للـ API
-            fetch('/api/preview-font', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(previewData)
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.ok && data.preview) {
-                    const previewImage = document.getElementById('previewImage');
-                    const previewContent = document.getElementById('previewContent');
-                    
-                    previewImage.src = data.preview;
-                    previewImage.style.display = 'block';
-                    previewContent.style.display = 'none';
-                }
-            })
-            .catch(err => {
-                console.log('Preview API not available, using fallback');
-                // Fallback للعرض العادي
-                const ar = document.getElementById('previewAr');
-                const en = document.getElementById('previewEn');
-                
-                const arFont = document.getElementById('arFontSelect').value;
-                const enFont = document.getElementById('enFontSelect').value;
-                
-                if (arFont === 'Amiri') {
-                    ar.style.fontFamily = "'Amiri', serif";
-                } else if (arFont === 'Tajawal') {
-                    ar.style.fontFamily = "'Tajawal', sans-serif";
-                } else {
-                    ar.style.fontFamily = "'Amiri', serif";
-                }
-                
-                const enFonts = {
-                    'Montserrat': "'Montserrat', sans-serif",
-                    'Roboto': "'Roboto', sans-serif",
-                    'Lato': "'Lato', sans-serif"
-                };
-                en.style.fontFamily = enFonts[enFont] || "'Montserrat', sans-serif";
-                
-                ar.style.color = document.getElementById('arColor').value;
-                ar.style.fontSize = `${1.5 * parseFloat(document.getElementById('arSize').value)}rem`;
-                const arOutline = parseInt(document.getElementById('arOutlineWidth').value) / 5;
-                ar.style.webkitTextStroke = arOutline > 0 ? `${arOutline}px ${document.getElementById('arOutlineColor').value}` : 'none';
-                
-                en.style.color = document.getElementById('enColor').value;
-                en.style.fontSize = `${0.85 * parseFloat(document.getElementById('enSize').value)}rem`;
-                const enOutline = parseInt(document.getElementById('enOutlineWidth').value) / 5;
-                en.style.webkitTextStroke = enOutline > 0 ? `${enOutline}px ${document.getElementById('enOutlineColor').value}` : 'none';
-            });
+            ar.style.color = document.getElementById('arColor').value;
+            ar.style.fontSize = `${1.5 * parseFloat(document.getElementById('arSize').value)}rem`;
+            const arOutline = parseInt(document.getElementById('arOutlineWidth').value) / 5;
+            ar.style.webkitTextStroke = arOutline > 0 ? `${arOutline}px ${document.getElementById('arOutlineColor').value}` : 'none';
+            
+            en.style.color = document.getElementById('enColor').value;
+            en.style.fontSize = `${0.85 * parseFloat(document.getElementById('enSize').value)}rem`;
+            const enOutline = parseInt(document.getElementById('enOutlineWidth').value) / 5;
+            en.style.webkitTextStroke = enOutline > 0 ? `${enOutline}px ${document.getElementById('enOutlineColor').value}` : 'none';
         }
 
         function saveAllSettings() {
@@ -1949,10 +1987,6 @@
              'enColor', 'enSize', 'enOutlineColor', 'enOutlineWidth'].forEach(key => {
                 settings[key] = document.getElementById(key).value;
             });
-            
-            // حفظ الخطوط
-            settings.arFont = document.getElementById('arFontSelect').value;
-            settings.enFont = document.getElementById('enFontSelect').value;
             
             localStorage.setItem('quran_app_styles_v2', JSON.stringify(settings));
             

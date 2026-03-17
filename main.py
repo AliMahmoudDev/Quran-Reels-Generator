@@ -87,35 +87,6 @@ FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
 VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
 
-# ==========================================
-# 🔤 Available Fonts Configuration
-# ==========================================
-AVAILABLE_FONTS = {
-    'arabic': {
-        'Amiri': {'file': 'Amiri.ttf', 'name': 'Amiri', 'style': 'قرآني كلاسيكي'},
-        'Arabic Default': {'file': 'Arabic.ttf', 'name': 'Arabic', 'style': 'ناسخ عصري'},
-        'Tajawal': {'file': 'Tajawal.woff2', 'name': 'Tajawal', 'style': 'عصري أنيق'},
-    },
-    'english': {
-        'Montserrat': {'file': 'English.otf', 'name': 'Montserrat', 'style': 'أنيق حديث'},
-        'Roboto': {'file': 'Roboto.woff2', 'name': 'Roboto', 'style': 'واضح بسيط'},
-        'Lato': {'file': 'Lato.woff2', 'name': 'Lato', 'style': 'أناقة عصرية'},
-    }
-}
-
-# الخط المستخدم للأقواس الزخرفية (دائماً Amiri لأنه يدعمها بشكل أفضل)
-ORNAMENTAL_BRACKETS_FONT = 'Amiri'
-
-def get_font_path(font_name, font_type='arabic'):
-    """Get font file path by name"""
-    fonts = AVAILABLE_FONTS.get(font_type, {})
-    if font_name in fonts:
-        return os.path.join(FONT_DIR, fonts[font_name]['file'])
-    # Return default
-    if font_type == 'arabic':
-        return FONT_PATH_ARABIC
-    return FONT_PATH_ENGLISH
-
 # Master Temp Directory
 BASE_TEMP_DIR = os.path.join(EXEC_DIR, "temp_workspaces")
 OUTPUTS_DIR = os.path.join(EXEC_DIR, "outputs")
@@ -601,104 +572,10 @@ class ScopedQuranLogger(ProgressBarLogger):
 # 🛠️ Helper Functions & Optimization
 # ==========================================
 
-def get_font_path(font_name, font_type='arabic'):
-    """الحصول على مسار الخط بناءً على اسمه"""
-    fonts = AVAILABLE_FONTS.get(font_type, {})
-    if font_name in fonts:
-        font_info = fonts[font_name]
-        font_file = font_info.get('file', '')
-        if font_file:
-            font_path = os.path.join(FONT_DIR, font_file)
-            if os.path.exists(font_path):
-                return font_path
-    
-    # Return default
-    if font_type == 'arabic':
-        return FONT_PATH_ARABIC
-    return FONT_PATH_ENGLISH
-
 @lru_cache(maxsize=10)
 def get_cached_font(font_path, size):
     try: return ImageFont.truetype(font_path, size)
     except: return ImageFont.load_default()
-
-# ==========================================
-# 🔤 Ornamental Brackets Handling
-# ==========================================
-def extract_ornamental_brackets(text):
-    """
-    استخراج الأقواس الزخرفية من النص القرآني
-    وإرجاع النص بدون الأقواس + الأقواس المنفصلة
-    """
-    # الأقواس الزخرفية القرآنية
-    opening_brackets = ['﴿', '﴾']
-    closing_brackets = ['﴾', '﴿']
-    
-    # البحث عن الأقواس
-    has_opening = any(bracket in text for bracket in opening_brackets)
-    
-    # إزالة الأقواس من النص
-    clean_text = text
-    for bracket in opening_brackets + closing_brackets:
-        clean_text = clean_text.replace(bracket, '')
-    
-    clean_text = clean_text.strip()
-    
-    return {
-        'text': clean_text,
-        'has_brackets': has_opening,
-        'opening': '﴿' if has_opening else '',
-        'closing': '﴾' if has_opening else ''
-    }
-
-def render_text_with_brackets(draw, text, x, y, font, brackets_font, color, stroke_width=0, stroke_color='#000000'):
-    """
-    رسم النص مع الأقواس الزخرفية بخط منفصل
-    بحيث تعمل الأقواس مع أي خط عربي
-    """
-    brackets_info = extract_ornamental_brackets(text)
-    
-    if not brackets_info['has_brackets']:
-        # لا توجد أقواس - ارسم النص عادي
-        draw.text((x, y), text, font=font, fill=color, stroke_width=stroke_width, stroke_fill=stroke_color)
-        return
-    
-    # حساب عرض القوس الافتتاحي
-    opening_width = 0
-    if brackets_info['opening']:
-        bbox = draw.textbbox((0, 0), brackets_info['opening'], font=brackets_font, stroke_width=stroke_width)
-        opening_width = bbox[2] - bbox[0]
-    
-    # حساب عرض النص الأساسي
-    text_bbox = draw.textbbox((0, 0), brackets_info['text'], font=font, stroke_width=stroke_width)
-    text_width = text_bbox[2] - text_bbox[0]
-    
-    # حساب عرض القوس الختامي
-    closing_width = 0
-    if brackets_info['closing']:
-        bbox = draw.textbbox((0, 0), brackets_info['closing'], font=brackets_font, stroke_width=stroke_width)
-        closing_width = bbox[2] - bbox[0]
-    
-    # العرض الكلي
-    total_width = opening_width + text_width + closing_width
-    
-    # نقطة البداية (للتوسط)
-    current_x = x - total_width // 2 if x == 'center' else x
-    
-    # رسم القوس الافتتاحي
-    if brackets_info['opening']:
-        draw.text((current_x, y), brackets_info['opening'], font=brackets_font, fill=color, stroke_width=stroke_width, stroke_fill=stroke_color)
-        current_x += opening_width + 2  # مسافة صغيرة
-    
-    # رسم النص الأساسي
-    draw.text((current_x, y), brackets_info['text'], font=font, fill=color, stroke_width=stroke_width, stroke_fill=stroke_color)
-    current_x += text_width + 2  # مسافة صغيرة
-    
-    # رسم القوس الختامي
-    if brackets_info['closing']:
-        draw.text((current_x, y), brackets_info['closing'], font=brackets_font, fill=color, stroke_width=stroke_width, stroke_fill=stroke_color)
-    
-    return total_width
 
 def detect_silence(sound, thresh):
     t = 0
@@ -838,75 +715,23 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
     stroke_w = int(style.get('arOutW', '4'))
     has_shadow = style.get('arShadow', False)
     shadow_c = style.get('arShadowC', '#000000')
-    
-    # دعم الخط المخصص
-    font_name = style.get('arFont', 'Arabic Default')
-    font_path = get_font_path(font_name, 'arabic')
-    
-    # خط الأقواس الزخرفية (دائماً Amiri)
-    brackets_font_path = get_font_path(ORNAMENTAL_BRACKETS_FONT, 'arabic')
 
     # الخط كبير لأنه سطر واحد
     final_fs = int(55 * scale_factor * size_mult)
-    font = get_cached_font(font_path, final_fs)
-    brackets_font = get_cached_font(brackets_font_path, final_fs)
-    
-    # استخراج معلومات الأقواس
-    brackets_info = extract_ornamental_brackets(text)
-    
-    # حساب العرض الكلي للنص مع الأقواس
-    img_temp = Image.new('RGBA', (1, 1), (0,0,0,0))
-    draw_temp = ImageDraw.Draw(img_temp)
-    
-    text_width = draw_temp.textbbox((0, 0), brackets_info['text'], font=font, stroke_width=stroke_w)[2]
-    opening_width = 0
-    closing_width = 0
-    
-    if brackets_info['has_brackets']:
-        if brackets_info['opening']:
-            opening_width = draw_temp.textbbox((0, 0), brackets_info['opening'], font=brackets_font, stroke_width=stroke_w)[2]
-        if brackets_info['closing']:
-            closing_width = draw_temp.textbbox((0, 0), brackets_info['closing'], font=brackets_font, stroke_width=stroke_w)[2]
-    
-    total_width = opening_width + text_width + closing_width + 10
+    font = get_cached_font(FONT_PATH_ARABIC, final_fs)
     
     img = Image.new('RGBA', (target_w, int(180 * scale_factor * size_mult)), (0,0,0,0))
     draw = ImageDraw.Draw(img)
-    
-    x = (target_w - total_width) // 2
+    w = draw.textbbox((0, 0), text, font=font, stroke_width=stroke_w)[2]
+    x = (target_w - w) // 2
     curr_y = 20
-    
-    # الظل
+        
     if has_shadow:
-        current_x = x
-        if brackets_info['opening']:
-            draw.text((current_x+4, curr_y+4), brackets_info['opening'], font=brackets_font, fill=shadow_c)
-            current_x += opening_width + 2
-        draw.text((current_x+4, curr_y+4), brackets_info['text'], font=font, fill=shadow_c)
-        current_x += text_width + 2
-        if brackets_info['closing']:
-            draw.text((current_x+4, curr_y+4), brackets_info['closing'], font=brackets_font, fill=shadow_c)
-    
-    # التوهج
+        draw.text((x+4, curr_y+4), text, font=font, fill=shadow_c)
     if glow: 
-        current_x = x
-        if brackets_info['opening']:
-            draw.text((current_x, curr_y), brackets_info['opening'], font=brackets_font, fill=(255,255,255,40), stroke_width=stroke_w+4, stroke_fill=(255,255,255,20))
-            current_x += opening_width + 2
-        draw.text((current_x, curr_y), brackets_info['text'], font=font, fill=(255,255,255,40), stroke_width=stroke_w+4, stroke_fill=(255,255,255,20))
-        current_x += text_width + 2
-        if brackets_info['closing']:
-            draw.text((current_x, curr_y), brackets_info['closing'], font=brackets_font, fill=(255,255,255,40), stroke_width=stroke_w+4, stroke_fill=(255,255,255,20))
+        draw.text((x, curr_y), text, font=font, fill=(255,255,255,40), stroke_width=stroke_w+4, stroke_fill=(255,255,255,20))
     
-    # النص الأساسي
-    current_x = x
-    if brackets_info['opening']:
-        draw.text((current_x, curr_y), brackets_info['opening'], font=brackets_font, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
-        current_x += opening_width + 2
-    draw.text((current_x, curr_y), brackets_info['text'], font=font, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
-    current_x += text_width + 2
-    if brackets_info['closing']:
-        draw.text((current_x, curr_y), brackets_info['closing'], font=brackets_font, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
+    draw.text((x, curr_y), text, font=font, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
     
     return ImageClip(np.array(img)).set_duration(duration).crossfadein(0.35).crossfadeout(0.35)
 
@@ -919,13 +744,9 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, 
     stroke_w = int(style.get('enOutW', '3'))
     has_shadow = style.get('enShadow', False)
     shadow_c = style.get('enShadowC', '#000000')
-    
-    # دعم الخط المخصص
-    font_name = style.get('enFont', 'Montserrat')
-    font_path = get_font_path(font_name, 'english')
 
     final_fs = int(32 * scale_factor * size_mult)
-    font = get_cached_font(font_path, final_fs)
+    font = get_cached_font(FONT_PATH_ENGLISH, final_fs)
     
     h = int(150 * size_mult)
     img = Image.new('RGBA', (target_w, h), (0,0,0,0))
@@ -1108,8 +929,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 end_en = int((chunk_idx + 1) * avg_en_per_ar)
                 if chunk_idx == len(ar_chunks) - 1:
                     en_chunk = " ".join(en_words[start_en:])
-                    # استخدام الأقواس القرآنية ﴿ ﴾ بدل الأقواس العادية
-                    display_ar = f"{ar_chunk} ﴿{ayah}﴾" 
+                    display_ar = f"{ar_chunk} ({ayah})" 
                 else:
                     en_chunk = " ".join(en_words[start_en:end_en])
                     display_ar = ar_chunk
@@ -1545,101 +1365,7 @@ def get_job_by_id(job_id):
     return jsonify(job)
 
 @app.route('/api/config')
-def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 'reciters': RECITERS_MAP, 'fonts': AVAILABLE_FONTS})
-
-@app.route('/api/fonts')
-def get_fonts_list():
-    """الحصول على قائمة الخطوط المتاحة"""
-    return jsonify({'ok': True, 'fonts': AVAILABLE_FONTS})
-
-@app.route('/api/preview-font', methods=['POST'])
-def preview_font():
-    """إنشاء معاينة للخط المحدد"""
-    data = request.json
-    
-    # الحصول على الإعدادات
-    ar_font = data.get('arFont', 'Arabic Default')
-    en_font = data.get('enFont', 'Montserrat')
-    ar_color = data.get('arColor', '#ffffff')
-    en_color = data.get('enColor', '#FFD700')
-    ar_size = float(data.get('arSize', '1.0'))
-    en_size = float(data.get('enSize', '1.0'))
-    ar_out_color = data.get('arOutC', '#000000')
-    ar_out_width = int(data.get('arOutW', '4'))
-    en_out_color = data.get('enOutC', '#000000')
-    en_out_width = int(data.get('enOutW', '3'))
-    
-    # النص للمعاينة
-    preview_text = data.get('text', 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ')
-    preview_en = data.get('enText', 'In the name of Allah, the Entirely Merciful')
-    
-    try:
-        # إنشاء صورة المعاينة
-        width = 600
-        height = 250
-        
-        img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(img)
-        
-        # تحميل الخطوط
-        ar_font_path = get_font_path(ar_font, 'arabic')
-        en_font_path = get_font_path(en_font, 'english')
-        brackets_font_path = get_font_path(ORNAMENTAL_BRACKETS_FONT, 'arabic')
-        
-        ar_font_obj = get_cached_font(ar_font_path, int(48 * ar_size))
-        en_font_obj = get_cached_font(en_font_path, int(28 * en_size))
-        brackets_font_obj = get_cached_font(brackets_font_path, int(48 * ar_size))
-        
-        # استخراج الأقواس
-        brackets_info = extract_ornamental_brackets(preview_text)
-        
-        # حساب العرض للنص العربي
-        text_width = draw.textbbox((0, 0), brackets_info['text'], font=ar_font_obj, stroke_width=ar_out_width)[2]
-        opening_width = 0
-        closing_width = 0
-        
-        if brackets_info['has_brackets']:
-            if brackets_info['opening']:
-                opening_width = draw.textbbox((0, 0), brackets_info['opening'], font=brackets_font_obj, stroke_width=ar_out_width)[2]
-            if brackets_info['closing']:
-                closing_width = draw.textbbox((0, 0), brackets_info['closing'], font=brackets_font_obj, stroke_width=ar_out_width)[2]
-        
-        total_ar_width = opening_width + text_width + closing_width + 10
-        
-        # رسم النص العربي مع الأقواس
-        x = (width - total_ar_width) // 2
-        y = 40
-        
-        current_x = x
-        if brackets_info['opening']:
-            draw.text((current_x, y), brackets_info['opening'], font=brackets_font_obj, fill=ar_color, stroke_width=ar_out_width, stroke_fill=ar_out_color)
-            current_x += opening_width + 2
-        draw.text((current_x, y), brackets_info['text'], font=ar_font_obj, fill=ar_color, stroke_width=ar_out_width, stroke_fill=ar_out_color)
-        current_x += text_width + 2
-        if brackets_info['closing']:
-            draw.text((current_x, y), brackets_info['closing'], font=brackets_font_obj, fill=ar_color, stroke_width=ar_out_width, stroke_fill=ar_out_color)
-        
-        # رسم النص الإنجليزي
-        en_width = draw.textbbox((0, 0), preview_en, font=en_font_obj, stroke_width=en_out_width)[2]
-        en_x = (width - en_width) // 2
-        en_y = 130
-        draw.text((en_x, en_y), preview_en, font=en_font_obj, fill=en_color, stroke_width=en_out_width, stroke_fill=en_out_color)
-        
-        # تحويل الصورة إلى base64
-        import base64
-        buffer = io.BytesIO()
-        img.save(buffer, format='PNG')
-        img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-        
-        return jsonify({
-            'ok': True, 
-            'preview': f'data:image/png;base64,{img_base64}',
-            'arFont': ar_font,
-            'enFont': en_font
-        })
-        
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+def conf(): return jsonify({'surahs': SURAH_NAMES, 'verseCounts': VERSE_COUNTS, 'reciters': RECITERS_MAP})
 
 # ==========================================
 # 🔧 Utility Functions
@@ -2095,6 +1821,287 @@ def cancel_batch():
     with BATCH_QUEUE_LOCK:
         if batch_id in BATCH_QUEUE:
             BATCH_QUEUE.remove(batch_id)
+    
+    return jsonify({'ok': True})
+
+# ==========================================
+# 📺 YouTube Integration
+# ==========================================
+
+# YouTube OAuth Configuration
+# يجب استبدال هذه القيم بالقيم الخاصة بك من Google Cloud Console
+YOUTUBE_CLIENT_ID = os.environ.get('YOUTUBE_CLIENT_ID', '')
+YOUTUBE_CLIENT_SECRET = os.environ.get('YOUTUBE_CLIENT_SECRET', '')
+YOUTUBE_REDIRECT_URI = os.environ.get('YOUTUBE_REDIRECT_URI', 'http://localhost:7860/api/youtube/callback')
+
+# Scopes المطلوبة
+YOUTUBE_SCOPES = [
+    'https://www.googleapis.com/auth/youtube.upload',
+    'https://www.googleapis.com/auth/youtube'
+]
+
+# تخزين الـ tokens في الذاكرة (يمكن نقله لقاعدة البيانات لاحقاً)
+YOUTUBE_TOKENS = {}  # session_id -> credentials
+
+def get_youtube_auth_url(session_id):
+    """إنشاء رابط المصادقة"""
+    if not YOUTUBE_CLIENT_ID:
+        return None
+    
+    from google_auth_oauthlib.flow import Flow
+    
+    flow = Flow.from_client_config({
+        'web': {
+            'client_id': YOUTUBE_CLIENT_ID,
+            'client_secret': YOUTUBE_CLIENT_SECRET,
+            'redirect_uris': [YOUTUBE_REDIRECT_URI],
+            'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
+            'token_uri': 'https://oauth2.googleapis.com/token'
+        }
+    }, scopes=YOUTUBE_SCOPES)
+    
+    flow.redirect_uri = YOUTUBE_REDIRECT_URI
+    
+    # إضافة state للتعرف على الجلسة
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true',
+        state=session_id
+    )
+    
+    return authorization_url
+
+def get_youtube_service(session_id):
+    """الحصول على خدمة YouTube للمستخدم"""
+    if session_id not in YOUTUBE_TOKENS:
+        return None
+    
+    try:
+        from google.oauth2.credentials import Credentials
+        from googleapiclient.discovery import build
+        
+        creds_data = YOUTUBE_TOKENS[session_id]
+        credentials = Credentials(
+            token=creds_data['token'],
+            refresh_token=creds_data['refresh_token'],
+            token_uri='https://oauth2.googleapis.com/token',
+            client_id=YOUTUBE_CLIENT_ID,
+            client_secret=YOUTUBE_CLIENT_SECRET,
+            scopes=YOUTUBE_SCOPES
+        )
+        
+        return build('youtube', 'v3', credentials=credentials)
+    except Exception as e:
+        print(f"[YouTube] Error getting service: {e}")
+        return None
+
+@app.route('/api/youtube/auth-url')
+def youtube_auth_url():
+    """الحصول على رابط المصادقة"""
+    session_id = request.args.get('sessionId')
+    
+    if not YOUTUBE_CLIENT_ID:
+        return jsonify({
+            'ok': False, 
+            'error': 'YouTube integration not configured. Please set YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET environment variables.',
+            'needsConfig': True
+        })
+    
+    # التحقق من وجود token صالح
+    if session_id and session_id in YOUTUBE_TOKENS:
+        return jsonify({'ok': True, 'alreadyAuthorized': True})
+    
+    auth_url = get_youtube_auth_url(session_id)
+    if auth_url:
+        return jsonify({'ok': True, 'authUrl': auth_url})
+    else:
+        return jsonify({'ok': False, 'error': 'Failed to generate auth URL'})
+
+@app.route('/api/youtube/callback')
+def youtube_callback():
+    """استقبال callback من Google OAuth"""
+    from google_auth_oauthlib.flow import Flow
+    import urllib.parse
+    
+    # الحصول على state (session_id)
+    state = request.args.get('state')
+    code = request.args.get('code')
+    error = request.args.get('error')
+    
+    if error:
+        return f'''
+        <html>
+        <head><title>خطأ</title></head>
+        <body style="font-family:Arial; text-align:center; padding:50px;">
+            <h2 style="color:red;">❌ فشل في المصادقة</h2>
+            <p>{error}</p>
+            <p>يمكنك إغلاق هذه الصفحة</p>
+            <script>setTimeout(() => window.close(), 3000);</script>
+        </body>
+        </html>
+        '''
+    
+    try:
+        flow = Flow.from_client_config({
+            'web': {
+                'client_id': YOUTUBE_CLIENT_ID,
+                'client_secret': YOUTUBE_CLIENT_SECRET,
+                'redirect_uris': [YOUTUBE_REDIRECT_URI],
+                'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
+                'token_uri': 'https://oauth2.googleapis.com/token'
+            }
+        }, scopes=YOUTUBE_SCOPES)
+        
+        flow.redirect_uri = YOUTUBE_REDIRECT_URI
+        flow.fetch_token(authorization_response=request.url)
+        
+        credentials = flow.credentials
+        
+        # تخزين الـ token
+        YOUTUBE_TOKENS[state] = {
+            'token': credentials.token,
+            'refresh_token': credentials.refresh_token,
+            'token_uri': credentials.token_uri,
+            'client_id': credentials.client_id,
+            'client_secret': credentials.client_secret,
+            'scopes': credentials.scopes
+        }
+        
+        return f'''
+        <html>
+        <head><title>تم بنجاح</title></head>
+        <body style="font-family:Arial; text-align:center; padding:50px; background:#1a1a1a; color:#fff;">
+            <h2 style="color:#22c55e;">✅ تم ربط حساب YouTube بنجاح!</h2>
+            <p>يمكنك الآن نشر فيديوهاتك على يوتيوب</p>
+            <p style="color:#888;">يمكنك إغلاق هذه الصفحة والعودة للتطبيق</p>
+            <script>
+                // إرسال رسالة للنافذة الأب
+                if (window.opener) {{
+                    window.opener.postMessage({{ type: 'youtube_auth_success' }}, '*');
+                }}
+                setTimeout(() => window.close(), 2000);
+            </script>
+        </body>
+        </html>
+        '''
+        
+    except Exception as e:
+        print(f"[YouTube] OAuth callback error: {e}")
+        return f'''
+        <html>
+        <head><title>خطأ</title></head>
+        <body style="font-family:Arial; text-align:center; padding:50px;">
+            <h2 style="color:red;">❌ حدث خطأ</h2>
+            <p>{str(e)}</p>
+            <script>setTimeout(() => window.close(), 5000);</script>
+        </body>
+        </html>
+        '''
+
+@app.route('/api/youtube/status')
+def youtube_status():
+    """التحقق من حالة الاتصال بـ YouTube"""
+    session_id = request.args.get('sessionId')
+    
+    if not YOUTUBE_CLIENT_ID:
+        return jsonify({'ok': True, 'configured': False, 'authorized': False})
+    
+    authorized = session_id in YOUTUBE_TOKENS
+    
+    return jsonify({
+        'ok': True, 
+        'configured': bool(YOUTUBE_CLIENT_ID),
+        'authorized': authorized
+    })
+
+@app.route('/api/youtube/upload', methods=['POST'])
+def youtube_upload():
+    """رفع فيديو على YouTube"""
+    from googleapiclient.http import MediaFileUpload
+    from googleapiclient.errors import HttpError
+    
+    data = request.json
+    session_id = data.get('sessionId')
+    job_id = data.get('jobId')
+    title = data.get('title', '')
+    description = data.get('description', '')
+    tags = data.get('tags', [])
+    privacy_status = data.get('privacyStatus', 'unlisted')  # public, unlisted, private
+    
+    if not session_id or not job_id:
+        return jsonify({'ok': False, 'error': 'Missing sessionId or jobId'}), 400
+    
+    # الحصول على الفيديو
+    job = db_get_job(job_id)
+    if not job or not job.get('output_path'):
+        return jsonify({'ok': False, 'error': 'Video not found'}), 404
+    
+    video_path = job['output_path']
+    if not os.path.exists(video_path):
+        return jsonify({'ok': False, 'error': 'Video file not found'}), 404
+    
+    # الحصول على خدمة YouTube
+    youtube = get_youtube_service(session_id)
+    if not youtube:
+        return jsonify({'ok': False, 'error': 'Not authorized with YouTube', 'needsAuth': True}), 401
+    
+    try:
+        # إعداد الـ body
+        body = {
+            'snippet': {
+                'title': title[:100],  # YouTube limit
+                'description': description[:5000],  # YouTube limit
+                'tags': tags[:500],  # YouTube limit
+                'categoryId': '22'  # People & Blogs
+            },
+            'status': {
+                'privacyStatus': privacy_status,
+                'selfDeclaredMadeForKids': False
+            }
+        }
+        
+        # رفع الفيديو
+        media = MediaFileUpload(
+            video_path,
+            mimetype='video/mp4',
+            resumable=True,
+            chunksize=1024*1024  # 1MB chunks
+        )
+        
+        request_obj = youtube.videos().insert(
+            part=','.join(body.keys()),
+            body=body,
+            media_body=media
+        )
+        
+        response = request_obj.execute()
+        
+        video_id = response['id']
+        video_url = f"https://www.youtube.com/watch?v={video_id}"
+        
+        return jsonify({
+            'ok': True,
+            'videoId': video_id,
+            'videoUrl': video_url,
+            'title': response['snippet']['title']
+        })
+        
+    except HttpError as e:
+        error_body = json.loads(e.content.decode('utf-8'))
+        error_msg = error_body.get('error', {}).get('message', str(e))
+        print(f"[YouTube] Upload error: {error_msg}")
+        return jsonify({'ok': False, 'error': error_msg}), 400
+    except Exception as e:
+        print(f"[YouTube] Upload error: {e}")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/youtube/disconnect', methods=['POST'])
+def youtube_disconnect():
+    """قطع الاتصال بـ YouTube"""
+    session_id = request.json.get('sessionId')
+    
+    if session_id and session_id in YOUTUBE_TOKENS:
+        del YOUTUBE_TOKENS[session_id]
     
     return jsonify({'ok': True})
 
