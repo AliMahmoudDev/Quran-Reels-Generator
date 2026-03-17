@@ -1910,6 +1910,7 @@ def get_youtube_auth_url(session_id):
         'response_type': 'code',
         'scope': ' '.join(YOUTUBE_SCOPES),
         'access_type': 'offline',
+        'prompt': 'consent',  # مهم جداً: يضمن الحصول على refresh_token جديد
         'include_granted_scopes': 'true',
         'state': session_id
     }
@@ -1927,6 +1928,13 @@ def get_youtube_service(session_id):
         from googleapiclient.discovery import build
         
         creds_data = YOUTUBE_TOKENS[session_id]
+        
+        # التحقق من وجود refresh_token
+        if not creds_data.get('refresh_token'):
+            print(f"[YouTube] No refresh_token found for session, deleting invalid token")
+            del YOUTUBE_TOKENS[session_id]
+            return None
+        
         credentials = Credentials(
             token=creds_data['token'],
             refresh_token=creds_data['refresh_token'],
@@ -1939,6 +1947,11 @@ def get_youtube_service(session_id):
         return build('youtube', 'v3', credentials=credentials)
     except Exception as e:
         print(f"[YouTube] Error getting service: {e}")
+        # حذف token التالف إذا كان الخطأ متعلق بـ credentials
+        if 'refresh_token' in str(e).lower() or 'credentials' in str(e).lower():
+            if session_id in YOUTUBE_TOKENS:
+                del YOUTUBE_TOKENS[session_id]
+                print(f"[YouTube] Deleted invalid token for session: {session_id[:20]}...")
         return None
 
 @app.route('/api/youtube/auth-url')
@@ -2008,6 +2021,21 @@ def youtube_callback():
         
         credentials = flow.credentials
         
+        # التحقق من وجود refresh_token
+        if not credentials.refresh_token:
+            print(f"[YouTube] WARNING: No refresh_token received!")
+            return f'''
+            <html>
+            <head><title>خطأ</title></head>
+            <body style="font-family:Arial; text-align:center; padding:50px; background:#1a1a1a; color:#fff; direction:rtl;">
+                <h2 style="color:#f59e0b;">⚠️ لم يتم الحصول على refresh_token</h2>
+                <p>يرجى إعادة المحاولة والموافقة على جميع الأذونات</p>
+                <p style="color:#888;">تأكد من الضغط على "Allow" في صفحة الموافقة</p>
+                <script>setTimeout(() => window.close(), 5000);</script>
+            </body>
+            </html>
+            '''
+        
         # تخزين الـ token
         YOUTUBE_TOKENS[state] = {
             'token': credentials.token,
@@ -2019,6 +2047,7 @@ def youtube_callback():
         }
         
         print(f"[YouTube] Token stored for session: {state[:20]}...")
+        print(f"[YouTube] refresh_token present: {bool(credentials.refresh_token)}")
         
         return f'''
         <html>
