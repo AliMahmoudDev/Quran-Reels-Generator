@@ -1853,7 +1853,13 @@ def get_base_url():
     
     # fallback للـ host العادي
     host = request.headers.get('Host', 'localhost:7860')
-    proto = 'https' if request.scheme == 'https' else 'http'
+    
+    # HuggingFace Spaces دائماً تستخدم https
+    if 'hf.space' in host:
+        proto = 'https'
+    else:
+        proto = 'https' if request.scheme == 'https' else 'http'
+    
     return f"{proto}://{host}"
 
 def get_youtube_redirect_uri():
