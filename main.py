@@ -16,6 +16,9 @@ import json
 import sqlite3
 import zipfile
 from functools import lru_cache  # ✅ Added for caching
+
+# مهم لـ OAuth مع HuggingFace (HTTPS خارجي، HTTP داخلي)
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 from flask import Flask, request, jsonify, send_file, g
 from flask_cors import CORS
 from contextlib import contextmanager
