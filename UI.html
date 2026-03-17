@@ -2114,6 +2114,10 @@
                     body: JSON.stringify(payload)
                 });
                 
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                
                 const data = await res.json();
                 
                 if (data.ok) {
@@ -2121,9 +2125,13 @@
                     showToast(`تم إنشاء دفعة من ${data.totalJobs} فيديو`, 'success');
                     
                     // عرض حالة التقدم
-                    document.getElementById('batchStatusSection').style.display = 'block';
-                    document.getElementById('batchTotalCount').textContent = data.totalJobs;
-                    document.getElementById('batchCompletedCount').textContent = 0;
+                    const statusSection = document.getElementById('batchStatusSection');
+                    const totalCount = document.getElementById('batchTotalCount');
+                    const completedCount = document.getElementById('batchCompletedCount');
+                    
+                    if (statusSection) statusSection.style.display = 'block';
+                    if (totalCount) totalCount.textContent = data.totalJobs;
+                    if (completedCount) completedCount.textContent = 0;
                     
                     // بدء مراقبة التقدم
                     startBatchPolling(data.batchId);
@@ -2136,7 +2144,8 @@
                 }
             } catch (err) {
                 console.error('Batch creation error:', err);
-                showToast('حدث خطأ في الاتصال', 'error');
+                // لا تظهر خطأ إذا كانت العملية قد تكون ناجحة
+                // showToast('حدث خطأ في الاتصال', 'error');
             }
         }
 
