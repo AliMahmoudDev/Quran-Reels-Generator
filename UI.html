@@ -1023,6 +1023,17 @@
                         </div>
                     </div>
 
+                    <!-- 🎛️ تأثيرات صوتية -->
+                    <div class="form-group" style="margin-top: 18px;">
+                        <label class="form-label">🎵 تأثير الصوت (Reverb)</label>
+                        <select class="form-select" id="reverbLevel">
+                            <option value="none">🔊 بدون تأثير (نظيف)</option>
+                            <option value="light">🌬️ صداء خفيف</option>
+                            <option value="medium">🎙️ صداء متوسط</option>
+                            <option value="mosque">🕌 تأثير مسجد</option>
+                        </select>
+                    </div>
+
                     <!-- خيارات متقدمة -->
                     <div class="advanced-toggle" onclick="toggleAdvanced()">
                         <span>⚡</span>
@@ -1526,6 +1537,7 @@
                 useVignette: useVignette.checked,
                 bgQuery: useSearch.checked ? bgQuery.value : '',
                 pexelsKey: localStorage.getItem('user_pexels_key') || '',
+                reverbLevel: document.getElementById('reverbLevel').value || 'none',  // 🎛️ Reverb effect
                 style: style
             };
 
@@ -1673,12 +1685,17 @@
             
             const statusIcon = item.status === 'complete' ? '✅' : item.status === 'error' ? '❌' : '⏳';
             
+            // تجهيز بيانات الوصف
+            const surahName = item.surahName || 'سورة';
+            const reciterName = item.reciter || 'قارئ';
+            const ayahRange = item.startAyah && item.endAyah ? `(${item.startAyah}-${item.endAyah})` : '';
+            
             let actionsHtml = '';
             if (item.downloadUrl && remaining > 0) {
                 actionsHtml = `
                     <button onclick="previewVideo('${item.downloadUrl}')">▶️ عرض</button>
                     <a href="${item.downloadUrl}" download>⬇️ تحميل</a>
-                    <button onclick="openYoutubeDialog('${item.jobId}', '${item.title?.replace(/'/g, "\\'") || 'فيديو قرآني'}')" style="background: #ff0000; color: white; border: none;">📺 يوتيوب</button>
+                    <button onclick="openYoutubeDialog('${item.jobId}', '${item.title?.replace(/'/g, "\\'") || 'فيديو قرآني'}', '${reciterName.replace(/'/g, "\\'")}', '${surahName}')" style="background: #ff0000; color: white; border: none;">📺 يوتيوب</button>
                     <button class="btn-delete" onclick="deleteHistoryItem(${item.id})">🗑️</button>
                 `;
             } else {
@@ -1720,8 +1737,16 @@
             }
         }
 
-        async function openYoutubeDialog(jobId, defaultTitle) {
+        async function openYoutubeDialog(jobId, defaultTitle, reciterName, surahName) {
             currentYoutubeJob = jobId;
+            
+            // إعداد الوصف الافتراضي
+            const defaultDescription = `قرآن كريم بصوت القارئ ${reciterName || 'قارئ'} من سورة ${surahName || 'سورة'}
+
+#قران_كريم #قران #quran #fyp #قرآن_كريم_راحة_نفسية #قرآن_كريم`;
+            
+            // إعداد الكلمات المفتاحية
+            const defaultTags = 'قرآن كريم, تلاوة, إسلام, Quran, قرآن, تلاوة قرآنية';
             
             // التحقق من حالة YouTube
             const status = await checkYoutubeStatus();
@@ -1775,10 +1800,10 @@
             }
             
             // عرض Dialog النشر
-            showYoutubeUploadDialog(jobId, defaultTitle);
+            showYoutubeUploadDialog(jobId, defaultTitle, defaultDescription, defaultTags);
         }
 
-        function showYoutubeUploadDialog(jobId, defaultTitle) {
+        function showYoutubeUploadDialog(jobId, defaultTitle, defaultDescription, defaultTags) {
             // إنشاء الـ dialog
             // حساب أقرب وقت للجدولة (بعد ساعة من الآن)
             const now = new Date();
@@ -1802,14 +1827,12 @@
                         
                         <div class="form-group">
                             <label class="form-label">📝 الوصف</label>
-                            <textarea id="ytDescription" class="form-input" style="height: 100px; resize: vertical;" placeholder="وصف الفيديو (اختياري)">🎬 تم إنشاء هذا الفيديو بواسطة صانع الريلز القرآني
-
-#قرآن #تلاوة #إسلام</textarea>
+                            <textarea id="ytDescription" class="form-input" style="height: 100px; resize: vertical;" placeholder="وصف الفيديو">${defaultDescription || ''}</textarea>
                         </div>
                         
                         <div class="form-group">
                             <label class="form-label">🏷️ الكلمات المفتاحية (مفصولة بفاصلة)</label>
-                            <input type="text" id="ytTags" class="form-input" value="قرآن, تلاوة, إسلام, Quran" placeholder="قرآن, تلاوة, إسلام">
+                            <input type="text" id="ytTags" class="form-input" value="${defaultTags || 'قرآن, تلاوة, إسلام, Quran'}" placeholder="قرآن, تلاوة, إسلام">
                         </div>
                         
                         <div class="form-group">
