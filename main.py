@@ -752,7 +752,7 @@ def download_audio(reciter_key, surah, ayah, idx, workspace_dir, job_id, reverb_
     snd = AudioSegment.from_file(out)
     start, end = detect_silence(snd, snd.dBFS-20), detect_silence(snd.reverse(), snd.dBFS-20)
     trimmed = snd[max(0, start-30):len(snd)-max(0, end-30)]
-    (AudioSegment.silent(duration=50) + trimmed.fade_in(0).fade_out(0)).export(out, format='mp3')
+    (AudioSegment.silent(duration=50) + trimmed.fade_in(20).fade_out(20)).export(out, format='mp3')
     
     # 🎛️ تطبيق Reverb إذا كان مطلوباً
     if reverb_level != 'none':
