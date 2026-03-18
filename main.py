@@ -442,12 +442,18 @@ NEW_RECITERS_CONFIG = {
 OLD_RECITERS_MAP = {
     'أبو بكر الشاطري':'Abu_Bakr_Ash-Shaatree_128kbps',
     'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 
-    ' عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 
-    ' ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 
-    ' سعود الشريم': 'Saood_ash-Shuraym_64kbps', 
-    ' مشاري العفاسي': 'Alafasy_64kbps',
-    'ناصر القطامي':'Nasser_Alqatami_128kbps', 
+    'عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 
+    'ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 
+    'سعود الشريم': 'Saood_ash-Shuraym_64kbps', 
+    'مشاري العفاسي': 'Alafasy_64kbps',
+    'ناصر القطامي': 'Nasser_Alqatami_128kbps', 
 }
+
+# خريطة عكسية لتحويل الـ ID للاسم العربي
+RECITER_ID_TO_NAME = {v: k for k, v in OLD_RECITERS_MAP.items()}
+# إضافة أسماء القراء الجدد (الاسم العربي = الاسم العربي)
+for name in NEW_RECITERS_CONFIG.keys():
+    RECITER_ID_TO_NAME[name] = name
 
 RECITERS_MAP = {**{k: k for k in NEW_RECITERS_CONFIG.keys()}, **OLD_RECITERS_MAP}
 
@@ -1103,17 +1109,20 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 surah = config.get('surah', 1)
                 start_ayah = config.get('startAyah', 1)
                 end_ayah = config.get('endAyah', start_ayah)
-                reciter = config.get('reciter', 'Unknown')
+                reciter_id = config.get('reciter', 'Unknown')
                 quality = config.get('quality', '720')
                 fps = config.get('fps', '20')
                 session_id = config.get('session_id')  # استخراج session_id
                 
+                # تحويل الـ ID للاسم العربي
+                reciter_name = RECITER_ID_TO_NAME.get(reciter_id, reciter_id)
+                
                 surah_name = SURAH_NAMES[surah-1] if surah <= len(SURAH_NAMES) else 'سورة'
                 # العنوان: اسم السورة (الآيات) | اسم القارئ
-                title = f"{surah_name} ({start_ayah}-{end_ayah}) | {reciter}"
+                title = f"{surah_name} ({start_ayah}-{end_ayah}) | {reciter_name}"
                 filename = f"Quran_{surah}_{start_ayah}.mp4"
                 
-                db_add_history(job_id, title, reciter, surah, start_ayah, end_ayah, quality, fps, filename, session_id)
+                db_add_history(job_id, title, reciter_name, surah, start_ayah, end_ayah, quality, fps, filename, session_id)
             except Exception as e:
                 print(f"Error adding to history: {e}")
 
