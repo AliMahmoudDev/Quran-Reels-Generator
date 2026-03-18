@@ -969,17 +969,18 @@
                     <div class="ayah-selector">
                         <div class="ayah-selector-header">
                             <span class="ayah-selector-title">📍 نطاق الآيات</span>
+                            <span id="maxAyahHint" style="font-size: 0.75rem; color: var(--text-muted);"></span>
                         </div>
                         <div class="ayah-selector-range">
                             <div class="ayah-num-display">
                                 <button type="button" onclick="adjustAyah('startAyah', -1)">−</button>
-                                <input type="number" id="startAyah" value="1" min="1">
+                                <input type="number" id="startAyah" value="1" min="1" max="286">
                                 <button type="button" onclick="adjustAyah('startAyah', 1)">+</button>
                             </div>
                             <span class="ayah-separator">←</span>
                             <div class="ayah-num-display">
                                 <button type="button" onclick="adjustAyah('endAyah', -1)">−</button>
-                                <input type="number" id="endAyah" value="5" min="1">
+                                <input type="number" id="endAyah" value="5" min="1" max="286">
                                 <button type="button" onclick="adjustAyah('endAyah', 1)">+</button>
                             </div>
                         </div>
@@ -1382,6 +1383,40 @@
             const startInput = document.getElementById('startAyah');
             const endInput = document.getElementById('endAyah');
             const surahInput = document.getElementById('surahSelect');
+            const maxHint = document.getElementById('maxAyahHint');
+            
+            // تحديث الحد الأقصى عند تغيير السورة
+            const updateMaxAyah = () => {
+                const surah = parseInt(surahInput?.value) || 1;
+                const max = VERSE_COUNTS[surah] || 286;
+                
+                // تحديث الـ max attribute
+                if (startInput) startInput.max = max;
+                if (endInput) endInput.max = max;
+                
+                // عرض تلميح الحد الأقصى
+                if (maxHint) maxHint.textContent = `(عدد الآيات: ${max})`;
+                
+                // تصحيح القيم الحالية
+                if (parseInt(startInput?.value) > max) startInput.value = 1;
+                if (parseInt(endInput?.value) > max) endInput.value = Math.min(5, max);
+            };
+            
+            // التحقق الفوري أثناء الكتابة
+            const validateOnInput = (input) => {
+                const surah = parseInt(surahInput?.value) || 1;
+                const max = VERSE_COUNTS[surah] || 286;
+                let val = parseInt(input.value) || 1;
+                
+                if (val < 1) input.value = 1;
+                if (val > max) {
+                    input.value = max;
+                    showToast(`هذه السورة بها ${max} آية فقط`, 'error');
+                }
+            };
+            
+            startInput?.addEventListener('input', () => validateOnInput(startInput));
+            endInput?.addEventListener('input', () => validateOnInput(endInput));
             
             startInput?.addEventListener('blur', () => validateAyahInput('startAyah'));
             endInput?.addEventListener('blur', () => validateAyahInput('endAyah'));
@@ -1402,10 +1437,15 @@
             });
             
             surahInput?.addEventListener('change', () => {
+                updateMaxAyah();
                 const max = VERSE_COUNTS[parseInt(surahInput.value)] || 286;
                 startInput.value = 1;
                 endInput.value = Math.min(5, max);
+                validateAyahRange();
             });
+            
+            // تحديث الحد الأقصى عند تحميل البيانات
+            setTimeout(updateMaxAyah, 500);
         }
 
         function initTabs() {
