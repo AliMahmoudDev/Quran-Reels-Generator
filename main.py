@@ -16,7 +16,6 @@ import json
 import sqlite3
 import zipfile
 from functools import lru_cache  # ✅ Added for caching
-from concurrent.futures import ThreadPoolExecutor
 
 # مهم لـ OAuth مع HuggingFace (HTTPS خارجي، HTTP داخلي)
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -1665,100 +1664,8 @@ def recover_pending_jobs():
 # 📦 Batch Export System
 # ==========================================
 
-# ==========================================
-# 📦 Batch Export System (Parallel Processing)
-# ==========================================
-
-from concurrent.futures import ThreadPoolExecutor
-
-# Thread Pool للـ batches (max 10 batches في نفس الوقت)
-BATCH_EXECUTOR = ThreadPoolExecutor(max_workers=10, thread_name_prefix='batch_worker')
-ACTIVE_BATCHES = {}  # الباتشات النشطة
-ACTIVE_BATCHES_LOCK = threading.Lock()
-
-def process_single_batch(batch_id):
-    """معالجة batch واحد بالكامل - كل batch في thread منفصل"""
-    try:
-        print(f"🎬 Starting batch processing: {batch_id[:8]}...")
-        db_update_batch(batch_id, status='running', started_at=time.time())
-        items = db_get_batch_items(batch_id)
-        print(f"  📋 Found {len(items)} items to process")
-        
-        for item in items:
-            try:
-                batch = db_get_batch(batch_id)
-                if batch and batch.get('status') == 'cancelled':
-                    print(f"⚠️ Batch {batch_id[:8]}... cancelled")
-                    break
-                
-                job_id = item['job_id']
-                job = db_get_job(job_id)
-                if not job or not job.get('config_json'):
-                    db_update_batch_item(batch_id, job_id, status='error', error='Config missing')
-                    batch = db_get_batch(batch_id)
-                    db_update_batch(batch_id, failed_jobs=(batch['failed_jobs'] or 0) + 1)
-                    continue
-                
-                config = json.loads(job['config_json'])
-                db_update_batch_item(batch_id, job_id, status='processing')
-                db_update_batch(batch_id, current_job_id=job_id, current_job_index=item['position'])
-                
-                print(f"  🎬 Processing video {item['position'] + 1}/{len(items)}")
-                
-                style_settings = config.get('style', {})
-                build_video_task(
-                    job_id,
-                    config.get('pexelsKey', ''),
-                    config.get('reciter', ''),
-                    item['surah'],
-                    item['start_ayah'],
-                    item['end_ayah'],
-                    config.get('quality', '720'),
-                    config.get('bgQuery', ''),
-                    int(config.get('fps', 20)),
-                    config.get('dynamicBg', False),
-                    config.get('useGlow', False),
-                    config.get('useVignette', False),
-                    style_settings,
-                    config.get('reverbLevel', 'none')
-                )
-                
-                updated_job = db_get_job(job_id)
-                output_path = updated_job.get('output_path') if updated_job else None
-                db_update_batch_item(batch_id, job_id, status='complete', output_path=output_path)
-                batch = db_get_batch(batch_id)
-                db_update_batch(batch_id, completed_jobs=(batch['completed_jobs'] or 0) + 1)
-                print(f"  ✅ Video {item['position'] + 1} complete!")
-                
-            except Exception as item_error:
-                print(f"  ❌ Video failed: {item_error}")
-                db_update_batch_item(batch_id, item['job_id'], status='error', error=str(item_error))
-                batch = db_get_batch(batch_id)
-                db_update_batch(batch_id, failed_jobs=(batch['failed_jobs'] or 0) + 1)
-        
-        batch = db_get_batch(batch_id)
-        db_update_batch(batch_id, status='complete', completed_at=time.time())
-        print(f"📦 Batch {batch_id[:8]}... complete!")
-        
-    except Exception as e:
-        print(f"❌ Batch failed: {e}")
-        db_update_batch(batch_id, status='error', error=str(e))
-    finally:
-        with ACTIVE_BATCHES_LOCK:
-            ACTIVE_BATCHES.pop(batch_id, None)
-
-
-def start_batch_processing(batch_id):
-    """بدء معالجة batch في thread منفصل"""
-    with ACTIVE_BATCHES_LOCK:
-        if batch_id in ACTIVE_BATCHES:
-            print(f"⚠️ Batch {batch_id[:8]}... already running")
-            return False
-        ACTIVE_BATCHES[batch_id] = {'started_at': time.time(), 'status': 'running'}
-    
-    BATCH_EXECUTOR.submit(process_single_batch, batch_id)
-    print(f"🚀 Batch {batch_id[:8]}... submitted to thread pool")
-    return True
+BATCH_QUEUE = []  # قائمة الانتظار
+BATCH_QUEUE_LOCK = threading.Lock()
 ACTIVE_BATCHES = {}  # الباتشات النشطة
 
 def process_batch_queue():
@@ -1924,7 +1831,9 @@ def recover_pending_batches():
             print(f"  🔄 Resetting stuck batch {batch_id[:8]}... from 'running' to 'pending'")
             db_update_batch(batch_id, status='pending')
         
-        start_batch_processing(batch_id)
+        with BATCH_QUEUE_LOCK:
+            if batch_id not in BATCH_QUEUE:
+                BATCH_QUEUE.append(batch_id)
         
         print(f"  ✅ Batch {batch_id[:8]}... queued for processing")
 
@@ -1984,8 +1893,8 @@ def create_batch():
         print(f"  ✅ Created job {i+1}/{len(items)}: {job_id[:8]}...")
     
     # إضافة للقائمة
-    # بدء المعالجة فوراً في thread منفصل
-        start_batch_processing(batch_id)
+    with BATCH_QUEUE_LOCK:
+        BATCH_QUEUE.append(batch_id)
         print(f"📋 Added batch {batch_id} to queue. Queue length: {len(BATCH_QUEUE)}")
     
     print(f"✅ Batch {batch_id} ready with {len(items)} videos")
@@ -2631,7 +2540,8 @@ except Exception as e:
 print("🧵 Starting background threads...")
 
 # Start batch processor thread
-print(f"✅ Batch processor ready (ThreadPoolExecutor with {BATCH_EXECUTOR._max_workers} workers)")
+batch_thread = threading.Thread(target=process_batch_queue, daemon=True, name="BatchProcessor")
+batch_thread.start()
 print("✅ Batch processor thread started")
 
 # Start cleanup thread
