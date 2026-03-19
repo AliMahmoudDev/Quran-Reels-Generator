@@ -1494,6 +1494,37 @@
                 Object.entries(data.reciters).forEach(([name, id]) => {
                     reciterSelect.add(new Option(name, id));
                 });
+                
+                // تحديث الحد الأقصى للآيات بناءً على السورة الأولى
+                const firstSurahMax = VERSE_COUNTS[1] || 7;
+                const startAyahInput = document.getElementById('startAyah');
+                const endAyahInput = document.getElementById('endAyah');
+                
+                if (startAyahInput) startAyahInput.max = firstSurahMax;
+                if (endAyahInput) endAyahInput.max = firstSurahMax;
+                
+                // إضافة event listener لتحديث الحد الأقصى عند تغيير السورة
+                surahSelect.addEventListener('change', function() {
+                    const surah = parseInt(this.value) || 1;
+                    const max = VERSE_COUNTS[surah] || 286;
+                    
+                    if (startAyahInput) {
+                        startAyahInput.max = max;
+                        if (parseInt(startAyahInput.value) > max) startAyahInput.value = 1;
+                    }
+                    
+                    if (endAyahInput) {
+                        endAyahInput.max = max;
+                        if (parseInt(endAyahInput.value) > max) endAyahInput.value = Math.min(5, max);
+                    }
+                    
+                    // تحديث الوقت التقريبي
+                    updateEstimatedTime();
+                });
+                
+                // تحديث الوقت التقريبي
+                updateEstimatedTime();
+                
             } catch (err) {
                 console.error('Config load error:', err);
                 showToast('فشل تحميل الإعدادات', 'error');
