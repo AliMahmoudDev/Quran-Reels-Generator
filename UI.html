@@ -1386,8 +1386,13 @@
             
             initTabs();
             loadSettings();
-            initAyahValidation();
+            
+            // تحميل الكونفج الأول عشان VERSE_COUNTS
             await loadConfig();
+            
+            // بعدين نعمل validation بعد ما البيانات تتحمل
+            initAyahValidation();
+            
             await loadHistory();
             await checkRunningJob();
             
