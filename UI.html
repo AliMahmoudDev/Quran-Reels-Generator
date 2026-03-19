@@ -2321,20 +2321,22 @@
 
         function renderBatchList() {
             const listEl = document.getElementById('batchList');
-            const emptyEl = document.getElementById('batchListEmpty');
             const countEl = document.getElementById('batchCount');
             
             countEl.textContent = batchItems.length;
             updateBatchTotalVideos();
             
+            // لو القائمة فاضية
             if (batchItems.length === 0) {
-                emptyEl.style.display = 'block';
-                listEl.innerHTML = '';
-                listEl.appendChild(emptyEl);
+                listEl.innerHTML = `
+                    <div class="history-empty" id="batchListEmpty">
+                        <p style="font-size: 0.85rem;">لم تتم إضافة أي فيديوهات</p>
+                    </div>
+                `;
                 return;
             }
             
-            emptyEl.style.display = 'none';
+            // عرض الفيديوهات
             listEl.innerHTML = batchItems.map((item, index) => {
                 const effectsIcons = [];
                 if (item.effects.dynamicBg) effectsIcons.push('🖼️');
