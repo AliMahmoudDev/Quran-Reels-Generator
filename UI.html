@@ -988,6 +988,10 @@
                             <span class="ayah-label">من آية</span>
                             <span class="ayah-label">إلى آية</span>
                         </div>
+                        <!-- عرض الوقت التقريبي -->
+                        <div id="estimatedTimeDisplay" style="text-align: center; margin-top: 10px; padding: 8px; background: var(--bg-input); border-radius: 8px; font-size: 0.85rem;">
+                            ⏱️ الوقت التقريبي: <span id="estimatedTime" style="color: var(--accent); font-weight: 600;">--:--</span>
+                        </div>
                     </div>
 
                     <!-- خيارات سريعة -->
@@ -1149,6 +1153,10 @@
                         <span class="ayah-label">من آية</span>
                         <span class="ayah-label">إلى آية</span>
                     </div>
+                    <!-- عرض الوقت التقريبي للدفعة -->
+                    <div id="batchEstimatedTimeDisplay" style="text-align: center; margin-top: 10px; padding: 8px; background: var(--bg-input); border-radius: 8px; font-size: 0.85rem;">
+                        ⏱️ الوقت التقريبي: <span id="batchEstimatedTime" style="color: var(--accent); font-weight: 600;">--:--</span>
+                    </div>
                 </div>
 
                 <!-- ✨ Effects -->
@@ -1204,6 +1212,11 @@
                             <p style="font-size: 0.85rem;">لم تتم إضافة أي فيديوهات</p>
                         </div>
                     </div>
+                </div>
+
+                <!-- الوقت الكلي للدفعة -->
+                <div id="batchTotalTimeDisplay" style="text-align: center; margin-top: 16px; padding: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; display: none;">
+                    ⏱️ الوقت الكلي التقريبي: <span id="batchTotalTime" style="color: var(--accent); font-weight: 600; font-size: 1.1rem;">--:--</span>
                 </div>
 
                 <!-- زر إنشاء الدفعة -->
@@ -1377,6 +1390,12 @@
             await loadConfig();
             await loadHistory();
             await checkRunningJob();
+            
+            // تحديث الوقت التقريبي عند التحميل
+            setTimeout(() => {
+                updateEstimatedTime();
+                updateBatchEstimatedTime();
+            }, 500);
         };
 
         function initAyahValidation() {
@@ -1533,6 +1552,146 @@
             if (end > max) {
                 endAyah.value = max;
             }
+            
+            // تحديث الوقت التقريبي
+            updateEstimatedTime();
+        }
+
+        // ═══════════════════════════════════════
+        // ⏱️ Estimated Time Calculator (Real Duration from API)
+        // ═══════════════════════════════════════
+        
+        // Cache لتخزين مدة الآيات
+        let durationCache = {};
+
+        async function fetchEstimatedTime(reciter, surah, startAyah, endAyah) {
+            // إنشاء مفتاح للـ cache
+            const cacheKey = `${reciter}-${surah}-${startAyah}-${endAyah}`;
+            
+            // لو موجود في الـ cache
+            if (durationCache[cacheKey]) {
+                return durationCache[cacheKey];
+            }
+            
+            try {
+                const res = await fetch('/api/estimate-duration', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reciter, surah, startAyah, endAyah })
+                });
+                
+                const data = await res.json();
+                
+                if (data.ok) {
+                    // حفظ في الـ cache
+                    durationCache[cacheKey] = data;
+                    return data;
+                }
+            } catch (err) {
+                console.error('Duration fetch error:', err);
+            }
+            
+            return null;
+        }
+
+        function updateEstimatedTime() {
+            const reciter = document.getElementById('reciterSelect')?.value;
+            const surah = parseInt(document.getElementById('surahSelect')?.value) || 1;
+            const start = parseInt(document.getElementById('startAyah')?.value) || 1;
+            const end = parseInt(document.getElementById('endAyah')?.value) || 1;
+            const el = document.getElementById('estimatedTime');
+            
+            if (el) {
+                el.textContent = '⏳ جاري الحساب...';
+            }
+            
+            fetchEstimatedTime(reciter, surah, start, end).then(data => {
+                if (data && data.formatted) {
+                    if (el) {
+                        el.textContent = data.formatted;
+                    }
+                } else {
+                    if (el) {
+                        el.textContent = '--:--';
+                    }
+                }
+            });
+        }
+
+        function updateBatchEstimatedTime() {
+            const reciter = document.getElementById('batchReciterSelect')?.value;
+            const surah = parseInt(document.getElementById('batchSurahSelect')?.value) || 1;
+            const start = parseInt(document.getElementById('batchStartAyah')?.value) || 1;
+            const end = parseInt(document.getElementById('batchEndAyah')?.value) || 1;
+            const el = document.getElementById('batchEstimatedTime');
+            
+            if (el) {
+                el.textContent = '⏳ جاري الحساب...';
+            }
+            
+            fetchEstimatedTime(reciter, surah, start, end).then(data => {
+                if (data && data.formatted) {
+                    if (el) {
+                        el.textContent = data.formatted;
+                    }
+                } else {
+                    if (el) {
+                        el.textContent = '--:--';
+                    }
+                }
+            });
+        }
+
+        async function updateBatchTotalTime() {
+            // حساب الوقت الكلي لكل الفيديوهات في القائمة
+            const totalTimeDisplay = document.getElementById('batchTotalTimeDisplay');
+            const totalTimeEl = document.getElementById('batchTotalTime');
+            
+            if (batchItems.length === 0) {
+                if (totalTimeDisplay) totalTimeDisplay.style.display = 'none';
+                return;
+            }
+            
+            if (totalTimeDisplay) totalTimeDisplay.style.display = 'block';
+            if (totalTimeEl) totalTimeEl.textContent = '⏳ جاري الحساب...';
+            
+            let totalMs = 0;
+            
+            for (const item of batchItems) {
+                const data = await fetchEstimatedTime(item.reciter, item.surah, item.startAyah, item.endAyah);
+                if (data && data.durationMs) {
+                    totalMs += data.durationMs;
+                }
+            }
+            
+            const totalSeconds = totalMs / 1000;
+            if (totalTimeEl) {
+                if (totalSeconds > 0) {
+                    totalTimeEl.textContent = formatDurationLocal(totalSeconds);
+                } else {
+                    totalTimeEl.textContent = '--:--';
+                }
+            }
+        }
+
+        function formatDurationLocal(seconds) {
+            if (seconds < 60) {
+                return `${Math.round(seconds)} ثانية`;
+            } else if (seconds < 3600) {
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.round(seconds % 60);
+                if (secs > 0) {
+                    return `${mins} د ${secs} ث`;
+                }
+                return `${mins} دقيقة`;
+            } else {
+                const hours = Math.floor(seconds / 3600);
+                const mins = Math.floor((seconds % 3600) / 60);
+                if (mins > 0) {
+                    return `${hours} س ${mins} د`;
+                }
+                return `${hours} ساعة`;
+            }
         }
 
         function randomize() {
@@ -1546,6 +1705,7 @@
                 startAyah.value = start;
                 endAyah.value = Math.min(start + 4, max);
             }
+            updateEstimatedTime();
         }
 
         function toggleAdvanced() {
@@ -2232,6 +2392,7 @@
                 document.getElementById('batchStartAyah').value = start;
                 document.getElementById('batchEndAyah').value = Math.min(start + 4, max);
             }
+            updateBatchEstimatedTime();
         }
 
         function adjustBatchAyah(id, delta) {
@@ -2252,6 +2413,8 @@
             if (id === 'batchEndAyah' && end < start) {
                 document.getElementById('batchStartAyah').value = end;
             }
+            
+            updateBatchEstimatedTime();
         }
 
         const MAX_BATCH_VIDEOS = 15; // الحد الأقصى لعدد الفيديوهات في الدفعة
@@ -2313,10 +2476,12 @@
             batchItems = [];
             renderBatchList();
             updateBatchTotalVideos();
+            updateBatchTotalTime();
         }
 
         function updateBatchTotalVideos() {
             document.getElementById('batchTotalVideos').textContent = batchItems.length;
+            updateBatchTotalTime();
         }
 
         function renderBatchList() {
@@ -2325,6 +2490,7 @@
             
             countEl.textContent = batchItems.length;
             updateBatchTotalVideos();
+            updateBatchTotalTime();
             
             // لو القائمة فاضية
             if (batchItems.length === 0) {
@@ -2343,8 +2509,13 @@
                 if (item.effects.useGlow) effectsIcons.push('✨');
                 if (item.effects.useVignette) effectsIcons.push('🎭');
                 
+                // محاولة الحصول على الوقت من الـ cache
+                const cacheKey = `${item.reciter}-${item.surah}-${item.startAyah}-${item.endAyah}`;
+                const cachedData = durationCache[cacheKey];
+                const timeStr = cachedData ? cachedData.formatted : '⏳...';
+                
                 return `
-                <div class="batch-item" style="
+                <div class="batch-item" data-index="${index}" style="
                     background: var(--bg-card);
                     border: 1px solid var(--border);
                     border-radius: 10px;
@@ -2359,8 +2530,9 @@
                             <div style="font-weight: 600; font-size: 0.95rem;">
                                 📖 ${item.surahName}
                             </div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted);">
-                                #${index + 1}
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="batch-item-time" data-index="${index}" style="font-size: 0.75rem; color: var(--accent);">⏱️ ${timeStr}</span>
+                                <span style="font-size: 0.75rem; color: var(--text-muted);">#${index + 1}</span>
                             </div>
                         </div>
                         <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">
@@ -2380,6 +2552,24 @@
                     ">✕</button>
                 </div>
             `}).join('');
+            
+            // تحديث أوقات الفيديوهات في الخلفية
+            updateBatchItemTimes();
+        }
+        
+        async function updateBatchItemTimes() {
+            // تحديث وقت كل فيديو في القائمة
+            for (let i = 0; i < batchItems.length; i++) {
+                const item = batchItems[i];
+                const data = await fetchEstimatedTime(item.reciter, item.surah, item.startAyah, item.endAyah);
+                
+                if (data && data.formatted) {
+                    const timeEl = document.querySelector(`.batch-item-time[data-index="${i}"]`);
+                    if (timeEl) {
+                        timeEl.textContent = `⏱️ ${data.formatted}`;
+                    }
+                }
+            }
         }
 
         async function startBatchGeneration() {

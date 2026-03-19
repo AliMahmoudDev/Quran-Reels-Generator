@@ -1185,6 +1185,102 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         except Exception as cleanup_err:
             print(f"⚠️ Cleanup error: {cleanup_err}")
 
+# ═══════════════════════════════════════
+# ⏱️ API: Estimate Duration (المدة التقريبية الفعلية)
+# ═══════════════════════════════════════
+@app.route('/api/estimate-duration', methods=['POST'])
+def estimate_duration():
+    """حساب المدة الفعلية للفيديو بناءً على توقيت الصوت"""
+    try:
+        d = request.json
+        reciter = d.get('reciter', '')
+        surah = int(d.get('surah', 1))
+        start_ayah = int(d.get('startAyah', 1))
+        end_ayah = int(d.get('endAyah', start_ayah))
+        
+        total_duration_ms = 0
+        
+        # للقراء الجدد (NEW_RECITERS_CONFIG) - نستخدم mp3quran timing API
+        if reciter in NEW_RECITERS_CONFIG:
+            reciter_id, server_url = NEW_RECITERS_CONFIG[reciter]
+            cache_dir = os.path.join(EXEC_DIR, "cache_mp3quran", str(reciter_id))
+            os.makedirs(cache_dir, exist_ok=True)
+            timings_path = os.path.join(cache_dir, f"{surah:03d}.json")
+            
+            # تحميل الـ timings لو مش موجودة
+            if not os.path.exists(timings_path):
+                try:
+                    t_data = requests.get(f"https://mp3quran.net/api/v3/ayat_timing?surah={surah}&read={reciter_id}", timeout=10).json()
+                    timings = {item['ayah']: {'start': item['start_time'], 'end': item['end_time']} for item in t_data}
+                    with open(timings_path, 'w') as f:
+                        json.dump(timings, f)
+                except Exception as e:
+                    print(f"[Estimate] Failed to get timings: {e}")
+                    return jsonify({'ok': False, 'error': 'Failed to get timings'})
+            
+            # قراءة الـ timings وحساب المدة
+            with open(timings_path, 'r') as f:
+                timings = json.load(f)
+            
+            for ayah in range(start_ayah, end_ayah + 1):
+                ayah_str = str(ayah)
+                if ayah_str in timings:
+                    start_time = timings[ayah_str]['start']
+                    end_time = timings[ayah_str]['end']
+                    # المدة بالميلي ثانية
+                    duration_ms = end_time - start_time
+                    total_duration_ms += duration_ms
+                else:
+                    # لو الآية مش موجودة، نحسب متوسط 8 ثواني
+                    total_duration_ms += 8000
+        
+        else:
+            # للقراء القدام - نحسب تقريبي بناءً على متوسط مدة الآية
+            # كل آية في المتوسط 8-12 ثانية حسب القارئ
+            avg_durations = {
+                'Alafasy_64kbps': 12000,  # العفاسي بطيء شوية
+                'Abu_Bakr_Ash-Shaatree_128kbps': 10000,
+                'Yasser_Ad-Dussary_128kbps': 10000,
+                'Abdurrahmaan_As-Sudais_64kbps': 9000,
+                'Maher_AlMuaiqly_64kbps': 10000,
+                'Saood_ash-Shuraym_64kbps': 10000,
+                'Nasser_Alqatami_128kbps': 11000,
+            }
+            avg_duration = avg_durations.get(reciter, 10000)
+            ayahs_count = end_ayah - start_ayah + 1
+            total_duration_ms = ayahs_count * avg_duration
+        
+        # تحويل المدة لصيغة مقروءة
+        total_seconds = total_duration_ms // 1000
+        
+        return jsonify({
+            'ok': True,
+            'durationMs': total_duration_ms,
+            'durationSeconds': total_seconds,
+            'formatted': format_duration(total_seconds)
+        })
+        
+    except Exception as e:
+        print(f"[Estimate] Error: {e}")
+        return jsonify({'ok': False, 'error': str(e)})
+
+def format_duration(seconds):
+    """تحويل الثواني لصيغة مقروءة"""
+    if seconds < 60:
+        return f"{seconds} ثانية"
+    elif seconds < 3600:
+        mins = seconds // 60
+        secs = seconds % 60
+        if secs > 0:
+            return f"{mins} د {secs} ث"
+        return f"{mins} دقيقة"
+    else:
+        hours = seconds // 3600
+        mins = (seconds % 3600) // 60
+        if mins > 0:
+            return f"{hours} س {mins} د"
+        return f"{hours} ساعة"
+
 @app.route('/')
 def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "API Running"
 
