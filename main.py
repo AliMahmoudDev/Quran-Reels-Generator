@@ -824,7 +824,9 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
     
     draw.text((x, curr_y), text, font=font, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
     
-    return ImageClip(np.array(img)).set_duration(duration).crossfadein(0.35).crossfadeout(0.35)
+    # ✅ Fade يتم التحكم فيه من خارج الدالة
+    clip = ImageClip(np.array(img)).set_duration(duration)
+    return clip
 
 def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, style=None):
     if style is None: style = {}
@@ -856,7 +858,9 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, 
 
     draw.text((target_w/2, y_pos), text, font=font, fill=color, align='center', anchor="ma", stroke_width=stroke_w, stroke_fill=stroke_c)
     
-    return ImageClip(np.array(img)).set_duration(duration).crossfadein(0.35).crossfadeout(0.35)
+    # ✅ Fade يتم التحكم فيه من خارج الدالة
+    clip = ImageClip(np.array(img)).set_duration(duration)
+    return clip
 
 def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     pool =[]
@@ -1035,6 +1039,22 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 # د. إنشاء الكليبات البصرية (نستخدم actual_duration بدل chunk_duration)
                 ac = create_text_clip(display_ar, actual_duration, target_w, scale, use_glow, style=style)
                 ec = create_english_clip(en_chunk, actual_duration, target_w, scale, use_glow, style=style)
+                
+                # ✅ Fade between Ayahs - Fade in في أول chunk من كل آية
+                FADE_DURATION = 0.4  # مدة الـ fade بالثواني
+                is_first_chunk = (chunk_idx == 0)
+                is_last_chunk = (chunk_idx == len(ar_chunks) - 1)
+                is_single_line = (len(ar_chunks) == 1)  # الآية سطر واحد
+                
+                if is_first_chunk:
+                    # Fade in في بداية الآية
+                    ac = ac.crossfadein(FADE_DURATION)
+                    ec = ec.crossfadein(FADE_DURATION)
+                
+                if is_last_chunk:
+                    # Fade out في نهاية الآية
+                    ac = ac.crossfadeout(FADE_DURATION)
+                    ec = ec.crossfadeout(FADE_DURATION)
 
                 # هـ. تحديد المواقع
                 ar_size_mult = float(style.get('arSize', '1.0'))
@@ -1045,10 +1065,14 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 ec = ec.set_position(('center', ar_y_pos + ac.h + (10 * scale)))
 
                 # و. معالجة الخلفية للقطعة (نستخدم actual_duration)
+                # ✅ الخلفية تتغير فقط بين الآيات (مش كل سطر)
                 if dynamic_bg and i < len(vpool):
                     bg_slice = ayah_bg_clip.loop().subclip(ayah_bg_time, ayah_bg_time + actual_duration)
-                    if chunk_idx == 0: bg_slice = bg_slice.fadein(0.5)
-                    if chunk_idx == len(ar_chunks) - 1: bg_slice = bg_slice.fadeout(0.5)
+                    # ✅ Fade للخلفية فقط بين الآيات (أول وآخر chunk في الآية كلها)
+                    if is_first_chunk: 
+                        bg_slice = bg_slice.fadein(0.5)
+                    if is_last_chunk: 
+                        bg_slice = bg_slice.fadeout(0.5)
                     ayah_bg_time += actual_duration
                 else:
                     bg_slice = base_bg_clip.loop().subclip(current_bg_time, current_bg_time + actual_duration)
