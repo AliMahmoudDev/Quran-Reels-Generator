@@ -1119,7 +1119,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 
                 surah_name = SURAH_NAMES[surah-1] if surah <= len(SURAH_NAMES) else 'سورة'
                 # العنوان: اسم السورة (الآيات) | اسم القارئ
-                title = f"{surah_name} ({start_ayah}-{end_ayah}) | {reciter_name}"
+                title = f"قرآن كريم {surah_name} ({start_ayah}-{end_ayah}) بصوت القارئ {reciter_name} #قران_كريم #quran #shorts"
                 filename = f"Quran_{surah}_{start_ayah}.mp4"
                 
                 db_add_history(job_id, title, reciter_name, surah, start_ayah, end_ayah, quality, fps, filename, session_id)
