@@ -1043,21 +1043,13 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 ac = create_text_clip(display_ar, actual_duration, target_w, scale, use_glow, style=style)
                 ec = create_english_clip(en_chunk, actual_duration, target_w, scale, use_glow, style=style)
                 
-                # ✅ Fade between Ayahs - Fade in في أول chunk من كل آية
-                FADE_DURATION = 0.4  # مدة الـ fade بالثواني
+                # ✅ Fade للنص في كل سطر (chunk) - مش بس الآية
+                TEXT_FADE = 0.35  # مدة fade النص
+                ac = ac.crossfadein(TEXT_FADE).crossfadeout(TEXT_FADE)
+                ec = ec.crossfadein(TEXT_FADE).crossfadeout(TEXT_FADE)
+                
                 is_first_chunk = (chunk_idx == 0)
                 is_last_chunk = (chunk_idx == len(ar_chunks) - 1)
-                is_single_line = (len(ar_chunks) == 1)  # الآية سطر واحد
-                
-                if is_first_chunk:
-                    # Fade in في بداية الآية
-                    ac = ac.crossfadein(FADE_DURATION)
-                    ec = ec.crossfadein(FADE_DURATION)
-                
-                if is_last_chunk:
-                    # Fade out في نهاية الآية
-                    ac = ac.crossfadeout(FADE_DURATION)
-                    ec = ec.crossfadeout(FADE_DURATION)
 
                 # هـ. تحديد المواقع
                 ar_size_mult = float(style.get('arSize', '1.0'))
@@ -1096,6 +1088,10 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 
         update_job_status(job_id, 85, "Merging All Chunks...")
         final_video = concatenate_videoclips(final_segments, method="compose")
+        
+        # ✅ Fade للصوت في بداية ونهاية الفيديو الكلي فقط (نص ثانية)
+        AUDIO_FADE = 0.5  # نص ثانية
+        final_video = final_video.audio_fadein(AUDIO_FADE).audio_fadeout(AUDIO_FADE)
         
         # حفظ الفيديو النهائي في مجلد outputs
         final_output_path = os.path.join(OUTPUTS_DIR, f"{job_id}.mp4")
