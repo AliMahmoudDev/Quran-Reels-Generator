@@ -437,6 +437,7 @@ NEW_RECITERS_CONFIG = {
     'ادريس أبكر': (12, "https://server6.mp3quran.net/abkr/"),
     'منصور السالمي': (245, "https://server14.mp3quran.net/mansor/"),
     'رعد الكردي': (221, "https://server6.mp3quran.net/kurdi/"),
+   ' محمد أيوب': (109, "https://server16.mp3quran.net/ayyoub2/Rewayat-Hafs-A-n-Assem/"),
 }
 
 OLD_RECITERS_MAP = {
