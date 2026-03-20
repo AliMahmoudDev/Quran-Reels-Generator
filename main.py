@@ -63,7 +63,7 @@ EXEC_DIR = app_dir()
 BUNDLE_DIR = EXEC_DIR 
 
 PEXELS_KEYS_STR = os.environ.get("PEXELS_API_KEYS", "")
-PEXELS_API_KEYS = [k.strip() for k in 
+PEXELS_API_KEYS = [k.strip() for k in PEXELS_KEYS_STR.split(",") if k.strip()]
 
 LOCAL_BGS_DIR = os.path.join(BUNDLE_DIR, "local_bgs")
 os.makedirs(LOCAL_BGS_DIR, exist_ok=True)
