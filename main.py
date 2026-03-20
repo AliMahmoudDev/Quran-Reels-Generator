@@ -62,12 +62,9 @@ def app_dir():
 EXEC_DIR = app_dir()
 BUNDLE_DIR = EXEC_DIR 
 
-PEXELS_API_KEYS =[
-    "AmAgE0J5AuBbsvR6dmG7qQLIc5uYZvDim2Vx250F5QoHNKnGdCofFerx",
-    "Fv0qzUGYwbGr6yHsauaXuNKiNR9L7OE7VLr5Wq6SngcLjavmkCEAskb2",
-    "1NK8BaBXGsXm4Uxzcesxm0Jxh2yCILOwqqsj4GiM57dXcb7b8bbDYyOu",
-    "C9KJNtJET2wAnmD42Gbu0OolTlmhoT02CX7fyst3kKEvnjRRWLiAqQ9t" 
-]
+
+PEXELS_KEYS_STR = os.environ.get("PEXELS_API_KEYS", "")
+PEXELS_API_KEYS = [k.strip() for k in 
 
 LOCAL_BGS_DIR = os.path.join(BUNDLE_DIR, "local_bgs")
 os.makedirs(LOCAL_BGS_DIR, exist_ok=True)
@@ -437,6 +434,7 @@ NEW_RECITERS_CONFIG = {
     'ادريس أبكر': (12, "https://server6.mp3quran.net/abkr/"),
     'منصور السالمي': (245, "https://server14.mp3quran.net/mansor/"),
     'رعد الكردي': (221, "https://server6.mp3quran.net/kurdi/"),
+    'محمد أيوب': (109, "https://server16.mp3quran.net/ayyoub2/Rewayat-Hafs-A-n-Assem/"),
 }
 
 OLD_RECITERS_MAP = {
