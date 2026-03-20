@@ -63,7 +63,7 @@ EXEC_DIR = app_dir()
 BUNDLE_DIR = EXEC_DIR 
 
 PEXELS_KEYS_STR = os.environ.get("PEXELS_API_KEYS", "")
-PEXELS_API_KEYS = [k.strip() for k in PEXELS_KEYS_STR.split(",") if k.strip()]
+PEXELS_API_KEYS = [k.strip() for k in 
 
 LOCAL_BGS_DIR = os.path.join(BUNDLE_DIR, "local_bgs")
 os.makedirs(LOCAL_BGS_DIR, exist_ok=True)
@@ -797,7 +797,7 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
     size_mult = float(style.get('arSize', '1.0'))
     stroke_c = style.get('arOutC', '#000000')
     stroke_w = int(style.get('arOutW', '4'))
-    has_shadow = style.get('arShadow', False)
+    has_shadow = style.get('arShadow', True)  # ✅ مفعّل افتراضياً
     shadow_c = style.get('arShadowC', '#000000')
 
     # الخط كبير لأنه سطر واحد
@@ -810,8 +810,15 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
     x = (target_w - w) // 2
     curr_y = 20
         
+    # ✅ ظل متعدد الطبقات لوضوح أفضل
     if has_shadow:
-        draw.text((x+4, curr_y+4), text, font=font, fill=shadow_c)
+        # طبقة ظل خارجية ناعمة (انتشار عريض)
+        for offset in range(6, 0, -1):
+            opacity = int(80 - offset * 10)  # تدرج الشفافية
+            shadow_color = (*[int(shadow_c.lstrip('#')[i:i+2], 16) for i in (0, 2, 4)], opacity)
+            draw.text((x+offset, curr_y+offset), text, font=font, fill=shadow_color)
+        # طبقة ظل داخلية حادة (للوضوح)
+        draw.text((x+3, curr_y+3), text, font=font, fill=(0, 0, 0, 180))
     if glow: 
         draw.text((x, curr_y), text, font=font, fill=(255,255,255,40), stroke_width=stroke_w+4, stroke_fill=(255,255,255,20))
     
@@ -826,7 +833,7 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, 
     size_mult = float(style.get('enSize', '1.0'))
     stroke_c = style.get('enOutC', '#000000')
     stroke_w = int(style.get('enOutW', '3'))
-    has_shadow = style.get('enShadow', False)
+    has_shadow = style.get('enShadow', True)  # ✅ مفعّل افتراضياً
     shadow_c = style.get('enShadowC', '#000000')
 
     final_fs = int(32 * scale_factor * size_mult)
@@ -837,8 +844,15 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, 
     draw = ImageDraw.Draw(img)
     
     y_pos = 20
+    # ✅ ظل متعدد الطبقات للنص الإنجليزي
     if has_shadow:
-        draw.text((target_w/2 + 2, y_pos + 2), text, font=font, fill=shadow_c, align='center', anchor="ma")
+        # طبقة ظل خارجية ناعمة
+        for offset in range(4, 0, -1):
+            opacity = int(70 - offset * 12)
+            shadow_color = (*[int(shadow_c.lstrip('#')[i:i+2], 16) for i in (0, 2, 4)], opacity)
+            draw.text((target_w/2 + offset, y_pos + offset), text, font=font, fill=shadow_color, align='center', anchor="ma")
+        # طبقة ظل داخلية حادة
+        draw.text((target_w/2 + 2, y_pos + 2), text, font=font, fill=(0, 0, 0, 160), align='center', anchor="ma")
 
     draw.text((target_w/2, y_pos), text, font=font, fill=color, align='center', anchor="ma", stroke_width=stroke_w, stroke_fill=stroke_c)
     
