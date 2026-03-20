@@ -50,4 +50,8 @@ ENV HOME=/home/user \
     PATH=/home/user/.local/bin:$PATH
 
 ENV FLASK_APP=main.py
+<<<<<<< HEAD
 CMD ["flask", "run", "--host=0.0.0.0", "--port=7860"]
+=======
+CMD ["flask", "run", "--host=0.0.0.0", "--port=7860"]
+>>>>>>> 507a37817754ee447abf5c9d595bc45e066b0a00
