@@ -945,7 +945,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             base_bg_clip = VideoFileClip(vpool[0]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
             video_clips_to_close.append(base_bg_clip)
 
-        overlays_static =[ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.45)]
+        overlays_static =[ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.3)]
         if use_vignette:
             overlays_static.append(create_vignette_mask(target_w, target_h))
 
