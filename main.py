@@ -89,7 +89,10 @@ UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
 # Master Temp Directory
 BASE_TEMP_DIR = os.path.join(EXEC_DIR, "temp_workspaces")
 OUTPUTS_DIR = os.path.join(EXEC_DIR, "outputs")
+DEBUG_DIR = os.path.join(EXEC_DIR, "debug_audio")  # ✅ مجلد التصحيح
+DEBUG_MODE = True  # ✅ تفعيل وضع التصحيح (خليه True لو عايز تكشف المشكلة)
 os.makedirs(BASE_TEMP_DIR, exist_ok=True)
+os.makedirs(DEBUG_DIR, exist_ok=True)  # ✅ إنشاء مجلد التصحيح
 os.makedirs(OUTPUTS_DIR, exist_ok=True)
 os.makedirs(VISION_DIR, exist_ok=True)
 
@@ -699,6 +702,11 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     check_stop(job_id)
     seg = AudioSegment.from_file(full_audio_path)[t['start']:t['end']]
     
+    # ✅ DEBUG: حفظ الصوت الأصلي قبل أي معالجة
+    if DEBUG_MODE:
+        debug_original = os.path.join(DEBUG_DIR, f"01_original_{surah}_{ayah}.mp3")
+        seg.export(debug_original, format="mp3")
+    
     # 🎯 جعل الـ threshold أكثر حساسية عشان ميعتبرش الصدى صمت
     # كان -25، خليناه -35 عشان يسيب الصوت الخافت (الصدى والمد)
     silence_thresh = seg.dBFS - 35
@@ -723,9 +731,20 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
         # الصوت قريب من النهاية - مفيش صمت كافي، نسيبه زي ما هو
         safe_end_trim = 0
     
+    # ✅ DEBUG: حفظ بعد قص الصمت (قبل fade)
+    if DEBUG_MODE:
+        seg_trimmed = seg[aggressive_start_trim:duration-safe_end_trim]
+        debug_trimmed = os.path.join(DEBUG_DIR, f"02_trimmed_{surah}_{ayah}.mp3")
+        seg_trimmed.export(debug_trimmed, format="mp3")
+    
     if duration - aggressive_start_trim - safe_end_trim > 200: 
         # 🎵 Fade out ناعم 200ms بدل 50ms
         seg = seg[aggressive_start_trim:duration-safe_end_trim].fade_out(200)
+    
+    # ✅ DEBUG: حفظ بعد fade_out
+    if DEBUG_MODE:
+        debug_faded = os.path.join(DEBUG_DIR, f"03_after_fade_{surah}_{ayah}.mp3")
+        seg.export(debug_faded, format="mp3")
         
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
     seg.export(out, format="mp3")
@@ -945,7 +964,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             base_bg_clip = VideoFileClip(vpool[0]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
             video_clips_to_close.append(base_bg_clip)
 
-        overlays_static =[ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.45)]
+        overlays_static =[ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.45)]  # ✅ زودناه عشان الخلفيات الفاتحة
         if use_vignette:
             overlays_static.append(create_vignette_mask(target_w, target_h))
 
@@ -1089,9 +1108,19 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         update_job_status(job_id, 85, "Merging All Chunks...")
         final_video = concatenate_videoclips(final_segments, method="compose")
         
+        # ✅ DEBUG: حفظ الصوت المدمج قبل أي fade
+        if DEBUG_MODE:
+            debug_concat = os.path.join(DEBUG_DIR, f"04_concatenated_{job_id}.mp3")
+            final_video.audio.write_audiofile(debug_concat, fps=44100, verbose=False, logger=None)
+        
         # ✅ Fade للصوت في بداية ونهاية الفيديو الكلي فقط (نص ثانية)
         AUDIO_FADE = 0.5  # نص ثانية
         final_video = final_video.audio_fadein(AUDIO_FADE).audio_fadeout(AUDIO_FADE)
+        
+        # ✅ DEBUG: حفظ الصوت بعد fade النهائي
+        if DEBUG_MODE:
+            debug_with_fade = os.path.join(DEBUG_DIR, f"05_after_final_fade_{job_id}.mp3")
+            final_video.audio.write_audiofile(debug_with_fade, fps=44100, verbose=False, logger=None)
         
         # حفظ الفيديو النهائي في مجلد outputs
         final_output_path = os.path.join(OUTPUTS_DIR, f"{job_id}.mp4")
