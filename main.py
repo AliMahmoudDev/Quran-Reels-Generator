@@ -718,8 +718,8 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     # 🚀 قص 30ms إضافية من أول الآية عشان نتأكد مفيش تسريب
     aggressive_start_trim = max(0, start_trim - 30)
     
-    # 🎵 مساحة أمان صغيرة جداً (50ms) - بس لمنع قص الصوت
-    safe_buffer = 50
+    # 🎵 بدون buffer - نقص كل الصمت في الآخر
+    safe_buffer = 0
     
     # لو الصمت المكتشف أكبر من الـ buffer، نقص الفرق بس
     # لو الصمت المكتشف أصغر، نقص الصمت كله وسيب الصوت
