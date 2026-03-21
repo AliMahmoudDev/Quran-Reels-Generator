@@ -89,7 +89,8 @@ UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
 # Master Temp Directory
 BASE_TEMP_DIR = os.path.join(EXEC_DIR, "temp_workspaces")
 OUTPUTS_DIR = os.path.join(EXEC_DIR, "outputs")
-DEBUG_DIR = os.path.join(EXEC_DIR, "debug_audio")  # ✅ مجلد التصحيح
+# ✅ DEBUG: مجلد التصحيح في /data عشان يبان في Hugging Face
+DEBUG_DIR = os.path.join("/data", "debug_audio") if os.path.exists("/data") else os.path.join(EXEC_DIR, "debug_audio")
 DEBUG_MODE = True  # ✅ تفعيل وضع التصحيح (خليه True لو عايز تكشف المشكلة)
 os.makedirs(BASE_TEMP_DIR, exist_ok=True)
 os.makedirs(DEBUG_DIR, exist_ok=True)  # ✅ إنشاء مجلد التصحيح
