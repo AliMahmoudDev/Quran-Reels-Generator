@@ -707,42 +707,21 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     if DEBUG_AUDIO_MODE and idx == 0:  # بس في أول آية
         seg.export(debug_original, format="mp3")
     
-    # 🎯 جعل الـ threshold أكثر حساسية عشان ميعتبرش الصدى صمت
-    # كان -25، خليناه -35 عشان يسيب الصوت الخافت (الصدى والمد)
-    silence_thresh = seg.dBFS - 35
-
-    start_trim = detect_leading_silence(seg, silence_threshold=silence_thresh)
-    end_trim = detect_leading_silence(seg.reverse(), silence_threshold=silence_thresh)
-    duration = len(seg)
+    # 🧪 تجربة: إلغاء silence detection خالص
+    # نستخدم الصوت من API timing كما هو بدون أي تعديل
     
-    # 🚀 بدون زيادة في الأول - نقص الصمت كله
-    aggressive_start_trim = start_trim
-    
-    # 🎵 مساحة أمان صغيرة (50ms) - رجعناه
-    safe_buffer = 50
-    
-    # لو الصمت المكتشف أكبر من الـ buffer، نقص الفرق بس
-    # لو الصمت المكتشف أصغر، نقص الصمت كله وسيب الصوت
-    if end_trim > safe_buffer:
-        # فيه صمت كافي - نقص جزء منه
-        safe_end_trim = end_trim - safe_buffer
-    else:
-        # الصوت قريب من النهاية - مفيش صمت كافي، نسيبه زي ما هو
-        safe_end_trim = 0
-    
-    # ✅ DEBUG: حفظ بعد قص الصمت (قبل fade)
+    # ✅ DEBUG: حفظ بعد قص الصمت (قبل fade) - نفس الصوت الأصلي
     debug_trimmed = os.path.join(OUTPUTS_DIR, f"{job_id}_debug_02_trimmed.mp3")
-    if DEBUG_AUDIO_MODE and idx == 0:  # بس في أول آية
-        seg_trimmed = seg[aggressive_start_trim:duration-safe_end_trim]
-        seg_trimmed.export(debug_trimmed, format="mp3")
+    if DEBUG_AUDIO_MODE and idx == 0:
+        seg.export(debug_trimmed, format="mp3")
     
-    if duration - aggressive_start_trim - safe_end_trim > 20: 
-        # 🎵 Fade out صغير جداً (5ms) - بس لمنع click
-        seg = seg[aggressive_start_trim:duration-safe_end_trim].fade_out(5)
+    # 🎵 Fade out صغير جداً (5ms) فقط لمنع click
+    if len(seg) > 10:
+        seg = seg.fade_out(5)
     
     # ✅ DEBUG: حفظ بعد fade_out
     debug_faded = os.path.join(OUTPUTS_DIR, f"{job_id}_debug_03_after_fade.mp3")
-    if DEBUG_AUDIO_MODE and idx == 0:  # بس في أول آية
+    if DEBUG_AUDIO_MODE and idx == 0:
         seg.export(debug_faded, format="mp3")
         
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
