@@ -1033,16 +1033,9 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 # 2. قص الصوت
                 chunk_audio = full_audioclip.subclip(current_audio_time, t_end)
                 
-                # ✅ Fade قصير جداً (5ms) فقط على أول وآخر chunk في كل آية
-                # ده بيمنع "التكة" الصوتية (click/pop) الناتجة عن القص على نقطة مش صفر
-                is_first_chunk_of_ayah = (chunk_idx == 0)
-                is_last_chunk_of_ayah = (chunk_idx == len(ar_chunks) - 1)
-                
-                if is_first_chunk_of_ayah:
-                    chunk_audio = chunk_audio.audio_fadein(0.005)  # 5ms fade in
-                
-                if is_last_chunk_of_ayah:
-                    chunk_audio = chunk_audio.audio_fadeout(0.005)  # 5ms fade out
+                # 🔧 Micro fade على كل chunk (2ms) - ده بيمنع click عند الدمج
+                # المشكلة كانت في concatenation - كل نقطة دمج محتاجة fade
+                chunk_audio = chunk_audio.audio_fadein(0.002).audio_fadeout(0.002)  # 2ms
                 
                 # 🚀 3. الحل الجذري: نعتمد وقت الصوت الفعلي كأساس لوقت الفيديو!
                 actual_duration = chunk_audio.duration
