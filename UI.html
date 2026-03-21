@@ -1107,17 +1107,6 @@
                         <a class="btn-secondary btn-download" id="downloadLink" download>⬇️ تحميل</a>
                         <button class="btn-secondary" onclick="resetForm()">🔄 فيديو جديد</button>
                     </div>
-                    
-                    <!-- 🐛 DEBUG: زر تصحيح الصوت (مؤقت) -->
-                    <div id="debugSection" style="margin-top: 16px; padding: 12px; background: rgba(239, 68, 68, 0.1); border: 1px dashed var(--danger); border-radius: 10px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                            <span style="font-size: 0.85rem; color: var(--danger);">🐛 تصحيح الصوت (مؤقت)</span>
-                            <button class="btn-secondary" style="width: auto; height: 32px; padding: 0 12px; font-size: 0.75rem;" onclick="loadDebugFiles()">🔍 عرض الملفات</button>
-                        </div>
-                        <div id="debugFilesList" style="display: none;">
-                            <!-- هنا هتظهر الملفات -->
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -1874,49 +1863,6 @@
             document.getElementById('progressCircle').style.strokeDashoffset = 408;
             document.getElementById('progressPercent').textContent = '0%';
             currentJobId = null;
-            // إخفاء قسم الـ debug
-            document.getElementById('debugFilesList').style.display = 'none';
-        }
-
-        // 🐛 DEBUG: تحميل ملفات تصحيح الصوت (مؤقت)
-        async function loadDebugFiles() {
-            if (!currentJobId) {
-                showToast('لا يوجد فيديو حالي', 'error');
-                return;
-            }
-            
-            const listDiv = document.getElementById('debugFilesList');
-            listDiv.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem;">⏳ جاري التحميل...</p>';
-            listDiv.style.display = 'block';
-            
-            try {
-                const res = await fetch(`/api/debug-audio?jobId=${currentJobId}&stage=all`);
-                const data = await res.json();
-                
-                if (!data.ok || !data.files || data.files.length === 0) {
-                    listDiv.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem;">⚠️ لا توجد ملفات تصحيح. تأكد من أن DEBUG_AUDIO_MODE مفعّل.</p>';
-                    return;
-                }
-                
-                let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
-                data.files.forEach(file => {
-                    const sizeKB = Math.round(file.size / 1024);
-                    html += `
-                        <a href="${file.url}" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--text-primary);" download>
-                            <div>
-                                <div style="font-size: 0.85rem; font-weight: 500;">Stage ${file.stage}: ${file.description}</div>
-                                <div style="font-size: 0.75rem; color: var(--text-muted);">${sizeKB} KB</div>
-                            </div>
-                            <span style="color: var(--accent);">⬇️</span>
-                        </a>
-                    `;
-                });
-                html += '</div>';
-                listDiv.innerHTML = html;
-                
-            } catch (err) {
-                listDiv.innerHTML = `<p style="color: var(--danger); font-size: 0.85rem;">❌ خطأ: ${err.message}</p>`;
-            }
         }
 
         async function stopGeneration() {
