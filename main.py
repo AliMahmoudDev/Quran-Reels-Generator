@@ -839,6 +839,7 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     pool =[]
     active_key = user_key if user_key and len(user_key) > 10 else random.choice(PEXELS_API_KEYS) if PEXELS_API_KEYS else ""
     
+    # ✅ الكلمات الآمنة المسموح بها
     SAFE_WHITELIST =[
         'nature', 'sky', 'sea', 'ocean', 'water', 'rain', 'cloud', 'mountain',
         'forest', 'tree', 'desert', 'sand', 'star', 'galaxy', 'space', 'moon',
@@ -846,13 +847,40 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
         'snow', 'winter', 'landscape', 'river', 'fog', 'mist', 'earth', 'bird'
     ]
 
+    # ✅ مواضيع آمنة جاهزة
     safe_topics =['sky clouds timelapse', 'galaxy stars space', 'ocean waves slow motion', 'forest trees drone', 'desert sand dunes', 'waterfall nature', 'mountains fog', 'mosque architecture', 'islamic pattern']
+
+    # 🚫 كلمات خطيرة - لو موجودة في النتيجة نرفضها
+    BLACKLIST_WORDS = [
+        'woman', 'women', 'girl', 'lady', 'female', 'model',
+        'man', 'men', 'boy', 'male', 'guy',
+        'person', 'people', 'human', 'child', 'baby', 'kid',
+        'face', 'portrait', 'selfie', 'couple', 'family',
+        'handsome', 'beautiful girl', 'beautiful woman'
+    ]
+
+    # ✅ كلمات إيجابية - نضيفها للـ query
+    POSITIVE_WORDS = ['empty', 'pure', 'minimalist', 'tranquil', 'serene']
+
+    # دالة فلترة الفيديوهات
+    def is_video_safe(vid):
+        """نتأكد إن الفيديو مفيهوش ناس من خلال URL و description"""
+        url = vid.get('url', '').lower()
+        description = vid.get('description', '').lower()
+        combined = f"{url} {description}"
+        
+        for bad_word in BLACKLIST_WORDS:
+            if bad_word in combined:
+                return False
+        return True
 
     if custom_query and len(custom_query) > 2:
         try: 
             q_trans = GoogleTranslator(source='auto', target='en').translate(custom_query.strip()).lower()
             is_safe = any(safe_word in q_trans for safe_word in SAFE_WHITELIST)
-            q = f"{q_trans} landscape scenery atmospheric" if is_safe else random.choice(safe_topics)
+            # ✅ نضيف كلمات إيجابية بدل السلبية
+            positive = random.choice(POSITIVE_WORDS)
+            q = f"{q_trans} landscape scenery {positive}" if is_safe else random.choice(safe_topics)
         except: 
             q = random.choice(safe_topics)
     else:
@@ -861,7 +889,7 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     if active_key:
         try:
             check_stop(job_id)
-            url = f"https://api.pexels.com/videos/search?query={q}&per_page={count+5}&page={random.randint(1, 10)}&orientation=portrait"
+            url = f"https://api.pexels.com/videos/search?query={q}&per_page={count+10}&page={random.randint(1, 10)}&orientation=portrait"
             r = requests.get(url, headers={'Authorization': active_key}, timeout=10)
             if r.status_code == 200:
                 vids = r.json().get('videos',[])
@@ -869,6 +897,11 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
                 for vid in vids:
                     if len(pool) >= count: break
                     check_stop(job_id)
+                    
+                    # 🚫 فلترة: نتأكد إن الفيديو آمن
+                    if not is_video_safe(vid):
+                        continue  # نتخطى الفيديو ده
+                    
                     f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), None)
                     if not f and vid['video_files']: f = vid['video_files'][0]
                     if f:
