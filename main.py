@@ -718,9 +718,8 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     # 🚀 قص 30ms إضافية من أول الآية عشان نتأكد مفيش تسريب
     aggressive_start_trim = max(0, start_trim - 30)
     
-    # 🎵 مساحة أمان أكبر للصدى في الآخر
-    # هنسيب 800ms من الآخر بدل 500ms عشان الصدى والمد
-    safe_buffer = 800
+    # 🎵 مساحة أمان صغيرة في الآخر (150ms) - بس لمنع قص الصوت
+    safe_buffer = 150
     
     # لو الصمت المكتشف أكبر من الـ buffer، نقص الفرق بس
     # لو الصمت المكتشف أصغر، نقص الصمت كله وسيب الصوت
@@ -737,9 +736,9 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
         seg_trimmed = seg[aggressive_start_trim:duration-safe_end_trim]
         seg_trimmed.export(debug_trimmed, format="mp3")
     
-    if duration - aggressive_start_trim - safe_end_trim > 200: 
-        # 🎵 Fade out ناعم 200ms بدل 50ms
-        seg = seg[aggressive_start_trim:duration-safe_end_trim].fade_out(200)
+    if duration - aggressive_start_trim - safe_end_trim > 50: 
+        # 🎵 Fade out صغير جداً (10ms) - بس لمنع click
+        seg = seg[aggressive_start_trim:duration-safe_end_trim].fade_out(10)
     
     # ✅ DEBUG: حفظ بعد fade_out
     debug_faded = os.path.join(OUTPUTS_DIR, f"{job_id}_debug_03_after_fade.mp3")
