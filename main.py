@@ -89,11 +89,10 @@ UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
 # Master Temp Directory
 BASE_TEMP_DIR = os.path.join(EXEC_DIR, "temp_workspaces")
 OUTPUTS_DIR = os.path.join(EXEC_DIR, "outputs")
-# ✅ DEBUG: مجلد التصحيح في /data عشان يبان في Hugging Face
-DEBUG_DIR = os.path.join("/data", "debug_audio") if os.path.exists("/data") else os.path.join(EXEC_DIR, "debug_audio")
-DEBUG_MODE = True  # ✅ تفعيل وضع التصحيح (خليه True لو عايز تكشف المشكلة)
+# ✅ DEBUG: وضع تصحيح الصوت - بيعمل 5 ملفات صوت قابلة للتحميل
+# كل ملف بيمثل مرحلة من مراحل معالجة الصوت
+DEBUG_AUDIO_MODE = True  # ✅ تفعيل وضع تصحيح الصوت (خليه False بعد ما تلاقي المشكلة)
 os.makedirs(BASE_TEMP_DIR, exist_ok=True)
-os.makedirs(DEBUG_DIR, exist_ok=True)  # ✅ إنشاء مجلد التصحيح
 os.makedirs(OUTPUTS_DIR, exist_ok=True)
 os.makedirs(VISION_DIR, exist_ok=True)
 
@@ -703,9 +702,9 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     check_stop(job_id)
     seg = AudioSegment.from_file(full_audio_path)[t['start']:t['end']]
     
-    # ✅ DEBUG: حفظ الصوت الأصلي قبل أي معالجة
-    if DEBUG_MODE:
-        debug_original = os.path.join(DEBUG_DIR, f"01_original_{surah}_{ayah}.mp3")
+    # ✅ DEBUG: حفظ الصوت الأصلي قبل أي معالجة (في outputs عشان يفضل موجود)
+    debug_original = os.path.join(OUTPUTS_DIR, f"{job_id}_debug_01_original.mp3")
+    if DEBUG_AUDIO_MODE and idx == 0:  # بس في أول آية
         seg.export(debug_original, format="mp3")
     
     # 🎯 جعل الـ threshold أكثر حساسية عشان ميعتبرش الصدى صمت
@@ -733,9 +732,9 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
         safe_end_trim = 0
     
     # ✅ DEBUG: حفظ بعد قص الصمت (قبل fade)
-    if DEBUG_MODE:
+    debug_trimmed = os.path.join(OUTPUTS_DIR, f"{job_id}_debug_02_trimmed.mp3")
+    if DEBUG_AUDIO_MODE and idx == 0:  # بس في أول آية
         seg_trimmed = seg[aggressive_start_trim:duration-safe_end_trim]
-        debug_trimmed = os.path.join(DEBUG_DIR, f"02_trimmed_{surah}_{ayah}.mp3")
         seg_trimmed.export(debug_trimmed, format="mp3")
     
     if duration - aggressive_start_trim - safe_end_trim > 200: 
@@ -743,8 +742,8 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
         seg = seg[aggressive_start_trim:duration-safe_end_trim].fade_out(200)
     
     # ✅ DEBUG: حفظ بعد fade_out
-    if DEBUG_MODE:
-        debug_faded = os.path.join(DEBUG_DIR, f"03_after_fade_{surah}_{ayah}.mp3")
+    debug_faded = os.path.join(OUTPUTS_DIR, f"{job_id}_debug_03_after_fade.mp3")
+    if DEBUG_AUDIO_MODE and idx == 0:  # بس في أول آية
         seg.export(debug_faded, format="mp3")
         
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
@@ -1110,8 +1109,8 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         final_video = concatenate_videoclips(final_segments, method="compose")
         
         # ✅ DEBUG: حفظ الصوت المدمج قبل أي fade
-        if DEBUG_MODE:
-            debug_concat = os.path.join(DEBUG_DIR, f"04_concatenated_{job_id}.mp3")
+        debug_concat = os.path.join(OUTPUTS_DIR, f"{job_id}_debug_04_concatenated.mp3")
+        if DEBUG_AUDIO_MODE:
             final_video.audio.write_audiofile(debug_concat, fps=44100, verbose=False, logger=None)
         
         # ✅ Fade للصوت في بداية ونهاية الفيديو الكلي فقط (نص ثانية)
@@ -1119,9 +1118,9 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         final_video = final_video.audio_fadein(AUDIO_FADE).audio_fadeout(AUDIO_FADE)
         
         # ✅ DEBUG: حفظ الصوت بعد fade النهائي
-        if DEBUG_MODE:
-            debug_with_fade = os.path.join(DEBUG_DIR, f"05_after_final_fade_{job_id}.mp3")
-            final_video.audio.write_audiofile(debug_with_fade, fps=44100, verbose=False, logger=None)
+        debug_final = os.path.join(OUTPUTS_DIR, f"{job_id}_debug_05_after_final_fade.mp3")
+        if DEBUG_AUDIO_MODE:
+            final_video.audio.write_audiofile(debug_final, fps=44100, verbose=False, logger=None)
         
         # حفظ الفيديو النهائي في مجلد outputs
         final_output_path = os.path.join(OUTPUTS_DIR, f"{job_id}.mp4")
@@ -1424,6 +1423,54 @@ def download_result():
     # Get filename from history or use default
     filename = f"Quran_video_{request.args.get('jobId')[:8]}.mp4"
     return send_file(output_path, as_attachment=True, download_name=filename)
+
+@app.route('/api/debug-audio')
+def download_debug_audio():
+    """تحميل ملفات صوت التصحيح - كل مرحلة على حدة"""
+    job_id = request.args.get('jobId')
+    stage = request.args.get('stage', 'all')  # 1, 2, 3, 4, 5, or 'all'
+    
+    if not job_id:
+        return jsonify({'error': 'Missing jobId'}), 400
+    
+    # ملفات الـ debug
+    debug_files = {
+        '1': ('01_original', 'الصوت الأصلي بدون أي معالجة'),
+        '2': ('02_trimmed', 'بعد قص الصمت'),
+        '3': ('03_after_fade', 'بعد fade out'),
+        '4': ('04_concatenated', 'بعد دمج جميع الآيات'),
+        '5': ('05_after_final_fade', 'بعد fade النهائي'),
+    }
+    
+    if stage == 'all':
+        # رجع قائمة بكل الملفات المتاحة
+        available = []
+        for s, (name, desc) in debug_files.items():
+            path = os.path.join(OUTPUTS_DIR, f"{job_id}_debug_{name}.mp3")
+            if os.path.exists(path):
+                available.append({
+                    'stage': s,
+                    'name': name,
+                    'description': desc,
+                    'url': f"/api/debug-audio?jobId={job_id}&stage={s}",
+                    'size': os.path.getsize(path)
+                })
+        return jsonify({
+            'ok': True,
+            'debug_mode': DEBUG_AUDIO_MODE,
+            'files': available
+        })
+    
+    if stage not in debug_files:
+        return jsonify({'error': f'Invalid stage. Use 1, 2, 3, 4, 5, or all'}), 400
+    
+    name, desc = debug_files[stage]
+    path = os.path.join(OUTPUTS_DIR, f"{job_id}_debug_{name}.mp3")
+    
+    if not os.path.exists(path):
+        return jsonify({'error': f'Debug file not found. Make sure DEBUG_AUDIO_MODE is enabled.'}), 404
+    
+    return send_file(path, as_attachment=True, download_name=f"debug_{name}.mp3")
 
 @app.route('/api/cancel', methods=['POST'])
 def cancel_process():
