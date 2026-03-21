@@ -853,11 +853,11 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
         try: 
             q_trans = GoogleTranslator(source='auto', target='en').translate(custom_query.strip()).lower()
             is_safe = any(safe_word in q_trans for safe_word in SAFE_WHITELIST)
-            q = f"{q_trans} landscape scenery atmospheric no people" if is_safe else f"{random.choice(safe_topics)} no people"
+            q = f"{q_trans} landscape scenery atmospheric" if is_safe else random.choice(safe_topics)
         except: 
-            q = f"{random.choice(safe_topics)} no people"
+            q = random.choice(safe_topics)
     else:
-        q = f"{random.choice(safe_topics)} no people"
+        q = random.choice(safe_topics)
 
     if active_key:
         try:
