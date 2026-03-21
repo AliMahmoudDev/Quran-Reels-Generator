@@ -1031,10 +1031,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 
                 # 2. قص الصوت
                 chunk_audio = full_audioclip.subclip(current_audio_time, t_end)
-                
-                # 🔧 Micro fade على كل chunk (2ms) - ده بيمنع click عند الدمج
-                # المشكلة كانت في concatenation - كل نقطة دمج محتاجة fade
-                chunk_audio = chunk_audio.audio_fadein(0.002).audio_fadeout(0.002)  # 2ms
+                # بدون أي fade - الصوت الأصلي أنظف
                 
                 # 🚀 3. الحل الجذري: نعتمد وقت الصوت الفعلي كأساس لوقت الفيديو!
                 actual_duration = chunk_audio.duration
