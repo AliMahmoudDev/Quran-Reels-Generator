@@ -36,6 +36,7 @@ from moviepy.editor import (
     ImageClip, VideoFileClip, AudioFileClip, 
     CompositeVideoClip, ColorClip, concatenate_videoclips
 )
+from moviepy.audio.AudioClip import concatenate_audioclips
 from moviepy.config import change_settings
 from proglog import ProgressBarLogger
 from pydub import AudioSegment
@@ -1067,7 +1068,20 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             raise Exception("لم يتم إنشاء أي مقاطع فيديو - قد يكون هناك مشكلة في تحميل الصوت أو النصوص")
 
         update_job_status(job_id, 85, "Merging All Chunks...")
-        final_video = concatenate_videoclips(final_segments, method="compose")
+        
+        # 🧪 تجربة: فصل الصوت والفيديو ودمجهم بشكل منفصل
+        # نجمع audio clips لوحدها
+        audio_clips = [seg.audio for seg in final_segments]
+        
+        # ندمج الصوت بـ concatenate_audioclips (أدق في التعامل مع الصوت)
+        merged_audio = concatenate_audioclips(audio_clips)
+        
+        # نشيل الصوت من الفيديو clips وندمج الفيديو لوحده
+        video_clips_no_audio = [seg.set_audio(None) for seg in final_segments]
+        final_video = concatenate_videoclips(video_clips_no_audio, method="compose")
+        
+        # نربط الصوت المدمج الجديد بالفيديو
+        final_video = final_video.set_audio(merged_audio)
         
         # ✅ DEBUG: حفظ الصوت المدمج قبل أي fade
         debug_concat = os.path.join(OUTPUTS_DIR, f"{job_id}_debug_04_concatenated.mp3")
