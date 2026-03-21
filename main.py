@@ -842,13 +842,13 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     # ✅ الكلمات الآمنة المسموح بها
     SAFE_WHITELIST =[
         'nature', 'sky', 'sea', 'ocean', 'water', 'rain', 'cloud', 'mountain',
-        'forest', 'tree', 'desert', 'sand', 'star', 'galaxy', 'space', 'moon',
+        'forest', 'tree', 'star', 'galaxy', 'space', 'moon',
         'sun', 'sunset', 'sunrise', 'mosque', 'islam', 'kaaba', 'makkah',
         'snow', 'winter', 'landscape', 'river', 'fog', 'mist', 'earth', 'bird'
     ]
 
     # ✅ مواضيع آمنة جاهزة
-    safe_topics =['sky clouds timelapse', 'galaxy stars space', 'ocean waves slow motion', 'forest trees drone', 'desert sand dunes', 'waterfall nature', 'mountains fog', 'mosque architecture', 'islamic pattern']
+    safe_topics =['sky clouds timelapse', 'galaxy stars space', 'ocean waves slow motion', 'forest trees drone', 'waterfall nature', 'mountains fog', 'mosque architecture', 'islamic pattern']
 
     # 🚫 كلمات خطيرة - لو موجودة في النتيجة نرفضها
     BLACKLIST_WORDS = [
