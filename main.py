@@ -707,7 +707,7 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     if DEBUG_AUDIO_MODE and idx == 0:  # بس في أول آية
         seg.export(debug_original, format="mp3")
     
-    # 🧪 تجربة: إلغاء silence detection خالص
+    # 🧪 تجربة: بدون أي fade
     # نستخدم الصوت من API timing كما هو بدون أي تعديل
     
     # ✅ DEBUG: حفظ بعد قص الصمت (قبل fade) - نفس الصوت الأصلي
@@ -715,14 +715,7 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     if DEBUG_AUDIO_MODE and idx == 0:
         seg.export(debug_trimmed, format="mp3")
     
-    # 🎵 Fade out صغير جداً (5ms) فقط لمنع click
-    if len(seg) > 10:
-        seg = seg.fade_out(5)
-    
-    # ✅ DEBUG: حفظ بعد fade_out
-    debug_faded = os.path.join(OUTPUTS_DIR, f"{job_id}_debug_03_after_fade.mp3")
-    if DEBUG_AUDIO_MODE and idx == 0:
-        seg.export(debug_faded, format="mp3")
+    # بدون fade_out خالص - نجرب
         
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
     seg.export(out, format="mp3")
