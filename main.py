@@ -16,6 +16,8 @@ import json
 import sqlite3
 import zipfile
 from functools import lru_cache  # ✅ Added for caching
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # مهم لـ OAuth مع HuggingFace (HTTPS خارجي، HTTP داخلي)
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -619,7 +621,14 @@ def estimate_ayah_length(surah, ayah):
 app = Flask(__name__, static_folder=EXEC_DIR)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-# Register the teardown function
+# 🛡️ Rate Limiter - حماية من الإفراط في الطلبات
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",  # تخزين في الذاكرة
+)
+
 app.teardown_appcontext(close_db)
 
 # ==========================================
@@ -1301,6 +1310,12 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         final_output_path = os.path.join(OUTPUTS_DIR, f"{job_id}.mp4")
         temp_mix_path = os.path.join(workspace, f"temp_mix_{job_id}.mp4")
         
+        # 🎬 إعدادات الضغط (قابلة للتعديل من الـ config)
+        # CRF: 18=جودة ممتازة, 23=جودة عالية (موصى), 28=جودة متوسطة
+        # Preset: ultrafast=سريع/حجم كبير, medium=متوازن, slow=ضغط أفضل
+        crf_value = config.get('crf', 23)  # ✅ افتراضي 23 = جودة عالية مع ضغط ممتاز
+        preset_value = config.get('preset', 'medium')  # ✅ افتراضي medium = توازن
+        
         update_job_status(job_id, 90, "Rendering Video (Mixing)...")
         final_video.write_videofile(
             temp_mix_path, 
@@ -1308,8 +1323,9 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             codec='libx264', 
             audio_codec='aac', 
             audio_bitrate='192k',
-            preset='ultrafast', 
+            preset=preset_value,  # ✅ قابل للتعديل
             threads=os.cpu_count() or 4,
+            ffmpeg_params=['-crf', str(crf_value)],  # ✅ ضغط ذكي بدون فقدان جودة
             logger=ScopedQuranLogger(job_id)
         )
 
@@ -1427,6 +1443,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 # ⏱️ API: Estimate Duration (المدة التقريبية الفعلية)
 # ═══════════════════════════════════════
 @app.route('/api/estimate-duration', methods=['POST'])
+@limiter.limit("100 per hour")  # 🛡️ 100 طلب في الساعة (خفيف)
 def estimate_duration():
     """حساب المدة الفعلية للفيديو بناءً على توقيت الصوت"""
     try:
@@ -1529,6 +1546,7 @@ def format_duration(seconds):
 def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "API Running"
 
 @app.route('/api/generate', methods=['POST'])
+@limiter.limit("20 per hour")  # 🛡️ 20 فيديو في الساعة
 def gen():
     d = request.json
     
@@ -2095,6 +2113,7 @@ def recover_pending_batches():
         print(f"  ✅ Batch {batch_id[:8]}... queued for processing")
 
 @app.route('/api/batch/create', methods=['POST'])
+@limiter.limit("5 per hour")  # 🛡️ 5 دفعات في الساعة
 def create_batch():
     """إنشاء باتش جديد من فيديوهات متعددة - كل فيديو بإعداداته الخاصة"""
     d = request.json
