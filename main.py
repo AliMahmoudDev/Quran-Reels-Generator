@@ -92,8 +92,10 @@ AVAILABLE_FONTS = {
     'Arabic': os.path.join(FONT_DIR, "Arabic.ttf"),
     'Amiri': os.path.join(FONT_DIR, "Amiri.ttf"),
     'Uthmani': os.path.join(FONT_DIR, "Uthmani.ttf"),
-    'DTPN4': os.path.join(FONT_DIR, "DTPN4.ttf"),
 }
+
+# ✅ خط Amiri للأقواس (بيدعم الأقواس المزخرفة)
+FONT_PATH_BRACKETS = os.path.join(FONT_DIR, "Amiri.ttf")
 
 # ✅ الخطوط الإنجليزية المتاحة
 AVAILABLE_FONTS_EN = {
@@ -738,28 +740,66 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
     # الخط كبير لأنه سطر واحد
     final_fs = int(55 * scale_factor * size_mult)
     font = get_cached_font(font_path, final_fs)
-    
+
+    # ✅ خط Amiri للأقواس المزخرفة (بيظهرها صح)
+    font_brackets = get_cached_font(FONT_PATH_BRACKETS, final_fs)
+
+    # ✅ فصل النص عن الأقواس
+    # الأقواس المزخرفة: ﴿ ﴾
+    import re
+    bracket_match = re.search(r'([﴿﴾]+.*[﴿﴾]+)$', text)
+    if bracket_match:
+        main_text = text[:bracket_match.start()].strip()
+        bracket_text = bracket_match.group(1)
+    else:
+        main_text = text
+        bracket_text = ""
+
     img = Image.new('RGBA', (target_w, int(180 * scale_factor * size_mult)), (0,0,0,0))
     draw = ImageDraw.Draw(img)
-    w = draw.textbbox((0, 0), text, font=font, stroke_width=stroke_w)[2]
-    x = (target_w - w) // 2
+
+    # حساب عرض النص الكامل
+    if bracket_text:
+        main_w = draw.textbbox((0, 0), main_text, font=font, stroke_width=stroke_w)[2]
+        bracket_w = draw.textbbox((0, 0), " " + bracket_text, font=font_brackets, stroke_width=stroke_w)[2]
+        total_w = main_w + bracket_w
+    else:
+        total_w = draw.textbbox((0, 0), text, font=font, stroke_width=stroke_w)[2]
+
+    x = (target_w - total_w) // 2
     curr_y = 20
-        
+
     # ✅ ظل متعدد الطبقات لوضوح أفضل
     if has_shadow:
-        # طبقة ظل خارجية ناعمة (انتشار عريض)
         for offset in range(6, 0, -1):
-            opacity = int(80 - offset * 10)  # تدرج الشفافية
+            opacity = int(80 - offset * 10)
             shadow_color = (*[int(shadow_c.lstrip('#')[i:i+2], 16) for i in (0, 2, 4)], opacity)
-            draw.text((x+offset, curr_y+offset), text, font=font, fill=shadow_color)
-        # طبقة ظل داخلية حادة (للوضوح)
-        draw.text((x+3, curr_y+3), text, font=font, fill=(0, 0, 0, 180))
-    if glow: 
-        draw.text((x, curr_y), text, font=font, fill=(255,255,255,40), stroke_width=stroke_w+4, stroke_fill=(255,255,255,20))
-    
-    draw.text((x, curr_y), text, font=font, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
-    
-    # ✅ Fade يتم التحكم فيه من خارج الدالة
+            if main_text:
+                draw.text((x+offset, curr_y+offset), main_text, font=font, fill=shadow_color)
+            if bracket_text:
+                draw.text((x + main_w + offset, curr_y+offset), " " + bracket_text, font=font_brackets, fill=shadow_color)
+        draw.text((x+3, curr_y+3), main_text if main_text else text, font=font, fill=(0, 0, 0, 180))
+        if bracket_text:
+            draw.text((x + main_w + 3, curr_y+3), " " + bracket_text, font=font_brackets, fill=(0, 0, 0, 180))
+
+    if glow:
+        if main_text:
+            draw.text((x, curr_y), main_text, font=font, fill=(255,255,255,40), stroke_width=stroke_w+4, stroke_fill=(255,255,255,20))
+        if bracket_text:
+            draw.text((x + main_w, curr_y), " " + bracket_text, font=font_brackets, fill=(255,255,255,40), stroke_width=stroke_w+4, stroke_fill=(255,255,255,20))
+
+    # رسم النص الرئيسي
+    if main_text:
+        draw.text((x, curr_y), main_text, font=font, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
+        text_end_x = x + draw.textbbox((0, 0), main_text, font=font, stroke_width=stroke_w)[2]
+    else:
+        draw.text((x, curr_y), text, font=font, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
+        text_end_x = x + total_w
+
+    # رسم الأقواس بخط Amiri
+    if bracket_text:
+        draw.text((text_end_x, curr_y), " " + bracket_text, font=font_brackets, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
+
     clip = ImageClip(np.array(img)).set_duration(duration)
     return clip
 
@@ -1787,7 +1827,7 @@ def process_batch_queue():
                     
                     # معالجة الفيديو
                     style_settings = config.get('style', {})
-                    
+
                     build_video_task(
                         job_id,
                         config.get('pexelsKey', ''),
@@ -1802,7 +1842,9 @@ def process_batch_queue():
                         config.get('useGlow', False),
                         config.get('useVignette', False),
                         config.get('aspectRatio', '9:16'),
-                        style_settings
+                        style_settings,
+                        config.get('font', 'Arabic'),
+                        config.get('fontEn', 'English')
                     )
                     
                     # إعادة الحصول على الـ job بعد المعالجة
@@ -1870,16 +1912,16 @@ def recover_pending_batches():
 def create_batch():
     """إنشاء باتش جديد من فيديوهات متعددة - كل فيديو بإعداداته الخاصة"""
     d = request.json
-    
-    items = d.get('items', [])  # قائمة الفيديوهات [{surah, startAyah, endAyah, reciter, dynamicBg, useGlow, useVignette}, ...]
+
+    items = d.get('items', [])  # قائمة الفيديوهات [{surah, startAyah, endAyah, reciter, dynamicBg, useGlow, useVignette, aspectRatio, font, fontEn}, ...]
     session_id = d.get('sessionId')
-    
+
     print(f"📥 Batch create request received: {len(items)} items")
-    
+
     if not items:
         print("❌ No items provided")
         return jsonify({'ok': False, 'error': 'No items provided'}), 400
-    
+
     # الإعدادات العامة (fallback)
     global_config = {
         'reciter': d.get('reciter'),
@@ -1888,17 +1930,20 @@ def create_batch():
         'dynamicBg': d.get('dynamicBg', True),
         'useGlow': d.get('useGlow', True),
         'useVignette': d.get('useVignette', True),
+        'aspectRatio': d.get('aspectRatio', '9:16'),
+        'font': d.get('font', 'Arabic'),
+        'fontEn': d.get('fontEn', 'English'),
         'bgQuery': d.get('bgQuery', ''),
         'pexelsKey': d.get('pexelsKey', ''),
         'style': d.get('style', {}),
         'session_id': session_id
     }
-    
+
     # إنشاء الباتش
     batch_id = str(uuid.uuid4())
     db_create_batch(batch_id, len(items), global_config)
     print(f"📦 Created batch: {batch_id}")
-    
+
     # إنشاء الـ jobs والـ items
     for i, item in enumerate(items):
         # دمج الإعدادات الخاصة بالـ item مع الإعدادات العامة
@@ -1906,7 +1951,7 @@ def create_batch():
         job_config['surah'] = item['surah']
         job_config['startAyah'] = item['startAyah']
         job_config['endAyah'] = item['endAyah']
-        
+
         # الإعدادات الخاصة بالـ item (لو موجودة)
         if item.get('reciter'):
             job_config['reciter'] = item['reciter']
@@ -1916,7 +1961,13 @@ def create_batch():
             job_config['useGlow'] = item['useGlow']
         if item.get('useVignette') is not None:
             job_config['useVignette'] = item['useVignette']
-        
+        if item.get('aspectRatio'):
+            job_config['aspectRatio'] = item['aspectRatio']
+        if item.get('font'):
+            job_config['font'] = item['font']
+        if item.get('fontEn'):
+            job_config['fontEn'] = item['fontEn']
+
         job_id = create_job(job_config, session_id)
         db_add_batch_item(batch_id, job_id, i, item['surah'], item['startAyah'], item['endAyah'])
         print(f"  ✅ Created job {i+1}/{len(items)}: {job_id[:8]}...")
