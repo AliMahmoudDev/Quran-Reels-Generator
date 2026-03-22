@@ -87,16 +87,29 @@ FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
 VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
 
-# ✅ الخطوط المتاحة
+# ✅ الخطوط العربية المتاحة
 AVAILABLE_FONTS = {
     'Arabic': os.path.join(FONT_DIR, "Arabic.ttf"),
     'Amiri': os.path.join(FONT_DIR, "Amiri.ttf"),
     'Uthmani': os.path.join(FONT_DIR, "Uthmani.ttf"),
+    'DTPN4': os.path.join(FONT_DIR, "DTPN4.ttf"),
+}
+
+# ✅ الخطوط الإنجليزية المتاحة
+AVAILABLE_FONTS_EN = {
+    'English': os.path.join(FONT_DIR, "English.otf"),
+    'Cinzel': os.path.join(FONT_DIR, "Cinzel.ttf"),
+    'Playfair': os.path.join(FONT_DIR, "Playfair.ttf"),
+    'Lora': os.path.join(FONT_DIR, "Lora.ttf"),
 }
 
 def get_font_path(font_name):
-    """الحصول على مسار الخط بناءً على الاسم"""
+    """الحصول على مسار الخط العربي بناءً على الاسم"""
     return AVAILABLE_FONTS.get(font_name, FONT_PATH_ARABIC)
+
+def get_font_path_en(font_name):
+    """الحصول على مسار الخط الإنجليزي بناءً على الاسم"""
+    return AVAILABLE_FONTS_EN.get(font_name, FONT_PATH_ENGLISH)
 
 # Master Temp Directory
 BASE_TEMP_DIR = os.path.join(EXEC_DIR, "temp_workspaces")
@@ -750,9 +763,9 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
     clip = ImageClip(np.array(img)).set_duration(duration)
     return clip
 
-def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, style=None):
+def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, style=None, font_path=None):
     if style is None: style = {}
-    
+
     color = style.get('enColor', '#FFD700')
     size_mult = float(style.get('enSize', '1.0'))
     stroke_c = style.get('enOutC', '#000000')
@@ -760,8 +773,12 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, 
     has_shadow = style.get('enShadow', True)  # ✅ مفعّل افتراضياً
     shadow_c = style.get('enShadowC', '#000000')
 
+    # ✅ استخدام الخط المختار أو الافتراضي
+    if font_path is None:
+        font_path = FONT_PATH_ENGLISH
+
     final_fs = int(32 * scale_factor * size_mult)
-    font = get_cached_font(FONT_PATH_ENGLISH, final_fs)
+    font = get_cached_font(font_path, final_fs)
     
     h = int(150 * size_mult)
     img = Image.new('RGBA', (target_w, h), (0,0,0,0))
@@ -870,7 +887,7 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
 # ==========================================
 # ⚡ Optimized Video Builder (Segmented / Chunked)
 # ==========================================
-def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, aspect_ratio, style, font_name='Arabic'):
+def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, aspect_ratio, style, font_name='Arabic', font_name_en='English'):
     job = get_job(job_id)
     if not job:
         raise Exception(f"Job {job_id} not found - cannot process video")
@@ -881,6 +898,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 
     # ✅ تحديد مسار الخط
     font_path = get_font_path(font_name)
+    font_path_en = get_font_path_en(font_name_en)
 
     # تحديد الأبعاد بناءً على aspect_ratio و quality
     # 9:16 = ريلز/تيك توك (portrait), 1:1 = سوير (square), 16:9 = يوتيوب (landscape)
@@ -993,14 +1011,14 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 end_en = int((chunk_idx + 1) * avg_en_per_ar)
                 if chunk_idx == len(ar_chunks) - 1:
                     en_chunk = " ".join(en_words[start_en:])
-                    display_ar = f"{ar_chunk} ({ayah})" 
+                    display_ar = f"{ar_chunk} ﴿{ayah}﴾"  # ✅ أقواس قرآنية مزخرفة
                 else:
                     en_chunk = " ".join(en_words[start_en:end_en])
                     display_ar = ar_chunk
 
                 # د. إنشاء الكليبات البصرية (نستخدم actual_duration بدل chunk_duration)
                 ac = create_text_clip(display_ar, actual_duration, target_w, scale, use_glow, style=style, font_path=font_path)
-                ec = create_english_clip(en_chunk, actual_duration, target_w, scale, use_glow, style=style)
+                ec = create_english_clip(en_chunk, actual_duration, target_w, scale, use_glow, style=style, font_path=font_path_en)
                 
                 # ✅ Fade للنص في كل سطر (chunk) - مش بس الآية
                 TEXT_FADE = 0.35  # مدة fade النص
@@ -1312,6 +1330,7 @@ def gen():
         'useGlow': d.get('useGlow', False),
         'useVignette': d.get('useVignette', False),
         'font': d.get('font', 'Arabic'),
+        'fontEn': d.get('fontEn', 'English'),
         'pexelsKey': d.get('pexelsKey', ''),
         'style': d.get('style', {}),
         'session_id': session_id
@@ -1340,7 +1359,8 @@ def gen():
             d.get('useVignette',False),
             d.get('aspectRatio','9:16'),
             style_settings,
-            d.get('font', 'Arabic')
+            d.get('font', 'Arabic'),
+            d.get('fontEn', 'English')
         ),
         daemon=True
     ).start()
