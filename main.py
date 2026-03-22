@@ -746,7 +746,7 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
 
     # ✅ فصل النص عن الأقواس المزخرفة
     import re
-    bracket_match = re.search(r'([﴿﴾]+.*[﴿﴾]+)$', text)
+    bracket_match = re.search(r'([﴾﴿]+.*[﴾﴿]+)$', text)
     if bracket_match:
         main_text = text[:bracket_match.start()].strip()
         bracket_text = bracket_match.group(1)
