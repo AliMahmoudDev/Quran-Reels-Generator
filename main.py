@@ -763,14 +763,14 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
         main_w = draw.textbbox((0, 0), main_text, font=font, stroke_width=stroke_w)[2]
         total_w = main_w + bracket_w
     else:
-        bracket_w = 0  # ✅ قيمة افتراضية
-        main_w = 0  # ✅ قيمة افتراضية
+        bracket_w = 0
+        main_w = 0
         total_w = draw.textbbox((0, 0), text, font=font, stroke_width=stroke_w)[2]
 
     x = (target_w - total_w) // 2
     curr_y = 20
 
-    # ✅ في RTL: الأقواس تُرسم أولاً (عشان تظهر على اليمين)
+    # ✅ الأقواس على اليمين، النص على الشمال
     if has_shadow:
         for offset in range(6, 0, -1):
             opacity = int(80 - offset * 10)
@@ -793,7 +793,7 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
         if main_text:
             draw.text((x + bracket_w, curr_y), main_text, font=font, fill=(255,255,255,40), stroke_width=stroke_w+4, stroke_fill=(255,255,255,20))
 
-    # ✅ رسم الأقواس أولاً (على اليمين في RTL)
+    # ✅ رسم الأقواس أولاً (على اليمين)
     if bracket_text:
         draw.text((x, curr_y), bracket_text + " ", font=font_brackets, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
 
