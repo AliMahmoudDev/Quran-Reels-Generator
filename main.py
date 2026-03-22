@@ -1310,11 +1310,11 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         final_output_path = os.path.join(OUTPUTS_DIR, f"{job_id}.mp4")
         temp_mix_path = os.path.join(workspace, f"temp_mix_{job_id}.mp4")
         
-        # 🎬 إعدادات الضغط (قابلة للتعديل من الـ config)
-        # CRF: 18=جودة ممتازة, 23=جودة عالية (موصى), 28=جودة متوسطة
-        # Preset: ultrafast=سريع/حجم كبير, medium=متوازن, slow=ضغط أفضل
-        crf_value = config.get('crf', 23)  # ✅ افتراضي 23 = جودة عالية مع ضغط ممتاز
-        preset_value = config.get('preset', 'medium')  # ✅ افتراضي medium = توازن
+        # 🎬 إعدادات الضغط (قيم ثابتة للحصول على أفضل توازن)
+        # CRF 23 = جودة عالية مع ضغط ممتاز (لا يُرى فرق بالعين)
+        # Preset fast = سرعة جيدة + ضغط كفء
+        crf_value = 23
+        preset_value = 'fast'
         
         update_job_status(job_id, 90, "Rendering Video (Mixing)...")
         final_video.write_videofile(
@@ -1323,9 +1323,9 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             codec='libx264', 
             audio_codec='aac', 
             audio_bitrate='192k',
-            preset=preset_value,  # ✅ قابل للتعديل
+            preset=preset_value,
             threads=os.cpu_count() or 4,
-            ffmpeg_params=['-crf', str(crf_value)],  # ✅ ضغط ذكي بدون فقدان جودة
+            ffmpeg_params=['-crf', str(crf_value)],
             logger=ScopedQuranLogger(job_id)
         )
 
