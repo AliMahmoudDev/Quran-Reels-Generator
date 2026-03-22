@@ -640,9 +640,9 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     check_stop(job_id)
     seg = AudioSegment.from_file(full_audio_path)[t['start']:t['end']]
     
-    # حفظ الصوت بدون أي تعديل (من API timing مباشرة)
-    out = os.path.join(workspace_dir, f'part{idx}.mp3')
-    seg.export(out, format="mp3")
+    # ✅ حفظ بصيغة WAV لتجنب MP3 padding
+    out = os.path.join(workspace_dir, f'part{idx}.wav')
+    seg.export(out, format="wav")
     
     return out
 
@@ -650,14 +650,21 @@ def download_audio(reciter_key, surah, ayah, idx, workspace_dir, job_id):
     if reciter_key in NEW_RECITERS_CONFIG:
         return process_mp3quran_audio(reciter_key, surah, ayah, idx, workspace_dir, job_id)
     
+    # للقراء القدام (everyayah.com) - ننزل MP3 ونحوله لـ WAV
     url = f'https://everyayah.com/data/{reciter_key}/{surah:03d}{ayah:03d}.mp3'
-    out = os.path.join(workspace_dir, f'part{idx}.mp3')
-    smart_download(url, out, job_id)
+    temp_mp3 = os.path.join(workspace_dir, f'part{idx}_temp.mp3')
+    smart_download(url, temp_mp3, job_id)
     
-    snd = AudioSegment.from_file(out)
+    snd = AudioSegment.from_file(temp_mp3)
     start, end = detect_silence(snd, snd.dBFS-20), detect_silence(snd.reverse(), snd.dBFS-20)
     trimmed = snd[max(0, start-30):len(snd)-max(0, end-30)]
-    (AudioSegment.silent(duration=50) + trimmed.fade_in(20).fade_out(20)).export(out, format='mp3')
+    
+    # ✅ حفظ بصيغة WAV بدون fade أو silence
+    out = os.path.join(workspace_dir, f'part{idx}.wav')
+    trimmed.export(out, format="wav")
+    
+    # نحذف الـ temp MP3
+    if os.path.exists(temp_mp3): os.remove(temp_mp3)
     
     return out
 
