@@ -749,7 +749,7 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
     bracket_match = re.search(r'([﴾﴿]+.*[﴾﴿]+)$', text)
     if bracket_match:
         main_text = text[:bracket_match.start()].strip()
-        bracket_text = bracket_match.group(1)
+        bracket_text = bracket_match.group(1)[::-1]
     else:
         main_text = text
         bracket_text = ""
