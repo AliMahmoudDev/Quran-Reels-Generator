@@ -2065,12 +2065,12 @@
             const dateStr = date.toLocaleDateString('ar-EG') + ' ' + date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
             
             const now = Date.now() / 1000;
-            const remaining = Math.max(0, 3600 - (now - item.createdAt));
+            const remaining = Math.max(0, 43200 - (now - item.createdAt)); // 12 ساعة = 43200 ثانية
             const mins = Math.floor(remaining / 60);
             
             let timerHtml = '';
             if (item.status === 'complete' && remaining > 0) {
-                const urgent = mins < 10;
+                const urgent = mins < 60; // أقل من ساعة = عاجل
                 timerHtml = `<span class="history-timer ${urgent ? 'urgent' : ''}">⏰ ${mins} د</span>`;
             }
             
