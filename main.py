@@ -476,23 +476,23 @@ NEW_RECITERS_CONFIG = {
     'رعد الكردي': (221, "https://server6.mp3quran.net/kurdi/"),
     'أحمد العجمي': (5, "https://server10.mp3quran.net/ajm/"),
     'محمود خليل الحصري': (118, "https://server13.mp3quran.net/husr/Rewayat-Qalon-A-n-Nafi/"),
+    # ✅ قراء جداد من القدام (ليهم توقيتات في mp3quran)
+    'عبدالرحمن السديس': (54, "https://server11.mp3quran.net/sds/"),
+    'مشاري العفاسي': (123, "https://server8.mp3quran.net/afs/"),
+    'سعود الشريم': (31, "https://server7.mp3quran.net/shur/"),
+    'أبو بكر الشاطري': (4, "https://server11.mp3quran.net/shatri/"),
 }
 
 OLD_RECITERS_MAP = {
-    'أبو بكر الشاطري':'Abu_Bakr_Ash-Shaatree_128kbps',
     'ياسر الدوسري':'Yasser_Ad-Dussary_128kbps', 
-    'عبدالرحمن السديس': 'Abdurrahmaan_As-Sudais_64kbps', 
     'ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 
-    'سعود الشريم': 'Saood_ash-Shuraym_64kbps', 
-    'مشاري العفاسي': 'Alafasy_64kbps',
     'ناصر القطامي': 'Nasser_Alqatami_128kbps',
     'محمد صديق المنشاوي': 'Minshawy_Murattal_128kbps',
 }
 
-# 🎯 MP3Quran IDs للقراء الجدد فقط (للتوقيتات الدقيقة)
-# القراء القدام مش ليهم IDs صحيحة في mp3quran timing API
+# 🎯 MP3Quran IDs للقراء الجدد (للتوقيتات الدقيقة)
 MP3QURAN_IDS = {
-    # القراء الجداد بس - من NEW_RECITERS_CONFIG
+    # القراء الجداد
     'احمد النفيس': 259,
     'وديع اليماني': 219,
     'بندر بليلة': 217,
@@ -501,6 +501,11 @@ MP3QURAN_IDS = {
     'رعد الكردي': 221,
     'أحمد العجمي': 5,
     'محمود خليل الحصري': 118,
+    # قراء منقولين من القدام (ليهم توقيتات)
+    'عبدالرحمن السديس': 54,
+    'مشاري العفاسي': 123,
+    'سعود الشريم': 31,
+    'أبو بكر الشاطري': 4,
 }
 
 # 📁 مجلد تخزين التوقيتات
