@@ -434,6 +434,9 @@ NEW_RECITERS_CONFIG = {
     'ادريس أبكر': (12, "https://server6.mp3quran.net/abkr/"),
     'منصور السالمي': (245, "https://server14.mp3quran.net/mansor/"),
     'رعد الكردي': (221, "https://server6.mp3quran.net/kurdi/"),
+    'أحمد العجمي': (5, "https://server10.mp3quran.net/ajm/"),
+    'محمود خليل الحصري': (118, "https://server13.mp3quran.net/husr/Rewayat-Qalon-A-n-Nafi/"),
+    'محمد صديق المنشاوي': (112, "https://server10.mp3quran.net/minsh/Almusshaf-Al-Mo-lim/"),
 }
 
 OLD_RECITERS_MAP = {
