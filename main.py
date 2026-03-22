@@ -468,6 +468,43 @@ def db_get_pending_batches():
 VERSE_COUNTS = {1: 7, 2: 286, 3: 200, 4: 176, 5: 120, 6: 165, 7: 206, 8: 75, 9: 129, 10: 109, 11: 123, 12: 111, 13: 43, 14: 52, 15: 99, 16: 128, 17: 111, 18: 110, 19: 98, 20: 135, 21: 112, 22: 78, 23: 118, 24: 64, 25: 77, 26: 227, 27: 93, 28: 88, 29: 69, 30: 60, 31: 34, 32: 30, 33: 73, 34: 54, 35: 45, 36: 83, 37: 182, 38: 88, 39: 75, 40: 85, 41: 54, 42: 53, 43: 89, 44: 59, 45: 37, 46: 35, 47: 38, 48: 29, 49: 18, 50: 45, 51: 60, 52: 49, 53: 62, 54: 55, 55: 78, 56: 96, 57: 29, 58: 22, 59: 24, 60: 13, 61: 14, 62: 11, 63: 11, 64: 18, 65: 12, 66: 12, 67: 30, 68: 52, 69: 52, 70: 44, 71: 28, 72: 28, 73: 20, 74: 56, 75: 40, 76: 31, 77: 50, 78: 40, 79: 46, 80: 42, 81: 29, 82: 19, 83: 36, 84: 25, 85: 22, 86: 17, 87: 19, 88: 26, 89: 30, 90: 20, 91: 15, 92: 21, 93: 11, 94: 8, 95: 8, 96: 19, 97: 5, 98: 8, 99: 8, 100: 11, 101: 11, 102: 8, 103: 3, 104: 9, 105: 5, 106: 4, 107: 7, 108: 3, 109: 6, 110: 3, 111: 5, 112: 4, 113: 5, 114: 6}
 SURAH_NAMES =['الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه', 'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم', 'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر', 'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق', 'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة', 'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج', 'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد', 'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس']
 
+# ==========================================
+# ✅ Input Validation - التحقق من صحة المدخلات
+# ==========================================
+class ValidationError(Exception):
+    """استثناء مخصص لأخطاء التحقق"""
+    pass
+
+def validate_ayah_range(surah, start_ayah, end_ayah):
+    """
+    التحقق من صحة نطاق الآيات
+    يرجع True لو صحيح، أو يرفع ValidationError لو فيه خطأ
+    """
+    # التحقق من رقم السورة
+    if not (1 <= surah <= 114):
+        raise ValidationError(f"رقم السورة يجب أن يكون بين 1 و 114، تم إرسال: {surah}")
+    
+    # التحقق من أن آية البداية موجبة
+    if start_ayah < 1:
+        raise ValidationError(f"آية البداية يجب أن تكون أكبر من 0، تم إرسال: {start_ayah}")
+    
+    # التحقق من ترتيب الآيات
+    if start_ayah > end_ayah:
+        raise ValidationError(f"آية البداية ({start_ayah}) أكبر من آية النهاية ({end_ayah})")
+    
+    # التحقق من عدد آيات السورة
+    max_verses = VERSE_COUNTS.get(surah, 286)
+    if end_ayah > max_verses:
+        surah_name = SURAH_NAMES[surah - 1] if surah <= len(SURAH_NAMES) else f"سورة {surah}"
+        raise ValidationError(f"سورة {surah_name} تحتوي على {max_verses} آية فقط، تم طلب آية {end_ayah}")
+    
+    # تحذير لو عدد الآيات كبير (أكثر من 20)
+    ayah_count = end_ayah - start_ayah + 1
+    if ayah_count > 20:
+        print(f"⚠️ تحذير: عدد الآيات ({ayah_count}) كبير جداً - قد يستغرق وقتاً طويلاً")
+    
+    return True
+
 # 🚀 Reciters Config
 NEW_RECITERS_CONFIG = {
     'احمد النفيس': (259, "https://server16.mp3quran.net/nufais/Rewayat-Hafs-A-n-Assem/"),
@@ -1394,7 +1431,11 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         db_update_job(job_id, status=status, error=msg)
     
     finally:
-        # إغلاق جميع الملفات المفتوحة بحرص شديد
+        # ═══════════════════════════════════════
+        # 🧹 Memory Cleanup - تنظيف الذاكرة والملفات
+        # ═══════════════════════════════════════
+        
+        # 1. إغلاق جميع الـ clips المفتوحة
         for ac in audio_clips_to_close:
             try: ac.close()
             except: pass
@@ -1407,9 +1448,20 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             if 'final_video' in locals(): final_video.close()
             for s in final_segments: s.close()
         except: pass
+        
+        # 2. تنظيف الـ numpy arrays المؤقتة
+        try:
+            if 'frame' in locals():
+                del frame
+            if 'bg_array' in locals():
+                del bg_array
+        except: pass
+        
+        # 3. تنظيف ذاكرة بايثون (مرتين للتأكد)
+        gc.collect()
         gc.collect()
         
-        # 🧹 حذف جميع الملفات المؤقتة
+        # 4. حذف جميع الملفات المؤقتة
         try:
             # حذف مجلد العمل المؤقت بالكامل
             if workspace and os.path.exists(workspace):
@@ -1436,8 +1488,25 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                     except: pass
                 print(f"🧹 Cleaned vision backgrounds")
                 
+            # حذف ملفات temp_timings المؤقتة
+            timings_cache = os.path.join(EXEC_DIR, "cache_timings")
+            if os.path.exists(timings_cache):
+                # نحتفظ بالملفات اللي أقل من ساعة
+                now = time.time()
+                for f in os.listdir(timings_cache):
+                    fpath = os.path.join(timings_cache, f)
+                    try:
+                        if os.path.isfile(fpath) and (now - os.path.getmtime(fpath)) > 3600:
+                            os.remove(fpath)
+                    except: pass
+                print(f"🧹 Cleaned old timings cache")
+                
         except Exception as cleanup_err:
             print(f"⚠️ Cleanup error: {cleanup_err}")
+        
+        # 5. تنظيف نهائي للذاكرة
+        gc.collect()
+        print(f"✅ Memory cleanup completed for job: {job_id}")
 
 # ═══════════════════════════════════════
 # ⏱️ API: Estimate Duration (المدة التقريبية الفعلية)
@@ -1542,6 +1611,56 @@ def format_duration(seconds):
             return f"{hours} س {mins} د"
         return f"{hours} ساعة"
 
+# ═══════════════════════════════════════
+# 🏥 API: Health Check - للمراقبة
+# ═══════════════════════════════════════
+START_TIME = time.time()  # لتتبع وقت التشغيل
+
+@app.route('/api/health')
+def health_check():
+    """
+    Endpoint للمراقبة - يرجع حالة السيرفر
+    يُستخدم من أدوات المراقبة للتأكد من أن الخدمة تعمل
+    """
+    try:
+        # عدد العمليات النشطة
+        active_jobs = len([j for j in JOBS.values() if j.get('is_running')])
+        
+        # عدد العمليات المكتملة اليوم
+        today = datetime.date.today().isoformat()
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM history WHERE date(created_at) = ?", (today,))
+        today_count = c.fetchone()[0]
+        conn.close()
+        
+        # الذاكرة المستخدمة (تقريبية)
+        import psutil
+        memory_percent = psutil.virtual_memory().percent
+        memory_used = round(psutil.virtual_memory().used / (1024**3), 2)  # GB
+    except:
+        active_jobs = len([j for j in JOBS.values() if j.get('is_running')])
+        today_count = 0
+        memory_percent = 0
+        memory_used = 0
+    
+    uptime_seconds = int(time.time() - START_TIME)
+    uptime_hours = uptime_seconds // 3600
+    uptime_mins = (uptime_seconds % 3600) // 60
+    
+    return jsonify({
+        'status': 'healthy',
+        'uptime': f"{uptime_hours}س {uptime_mins}د",
+        'uptime_seconds': uptime_seconds,
+        'active_jobs': active_jobs,
+        'videos_today': today_count,
+        'memory': {
+            'percent': memory_percent,
+            'used_gb': memory_used
+        },
+        'timestamp': datetime.datetime.now().isoformat()
+    })
+
 @app.route('/')
 def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "API Running"
 
@@ -1553,11 +1672,24 @@ def gen():
     # استخراج session_id من الطلب
     session_id = d.get('sessionId')
     
+    # ✅ التحقق من صحة المدخلات
+    try:
+        surah = int(d['surah'])
+        start_ayah = int(d['startAyah'])
+        end_ayah = int(d.get('endAyah', start_ayah))
+        
+        # التحقق من نطاق الآيات
+        validate_ayah_range(surah, start_ayah, end_ayah)
+    except ValidationError as ve:
+        return jsonify({'ok': False, 'error': str(ve)}), 400
+    except (ValueError, KeyError) as e:
+        return jsonify({'ok': False, 'error': f'بيانات غير صحيحة: {str(e)}'}), 400
+    
     # Create job with config for persistence
     config = {
-        'surah': int(d['surah']),
-        'startAyah': int(d['startAyah']),
-        'endAyah': int(d.get('endAyah', 0)),
+        'surah': surah,
+        'startAyah': start_ayah,
+        'endAyah': end_ayah,
         'reciter': d['reciter'],
         'quality': d.get('quality', '720'),
         'fps': d.get('fps', '20'),
@@ -1582,11 +1714,11 @@ def gen():
         target=build_video_task,
         args=(
             job_id,
-            d['pexelsKey'],
+            d.get('pexelsKey', ''),
             d['reciter'],
-            int(d['surah']),
-            int(d['startAyah']),
-            int(d.get('endAyah',0)),
+            surah,
+            start_ayah,
+            end_ayah,
             d.get('quality','720'),
             d.get('bgQuery',''),
             int(d.get('fps',20)),
