@@ -46,14 +46,16 @@ from deep_translator import GoogleTranslator
 # ⚙️ Configuration & Setup
 # ==========================================
 
-STUDIO_DRY_FILTER = (
-    "highpass=f=60, "
-    "equalizer=f=200:width_type=h:width=200:g=3, "
-    "equalizer=f=8000:width_type=h:width=1000:g=2, "
-    "acompressor=threshold=-21dB:ratio=4:attack=200:release=1000, "
-    "extrastereo=m=1.3, "
-    "loudnorm=I=-16:TP=-1.5:LRA=11"
-)
+# STUDIO_DRY_FILTER - معطل مؤقتاً (كان يسبب صدى)
+# لو حبيت ترجعه: uncomment اللي تحت وفك تعليق الفلتر في السطر 1052
+# STUDIO_DRY_FILTER = (
+#     "highpass=f=60, "
+#     "equalizer=f=200:width_type=h:width=200:g=3, "
+#     "equalizer=f=8000:width_type=h:width=1000:g=2, "
+#     "acompressor=threshold=-21dB:ratio=4:attack=200:release=1000, "
+#     "extrastereo=m=1.3, "
+#     "loudnorm=I=-16:TP=-1.5:LRA=11"
+# )
 
 
 def app_dir():
@@ -1045,21 +1047,9 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             logger=ScopedQuranLogger(job_id)
         )
 
-        # 6. معالجة وتوحيد الصوت (Studio Dry Filter)
-        update_job_status(job_id, 98, "Mastering Audio (Dry Studio)...")
-        cmd = (
-            f'ffmpeg -y -i "{temp_mix_path}" '
-            f'-af "{STUDIO_DRY_FILTER}" '
-            f'-c:v copy '
-            f'-c:a aac -b:a 192k '
-            f'"{final_output_path}"'
-        )
-        
-        if os.system(cmd) != 0: 
-            # في حال فشل الفلتر لأي سبب، نستخدم النسخة الأصلية
-            shutil.move(temp_mix_path, final_output_path)
-        else:
-            if os.path.exists(temp_mix_path): os.remove(temp_mix_path)
+        # 6. حفظ الفيديو النهائي مباشرة (بدون فلتر صوتي)
+        # لو حبيت ترجع الفلتر: uncomment الكود القديم في الأعلى وشيل التعليق من STUDIO_DRY_FILTER
+        shutil.move(temp_mix_path, final_output_path)
 
         with JOBS_LOCK: 
             if job_id in JOBS:
