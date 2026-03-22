@@ -95,7 +95,7 @@ AVAILABLE_FONTS = {
 }
 
 # ✅ خط Amiri للأقواس (بيدعم الأقواس المزخرفة)
-FONT_PATH_BRACKETS = os.path.join(FONT_DIR, "Arabic.ttf")
+FONT_PATH_BRACKETS = os.path.join(FONT_DIR, "Amiri.ttf")
 
 # ✅ الخطوط الإنجليزية المتاحة
 AVAILABLE_FONTS_EN = {
@@ -746,7 +746,7 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
 
     # ✅ فصل النص عن الأقواس المزخرفة
     import re
-    bracket_match = re.search(r'(\(.*\))$', text)
+    bracket_match = re.search(r'([﴾﴿]+.*[﴾﴿]+)$', text)
     if bracket_match:
         main_text = text[:bracket_match.start()].strip()
         bracket_text = bracket_match.group(1)[::-1]
@@ -1091,7 +1091,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 end_en = int((chunk_idx + 1) * avg_en_per_ar)
                 if chunk_idx == len(ar_chunks) - 1:
                     en_chunk = " ".join(en_words[start_en:])
-                    display_ar = f"{ar_chunk} ({ayah})"  # ✅ أقواس عادية بخط Arabic المزخرف
+                    display_ar = f"{ar_chunk} ﴿{ayah}﴾"  # ✅ أقواس قرآنية مزخرفة
                 else:
                     en_chunk = " ".join(en_words[start_en:end_en])
                     display_ar = ar_chunk
