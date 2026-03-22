@@ -594,7 +594,7 @@ def cleanup_job(job_id):
     with JOBS_LOCK:
         job = JOBS.pop(job_id, None)
     # Don't delete files - keep them for download
-    # Files will be cleaned up by background_cleanup after 24h
+    # Files will be cleaned up by background_cleanup after 12h
 
 class ScopedQuranLogger(ProgressBarLogger):
     def __init__(self, job_id):
@@ -1693,8 +1693,8 @@ def background_cleanup():
     while True:
         time.sleep(600)  # Every 10 minutes
         try:
-            db_cleanup_old_jobs(hours=1)  # Clean jobs older than 1 hour
-            print("🧹 Background cleanup completed (1 hour expiry)")
+            db_cleanup_old_jobs(hours=12)  # Clean jobs older than 12 hours
+            print("🧹 Background cleanup completed (12 hour expiry)")
         except Exception as e:
             print(f"Cleanup error: {e}")
 
