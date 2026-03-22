@@ -234,6 +234,20 @@ def init_db():
         c.execute("ALTER TABLE batch_items ADD COLUMN error TEXT")
         print("✅ Added error to batch_items table")
     
+    # Migration: إضافة video_started_at لـ batch_items
+    try:
+        c.execute("SELECT video_started_at FROM batch_items LIMIT 1")
+    except sqlite3.OperationalError:
+        c.execute("ALTER TABLE batch_items ADD COLUMN video_started_at REAL")
+        print("✅ Added video_started_at to batch_items table")
+    
+    # Migration: إضافة avg_video_time لـ batch_jobs
+    try:
+        c.execute("SELECT avg_video_time FROM batch_jobs LIMIT 1")
+    except sqlite3.OperationalError:
+        c.execute("ALTER TABLE batch_jobs ADD COLUMN avg_video_time REAL")
+        print("✅ Added avg_video_time to batch_jobs table")
+    
     conn.commit()
     conn.close()
     print("✅ Database initialized successfully!")
@@ -1858,8 +1872,9 @@ def process_batch_queue():
                     
                     config = json.loads(job['config_json'])
                     
-                    # تحديث حالة الـ item
-                    db_update_batch_item(batch_id, job_id, status='processing')
+                    # تحديث حالة الـ item مع وقت البداية
+                    video_start_time = time.time()
+                    db_update_batch_item(batch_id, job_id, status='processing', video_started_at=video_start_time)
                     db_update_batch(batch_id, current_job_id=job_id, current_job_index=item['position'])
                     
                     print(f"  🎬 Processing video {item['position'] + 1}/{len(items)}: Surah {item['surah']}, Ayah {item['start_ayah']}")
@@ -1886,6 +1901,9 @@ def process_batch_queue():
                         config.get('fontEn', 'English')
                     )
                     
+                    # حساب وقت الفيديو
+                    video_time = time.time() - video_start_time
+                    
                     # إعادة الحصول على الـ job بعد المعالجة
                     updated_job = db_get_job(job_id)
                     output_path = updated_job.get('output_path') if updated_job else None
@@ -1893,10 +1911,14 @@ def process_batch_queue():
                     # تحديث حالة الـ item
                     db_update_batch_item(batch_id, job_id, status='complete', output_path=output_path)
                     
-                    # تحديث الـ batch counter
+                    # تحديث الـ batch counter ومتوسط الوقت
                     batch = db_get_batch(batch_id)
-                    db_update_batch(batch_id, completed_jobs=(batch['completed_jobs'] or 0) + 1)
-                    print(f"  ✅ Video {item['position'] + 1} complete!")
+                    completed = (batch['completed_jobs'] or 0) + 1
+                    old_avg = batch.get('avg_video_time') or 0
+                    # حساب المتوسط الجديد
+                    new_avg = ((old_avg * (completed - 1)) + video_time) / completed
+                    db_update_batch(batch_id, completed_jobs=completed, avg_video_time=new_avg)
+                    print(f"  ✅ Video {item['position'] + 1} complete! (took {video_time:.1f}s, avg: {new_avg:.1f}s)")
                     
                 except Exception as item_error:
                     print(f"  ❌ Video {item.get('position', '?') + 1} failed: {item_error}")
@@ -2047,9 +2069,12 @@ def get_batch_status():
     
     # إضافة معلومات كل فيديو
     items_info = []
+    current_video = None
+    current_item_started_at = None
+    
     for item in items:
         job = db_get_job(item['job_id'])
-        items_info.append({
+        item_info = {
             'position': item['position'],
             'surah': item['surah'],
             'startAyah': item['start_ayah'],
@@ -2058,7 +2083,32 @@ def get_batch_status():
             'jobId': item['job_id'],
             'percent': job.get('percent', 0) if job else 0,
             'downloadUrl': f"/api/download?jobId={item['job_id']}" if item['status'] == 'complete' and job and job.get('output_path') else None
-        })
+        }
+        items_info.append(item_info)
+        
+        # تحديد الفيديو الحالي
+        if item['status'] == 'processing':
+            current_video = item_info
+            current_item_started_at = item.get('video_started_at')
+    
+    # حساب الوقت المتبقي
+    remaining_time = None
+    remaining_videos = batch['total_jobs'] - (batch['completed_jobs'] or 0) - (batch['failed_jobs'] or 0)
+    
+    if batch['status'] == 'running':
+        avg_time = batch.get('avg_video_time') or 45  # افتراض 45 ثانية لو مفيش متوسط
+        remaining_time = int(remaining_videos * avg_time)
+        
+        # لو فيه فيديو حالي، نطرح الوقت اللي فات
+        if current_item_started_at:
+            elapsed = time.time() - current_item_started_at
+            remaining_time = max(0, remaining_time - int(elapsed))
+    
+    # الحصول على اسم السورة للفيديو الحالي
+    surah_name = None
+    if current_video:
+        surah_names = get_surah_names()
+        surah_name = surah_names.get(str(current_video['surah']), f"سورة {current_video['surah']}")
     
     return jsonify({
         'ok': True,
@@ -2072,6 +2122,15 @@ def get_batch_status():
             'createdAt': batch['created_at'],
             'startedAt': batch.get('started_at'),
             'completedAt': batch.get('completed_at'),
+            'avgVideoTime': batch.get('avg_video_time'),
+            'remainingTime': remaining_time,
+            'remainingVideos': remaining_videos,
+            'currentVideo': {
+                'surahName': surah_name,
+                'surah': current_video['surah'] if current_video else None,
+                'ayah': current_video['startAyah'] if current_video else None,
+                'position': current_video['position'] if current_video else None
+            } if current_video else None,
             'items': items_info
         }
     })

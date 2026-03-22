@@ -1311,6 +1311,12 @@
                             <div class="progress-percent" id="batchProgressPercent">0%</div>
                         </div>
                         <div class="progress-status" id="batchProgressStatus">جاري التحضير...</div>
+                        <div id="batchCurrentVideo" style="margin-top: 8px; font-size: 0.9rem; color: var(--accent); display: none;">
+                            🎬 <span id="batchCurrentVideoName">--</span>
+                        </div>
+                        <div id="batchRemainingTime" style="margin-top: 6px; font-size: 0.85rem; color: var(--text-muted); display: none;">
+                            ⏱️ الوقت المتبقي: <span id="batchRemainingTimeValue" style="color: var(--accent);">--:--</span>
+                        </div>
                         <div style="margin-top: 12px; font-size: 0.85rem; color: var(--text-muted);">
                             <span id="batchCompletedCount">0</span> / <span id="batchTotalCount">0</span> فيديو
                         </div>
@@ -2899,15 +2905,56 @@
             document.getElementById('batchCompletedCount').textContent = completed + failed;
             
             const statusEl = document.getElementById('batchProgressStatus');
+            const currentVideoEl = document.getElementById('batchCurrentVideo');
+            const currentVideoNameEl = document.getElementById('batchCurrentVideoName');
+            const remainingTimeEl = document.getElementById('batchRemainingTime');
+            const remainingTimeValueEl = document.getElementById('batchRemainingTimeValue');
+            
             if (batch.status === 'running') {
                 statusEl.textContent = `جاري المعالجة... (${batch.currentJobIndex + 1}/${total})`;
+                
+                // عرض الفيديو الحالي
+                if (batch.currentVideo) {
+                    currentVideoEl.style.display = 'block';
+                    currentVideoNameEl.textContent = `${batch.currentVideo.surahName} - آية ${batch.currentVideo.ayah}`;
+                } else {
+                    currentVideoEl.style.display = 'none';
+                }
+                
+                // عرض الوقت المتبقي
+                if (batch.remainingTime !== null && batch.remainingTime !== undefined) {
+                    remainingTimeEl.style.display = 'block';
+                    remainingTimeValueEl.textContent = formatTime(batch.remainingTime);
+                } else {
+                    remainingTimeEl.style.display = 'none';
+                }
             } else if (batch.status === 'complete') {
                 statusEl.textContent = `✅ اكتمل!`;
+                currentVideoEl.style.display = 'none';
+                remainingTimeEl.style.display = 'none';
             } else if (batch.status === 'cancelled') {
                 statusEl.textContent = `⚠️ تم الإلغاء`;
+                currentVideoEl.style.display = 'none';
+                remainingTimeEl.style.display = 'none';
             } else if (batch.status === 'pending') {
                 statusEl.textContent = `⏳ في الانتظار...`;
+                currentVideoEl.style.display = 'none';
+                remainingTimeEl.style.display = 'none';
             }
+        }
+        
+        function formatTime(seconds) {
+            if (seconds < 60) {
+                return `${seconds} ثانية`;
+            }
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            if (mins >= 60) {
+                const hours = Math.floor(mins / 60);
+                const remainMins = mins % 60;
+                return `${hours} ساعة ${remainMins} د`;
+            }
+            return `${mins} د ${secs} ث`;
         }
 
         function initBatchPage() {
