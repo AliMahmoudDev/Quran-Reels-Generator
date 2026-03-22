@@ -2066,12 +2066,20 @@
             
             const now = Date.now() / 1000;
             const remaining = Math.max(0, 43200 - (now - item.createdAt)); // 12 ساعة = 43200 ثانية
-            const mins = Math.floor(remaining / 60);
+            
+            // تنسيق الوقت الذكي
+            function formatRemaining(secs) {
+                if (secs < 60) return `${secs} ث`;
+                if (secs < 3600) return `${Math.floor(secs / 60)} د`;
+                const hours = Math.floor(secs / 3600);
+                const mins = Math.floor((secs % 3600) / 60);
+                return mins > 0 ? `${hours} س ${mins} د` : `${hours} س`;
+            }
             
             let timerHtml = '';
             if (item.status === 'complete' && remaining > 0) {
-                const urgent = mins < 60; // أقل من ساعة = عاجل
-                timerHtml = `<span class="history-timer ${urgent ? 'urgent' : ''}">⏰ ${mins} د</span>`;
+                const urgent = remaining < 3600; // أقل من ساعة = عاجل
+                timerHtml = `<span class="history-timer ${urgent ? 'urgent' : ''}">⏰ ${formatRemaining(remaining)}</span>`;
             }
             
             const statusIcon = item.status === 'complete' ? '✅' : item.status === 'error' ? '❌' : '⏳';
