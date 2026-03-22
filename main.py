@@ -763,6 +763,8 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
         main_w = draw.textbbox((0, 0), main_text, font=font, stroke_width=stroke_w)[2]
         total_w = main_w + bracket_w
     else:
+        bracket_w = 0  # ✅ قيمة افتراضية
+        main_w = 0  # ✅ قيمة افتراضية
         total_w = draw.textbbox((0, 0), text, font=font, stroke_width=stroke_w)[2]
 
     x = (target_w - total_w) // 2
