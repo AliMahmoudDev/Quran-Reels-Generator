@@ -2107,8 +2107,8 @@ def get_batch_status():
     # الحصول على اسم السورة للفيديو الحالي
     surah_name = None
     if current_video:
-        surah_names = get_surah_names()
-        surah_name = surah_names.get(str(current_video['surah']), f"سورة {current_video['surah']}")
+        surah_idx = current_video['surah'] - 1  # السور مرقمة من 1، الـ list من 0
+        surah_name = SURAH_NAMES[surah_idx] if 0 <= surah_idx < len(SURAH_NAMES) else f"سورة {current_video['surah']}"
     
     return jsonify({
         'ok': True,
