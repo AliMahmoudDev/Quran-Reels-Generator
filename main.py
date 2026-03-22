@@ -1022,15 +1022,16 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         merged_audio = concatenate_audioclips(audio_clips)
         
         # نشيل الصوت من الفيديو clips وندمج الفيديو لوحده
+        # استخدام method="chain" بدل "compose" لتجنب overlap تلقائي
         video_clips_no_audio = [seg.set_audio(None) for seg in final_segments]
-        final_video = concatenate_videoclips(video_clips_no_audio, method="compose")
+        final_video = concatenate_videoclips(video_clips_no_audio, method="chain")
         
         # نربط الصوت المدمج الجديد بالفيديو
         final_video = final_video.set_audio(merged_audio)
         
-        # ✅ Fade للصوت في بداية ونهاية الفيديو الكلي فقط (نص ثانية)
-        AUDIO_FADE = 0.5  # نص ثانية
-        final_video = final_video.audio_fadein(AUDIO_FADE).audio_fadeout(AUDIO_FADE)
+        # ✅ Fade للصوت معطل مؤقتاً - يمكن يسبب مشاكل في الدمج
+        # AUDIO_FADE = 0.5
+        # final_video = final_video.audio_fadein(AUDIO_FADE).audio_fadeout(AUDIO_FADE)
         
         # حفظ الفيديو النهائي في مجلد outputs
         final_output_path = os.path.join(OUTPUTS_DIR, f"{job_id}.mp4")
