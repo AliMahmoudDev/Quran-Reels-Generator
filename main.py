@@ -82,10 +82,21 @@ AudioSegment.ffmpeg = FFMPEG_EXE
 
 # Asset Paths
 FONT_DIR = os.path.join(EXEC_DIR, "fonts")
-FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Arabic.ttf") 
+FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Arabic.ttf")
 FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
 VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
+
+# ✅ الخطوط المتاحة
+AVAILABLE_FONTS = {
+    'Arabic': os.path.join(FONT_DIR, "Arabic.ttf"),
+    'Amiri': os.path.join(FONT_DIR, "Amiri.ttf"),
+    'Uthmani': os.path.join(FONT_DIR, "Uthmani.ttf"),
+}
+
+def get_font_path(font_name):
+    """الحصول على مسار الخط بناءً على الاسم"""
+    return AVAILABLE_FONTS.get(font_name, FONT_PATH_ARABIC)
 
 # Master Temp Directory
 BASE_TEMP_DIR = os.path.join(EXEC_DIR, "temp_workspaces")
@@ -697,9 +708,9 @@ def create_vignette_mask(w, h):
 # 🎨 Visual Elements
 # ==========================================
 
-def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, style=None):
+def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, style=None, font_path=None):
     if style is None: style = {}
-    
+
     color = style.get('arColor', '#ffffff')
     size_mult = float(style.get('arSize', '1.0'))
     stroke_c = style.get('arOutC', '#000000')
@@ -707,9 +718,13 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
     has_shadow = style.get('arShadow', True)  # ✅ مفعّل افتراضياً
     shadow_c = style.get('arShadowC', '#000000')
 
+    # ✅ استخدام الخط المختار أو الافتراضي
+    if font_path is None:
+        font_path = FONT_PATH_ARABIC
+
     # الخط كبير لأنه سطر واحد
     final_fs = int(55 * scale_factor * size_mult)
-    font = get_cached_font(FONT_PATH_ARABIC, final_fs)
+    font = get_cached_font(font_path, final_fs)
     
     img = Image.new('RGBA', (target_w, int(180 * scale_factor * size_mult)), (0,0,0,0))
     draw = ImageDraw.Draw(img)
@@ -855,15 +870,18 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
 # ==========================================
 # ⚡ Optimized Video Builder (Segmented / Chunked)
 # ==========================================
-def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, aspect_ratio, style):
+def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, aspect_ratio, style, font_name='Arabic'):
     job = get_job(job_id)
     if not job:
         raise Exception(f"Job {job_id} not found - cannot process video")
-    
+
     workspace = job['workspace']
     if not workspace:
         raise Exception(f"Job {job_id} has no workspace")
-    
+
+    # ✅ تحديد مسار الخط
+    font_path = get_font_path(font_name)
+
     # تحديد الأبعاد بناءً على aspect_ratio و quality
     # 9:16 = ريلز/تيك توك (portrait), 1:1 = سوير (square), 16:9 = يوتيوب (landscape)
     if aspect_ratio == '1:1':
@@ -981,7 +999,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                     display_ar = ar_chunk
 
                 # د. إنشاء الكليبات البصرية (نستخدم actual_duration بدل chunk_duration)
-                ac = create_text_clip(display_ar, actual_duration, target_w, scale, use_glow, style=style)
+                ac = create_text_clip(display_ar, actual_duration, target_w, scale, use_glow, style=style, font_path=font_path)
                 ec = create_english_clip(en_chunk, actual_duration, target_w, scale, use_glow, style=style)
                 
                 # ✅ Fade للنص في كل سطر (chunk) - مش بس الآية
@@ -1293,35 +1311,37 @@ def gen():
         'dynamicBg': d.get('dynamicBg', False),
         'useGlow': d.get('useGlow', False),
         'useVignette': d.get('useVignette', False),
+        'font': d.get('font', 'Arabic'),
         'pexelsKey': d.get('pexelsKey', ''),
         'style': d.get('style', {}),
         'session_id': session_id
     }
-    
+
     job_id = create_job(config, session_id)
-    style_settings = d.get('style', {}) 
-    
+    style_settings = d.get('style', {})
+
     # Update status to processing
     update_job_status(job_id, 0, 'processing')
-    
+
     threading.Thread(
-        target=build_video_task, 
+        target=build_video_task,
         args=(
-            job_id, 
-            d['pexelsKey'], 
-            d['reciter'], 
-            int(d['surah']), 
-            int(d['startAyah']), 
-            int(d.get('endAyah',0)), 
-            d.get('quality','720'), 
-            d.get('bgQuery',''), 
-            int(d.get('fps',20)), 
-            d.get('dynamicBg',False), 
-            d.get('useGlow',False), 
+            job_id,
+            d['pexelsKey'],
+            d['reciter'],
+            int(d['surah']),
+            int(d['startAyah']),
+            int(d.get('endAyah',0)),
+            d.get('quality','720'),
+            d.get('bgQuery',''),
+            int(d.get('fps',20)),
+            d.get('dynamicBg',False),
+            d.get('useGlow',False),
             d.get('useVignette',False),
             d.get('aspectRatio','9:16'),
-            style_settings
-        ), 
+            style_settings,
+            d.get('font', 'Arabic')
+        ),
         daemon=True
     ).start()
     
