@@ -970,8 +970,9 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 
                 # ✅ Fade للنص في كل سطر (chunk) - مش بس الآية
                 TEXT_FADE = 0.35  # مدة fade النص
-                ac = ac.crossfadein(TEXT_FADE).crossfadeout(TEXT_FADE)
-                ec = ec.crossfadein(TEXT_FADE).crossfadeout(TEXT_FADE)
+                # استخدام fadein/fadeout بدل crossfadein/crossfadeout لتجنب تكرار الصوت
+                ac = ac.fadein(TEXT_FADE).fadeout(TEXT_FADE)
+                ec = ec.fadein(TEXT_FADE).fadeout(TEXT_FADE)
                 
                 is_first_chunk = (chunk_idx == 0)
                 is_last_chunk = (chunk_idx == len(ar_chunks) - 1)
