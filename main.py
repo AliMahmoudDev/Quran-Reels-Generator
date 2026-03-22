@@ -744,8 +744,7 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
     # ✅ خط Amiri للأقواس المزخرفة (بيظهرها صح)
     font_brackets = get_cached_font(FONT_PATH_BRACKETS, final_fs)
 
-    # ✅ فصل النص عن الأقواس
-    # الأقواس المزخرفة: ﴿ ﴾
+    # ✅ فصل النص عن الأقواس المزخرفة
     import re
     bracket_match = re.search(r'([﴿﴾]+.*[﴿﴾]+)$', text)
     if bracket_match:
@@ -760,8 +759,8 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
 
     # حساب عرض النص الكامل
     if bracket_text:
+        bracket_w = draw.textbbox((0, 0), bracket_text + " ", font=font_brackets, stroke_width=stroke_w)[2]
         main_w = draw.textbbox((0, 0), main_text, font=font, stroke_width=stroke_w)[2]
-        bracket_w = draw.textbbox((0, 0), " " + bracket_text, font=font_brackets, stroke_width=stroke_w)[2]
         total_w = main_w + bracket_w
     else:
         total_w = draw.textbbox((0, 0), text, font=font, stroke_width=stroke_w)[2]
@@ -769,36 +768,38 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
     x = (target_w - total_w) // 2
     curr_y = 20
 
-    # ✅ ظل متعدد الطبقات لوضوح أفضل
+    # ✅ في RTL: الأقواس تُرسم أولاً (عشان تظهر على اليمين)
     if has_shadow:
         for offset in range(6, 0, -1):
             opacity = int(80 - offset * 10)
             shadow_color = (*[int(shadow_c.lstrip('#')[i:i+2], 16) for i in (0, 2, 4)], opacity)
-            if main_text:
-                draw.text((x+offset, curr_y+offset), main_text, font=font, fill=shadow_color)
+            # ✅ نرسم الأقواس أولاً (على اليمين)
             if bracket_text:
-                draw.text((x + main_w + offset, curr_y+offset), " " + bracket_text, font=font_brackets, fill=shadow_color)
-        draw.text((x+3, curr_y+3), main_text if main_text else text, font=font, fill=(0, 0, 0, 180))
+                draw.text((x+offset, curr_y+offset), bracket_text + " ", font=font_brackets, fill=shadow_color)
+            # ثم النص (على الشمال)
+            if main_text:
+                draw.text((x + bracket_w + offset, curr_y+offset), main_text, font=font, fill=shadow_color)
+        # ظل داخلي
         if bracket_text:
-            draw.text((x + main_w + 3, curr_y+3), " " + bracket_text, font=font_brackets, fill=(0, 0, 0, 180))
+            draw.text((x+3, curr_y+3), bracket_text + " ", font=font_brackets, fill=(0, 0, 0, 180))
+        if main_text:
+            draw.text((x + bracket_w + 3, curr_y+3), main_text, font=font, fill=(0, 0, 0, 180))
 
     if glow:
-        if main_text:
-            draw.text((x, curr_y), main_text, font=font, fill=(255,255,255,40), stroke_width=stroke_w+4, stroke_fill=(255,255,255,20))
         if bracket_text:
-            draw.text((x + main_w, curr_y), " " + bracket_text, font=font_brackets, fill=(255,255,255,40), stroke_width=stroke_w+4, stroke_fill=(255,255,255,20))
+            draw.text((x, curr_y), bracket_text + " ", font=font_brackets, fill=(255,255,255,40), stroke_width=stroke_w+4, stroke_fill=(255,255,255,20))
+        if main_text:
+            draw.text((x + bracket_w, curr_y), main_text, font=font, fill=(255,255,255,40), stroke_width=stroke_w+4, stroke_fill=(255,255,255,20))
 
-    # رسم النص الرئيسي
+    # ✅ رسم الأقواس أولاً (على اليمين في RTL)
+    if bracket_text:
+        draw.text((x, curr_y), bracket_text + " ", font=font_brackets, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
+
+    # ثم رسم النص (على الشمال)
     if main_text:
-        draw.text((x, curr_y), main_text, font=font, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
-        text_end_x = x + draw.textbbox((0, 0), main_text, font=font, stroke_width=stroke_w)[2]
+        draw.text((x + bracket_w, curr_y), main_text, font=font, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
     else:
         draw.text((x, curr_y), text, font=font, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
-        text_end_x = x + total_w
-
-    # رسم الأقواس بخط Amiri
-    if bracket_text:
-        draw.text((text_end_x, curr_y), " " + bracket_text, font=font_brackets, fill=color, stroke_width=stroke_w, stroke_fill=stroke_c)
 
     clip = ImageClip(np.array(img)).set_duration(duration)
     return clip
