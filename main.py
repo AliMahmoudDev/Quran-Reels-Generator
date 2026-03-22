@@ -618,71 +618,7 @@ def detect_leading_silence(sound, silence_threshold=-50.0, chunk_size=10):
         trim_ms += chunk_size
     return trim_ms
 
-# ==========================================
-# 🎛️ Audio Effects (Reverb)
-# ==========================================
-REVERB_PRESETS = {
-    'none': None,
-    'light': {
-        'description': 'صداء خفيف',
-        'ffmpeg_filter': 'aecho=0.6:0.7:40:0.3,aecho=0.4:0.5:60:0.2'
-    },
-    'medium': {
-        'description': 'صداء متوسط', 
-        'ffmpeg_filter': 'aecho=0.8:0.7:60:0.4,aecho=0.5:0.6:120:0.3,aecho=0.3:0.5:180:0.2'
-    },
-    'mosque': {
-        'description': 'تأثير مسجد',
-        'ffmpeg_filter': 'aecho=0.9:0.8:80:0.5,aecho=0.7:0.7:140:0.4,aecho=0.5:0.6:200:0.3,aecho=0.3:0.5:280:0.2,highpass=f=80,lowpass=f=8000'
-    }
-}
-
-def apply_reverb(input_path, output_path, reverb_level='none'):
-    """تطبيق تأثير Reverb على ملف صوتي باستخدام ffmpeg"""
-    if reverb_level == 'none' or reverb_level not in REVERB_PRESETS:
-        # بدون تأثير - نسخ الملف كما هو
-        if input_path != output_path:
-            import shutil
-            shutil.copy(input_path, output_path)
-        return output_path
-    
-    preset = REVERB_PRESETS[reverb_level]
-    if preset is None:
-        if input_path != output_path:
-            import shutil
-            shutil.copy(input_path, output_path)
-        return output_path
-    
-    ffmpeg_filter = preset['ffmpeg_filter']
-    
-    # استخدام ffmpeg لتطبيق الفلتر
-    import subprocess
-    cmd = [
-        FFMPEG_EXE, '-y', '-i', input_path,
-        '-af', ffmpeg_filter,
-        '-ar', '44100',  # sample rate ثابت
-        '-ac', '2',      # stereo
-        output_path
-    ]
-    
-    try:
-        subprocess.run(cmd, check=True, capture_output=True, timeout=30)
-        print(f"[Audio] Applied reverb '{reverb_level}' to {input_path}")
-        return output_path
-    except subprocess.TimeoutExpired:
-        print(f"[Audio] Reverb timeout, using original")
-        if input_path != output_path:
-            import shutil
-            shutil.copy(input_path, output_path)
-        return output_path
-    except Exception as e:
-        print(f"[Audio] Reverb error: {e}, using original")
-        if input_path != output_path:
-            import shutil
-            shutil.copy(input_path, output_path)
-        return output_path
-
-def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id, reverb_level='none'):
+def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id):
     reciter_id, server_url = NEW_RECITERS_CONFIG[reciter_name]
     cache_dir = os.path.join(EXEC_DIR, "cache_mp3quran", str(reciter_id))
     os.makedirs(cache_dir, exist_ok=True)
@@ -706,17 +642,11 @@ def process_mp3quran_audio(reciter_name, surah, ayah, idx, workspace_dir, job_id
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
     seg.export(out, format="mp3")
     
-    # 🎛️ تطبيق Reverb إذا كان مطلوباً
-    if reverb_level != 'none':
-        reverb_out = os.path.join(workspace_dir, f'part{idx}_reverb.mp3')
-        apply_reverb(out, reverb_out, reverb_level)
-        return reverb_out
-    
     return out
 
-def download_audio(reciter_key, surah, ayah, idx, workspace_dir, job_id, reverb_level='none'):
+def download_audio(reciter_key, surah, ayah, idx, workspace_dir, job_id):
     if reciter_key in NEW_RECITERS_CONFIG:
-        return process_mp3quran_audio(reciter_key, surah, ayah, idx, workspace_dir, job_id, reverb_level)
+        return process_mp3quran_audio(reciter_key, surah, ayah, idx, workspace_dir, job_id)
     
     url = f'https://everyayah.com/data/{reciter_key}/{surah:03d}{ayah:03d}.mp3'
     out = os.path.join(workspace_dir, f'part{idx}.mp3')
@@ -726,12 +656,6 @@ def download_audio(reciter_key, surah, ayah, idx, workspace_dir, job_id, reverb_
     start, end = detect_silence(snd, snd.dBFS-20), detect_silence(snd.reverse(), snd.dBFS-20)
     trimmed = snd[max(0, start-30):len(snd)-max(0, end-30)]
     (AudioSegment.silent(duration=50) + trimmed.fade_in(20).fade_out(20)).export(out, format='mp3')
-    
-    # 🎛️ تطبيق Reverb إذا كان مطلوباً
-    if reverb_level != 'none':
-        reverb_out = os.path.join(workspace_dir, f'part{idx}_reverb.mp3')
-        apply_reverb(out, reverb_out, reverb_level)
-        return reverb_out
     
     return out
 
@@ -924,7 +848,7 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
 # ==========================================
 # ⚡ Optimized Video Builder (Segmented / Chunked)
 # ==========================================
-def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, style, reverb_level='none'):
+def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, style):
     job = get_job(job_id)
     if not job:
         raise Exception(f"Job {job_id} not found - cannot process video")
@@ -967,7 +891,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 
             # تحميل الصوت مع التحقق
             try:
-                ap = download_audio(reciter_id, surah, ayah, i, workspace, job_id, reverb_level)
+                ap = download_audio(reciter_id, surah, ayah, i, workspace, job_id)
                 if not os.path.exists(ap):
                     raise Exception(f"Audio file not found: {ap}")
                 full_audioclip = AudioFileClip(ap)
@@ -1351,7 +1275,6 @@ def gen():
         'useVignette': d.get('useVignette', False),
         'pexelsKey': d.get('pexelsKey', ''),
         'style': d.get('style', {}),
-        'reverbLevel': d.get('reverbLevel', 'none'),  # 🎛️ Reverb effect
         'session_id': session_id
     }
     
@@ -1376,8 +1299,7 @@ def gen():
             d.get('dynamicBg',False), 
             d.get('useGlow',False), 
             d.get('useVignette',False),
-            style_settings,
-            d.get('reverbLevel', 'none')  # 🎛️ Reverb effect
+            style_settings
         ), 
         daemon=True
     ).start()
@@ -1689,8 +1611,7 @@ def recover_pending_jobs():
                         cfg.get('dynamicBg', False),
                         cfg.get('useGlow', False),
                         cfg.get('useVignette', False),
-                        style,
-                        cfg.get('reverbLevel', 'none')  # 🎛️ Reverb effect
+                        style
                     ),
                     daemon=True
                 ).start()
@@ -1818,8 +1739,7 @@ def process_batch_queue():
                         config.get('dynamicBg', False),
                         config.get('useGlow', False),
                         config.get('useVignette', False),
-                        style_settings,
-                        config.get('reverbLevel', 'none')  # 🎛️ Reverb effect
+                        style_settings
                     )
                     
                     # إعادة الحصول على الـ job بعد المعالجة

@@ -1028,17 +1028,6 @@
                         </div>
                     </div>
 
-                    <!-- 🎛️ تأثيرات صوتية -->
-                    <div class="form-group" style="margin-top: 18px;">
-                        <label class="form-label">🎵 تأثير الصوت (Reverb)</label>
-                        <select class="form-select" id="reverbLevel">
-                            <option value="none">🔊 بدون تأثير (نظيف)</option>
-                            <option value="light">🌬️ صداء خفيف</option>
-                            <option value="medium">🎙️ صداء متوسط</option>
-                            <option value="mosque">🕌 تأثير مسجد</option>
-                        </select>
-                    </div>
-
                     <!-- خيارات متقدمة -->
                     <div class="advanced-toggle" onclick="toggleAdvanced()">
                         <span>⚡</span>
@@ -1736,6 +1725,8 @@
             }
             if (surahSelect.options.length > 0) {
                 surahSelect.selectedIndex = Math.floor(Math.random() * surahSelect.options.length);
+                // تحديث الـ max attribute للآيات بعد تغيير السورة
+                surahSelect.dispatchEvent(new Event('change'));
                 const max = VERSE_COUNTS[parseInt(surahSelect.value)] || 286;
                 const start = Math.floor(Math.random() * Math.max(1, max - 5)) + 1;
                 startAyah.value = start;
@@ -1773,7 +1764,6 @@
                 useVignette: useVignette.checked,
                 bgQuery: useSearch.checked ? bgQuery.value : '',
                 pexelsKey: localStorage.getItem('user_pexels_key') || '',
-                reverbLevel: document.getElementById('reverbLevel').value || 'none',  // 🎛️ Reverb effect
                 style: style
             };
 
