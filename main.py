@@ -489,17 +489,18 @@ OLD_RECITERS_MAP = {
     'محمد صديق المنشاوي': 'Minshawy_Murattal_128kbps',
 }
 
-# 🎯 MP3Quran IDs للقراء (للتوقيتات الدقيقة)
+# 🎯 MP3Quran IDs للقراء الجدد فقط (للتوقيتات الدقيقة)
+# القراء القدام مش ليهم IDs صحيحة في mp3quran timing API
 MP3QURAN_IDS = {
-    # القراء القدام (من mp3quran)
-    'Abu_Bakr_Ash-Shaatree_128kbps': 64,      # أبو بكر الشاطري
-    'Yasser_Ad-Dussary_128kbps': 168,         # ياسر الدوسري
-    'Abdurrahmaan_As-Sudais_64kbps': 9,       # السديس
-    'Maher_AlMuaiqly_64kbps': 162,            # ماهر المعيقلي
-    'Saood_ash-Shuraym_64kbps': 10,           # سعود الشريم
-    'Alafasy_64kbps': 7,                      # مشاري العفاسي
-    'Nasser_Alqatami_128kbps': 151,           # ناصر القطامي
-    'Minshawy_Murattal_128kbps': 44,          # المنشاوي
+    # القراء الجداد بس - من NEW_RECITERS_CONFIG
+    'احمد النفيس': 259,
+    'وديع اليماني': 219,
+    'بندر بليلة': 217,
+    'ادريس أبكر': 12,
+    'منصور السالمي': 245,
+    'رعد الكردي': 221,
+    'أحمد العجمي': 5,
+    'محمود خليل الحصري': 118,
 }
 
 # 📁 مجلد تخزين التوقيتات
