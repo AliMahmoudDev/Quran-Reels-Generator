@@ -11,7 +11,6 @@ import logging
 import traceback
 import gc
 import random
-import math
 import requests
 import json
 import sqlite3
@@ -35,8 +34,7 @@ if not hasattr(PIL.Image, 'ANTIALIAS'):
 
 from moviepy.editor import (
     ImageClip, VideoFileClip, AudioFileClip, 
-    CompositeVideoClip, ColorClip, concatenate_videoclips,
-    ImageSequenceClip
+    CompositeVideoClip, ColorClip, concatenate_videoclips
 )
 from moviepy.audio.AudioClip import concatenate_audioclips
 from moviepy.config import change_settings
@@ -771,87 +769,6 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, 
     clip = ImageClip(np.array(img)).set_duration(duration)
     return clip
 
-# ==========================================
-# ✨ Visual Effects (Particles, Glow, Wave)
-# ==========================================
-
-def create_particles_clip(duration, target_w, target_h, num_particles=30):
-    """إنشاء جزيئات نور متطايرة"""
-    frames = []
-    num_frames = int(duration * 20)  # 20 FPS for particles
-    
-    for frame_idx in range(num_frames):
-        img = Image.new('RGBA', (target_w, target_h), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(img)
-        
-        for i in range(num_particles):
-            # موقع عشوائي مع حركة
-            x = random.randint(0, target_w)
-            base_y = (target_h * 0.2) + (target_h * 0.6) * (i / num_particles)
-            y = int(base_y + math.sin(frame_idx * 0.1 + i) * 50)  # حركة موجية
-            
-            # حجم ونقاء متغير
-            size = random.randint(2, 6)
-            alpha = int(150 + 100 * math.sin(frame_idx * 0.15 + i * 0.5))
-            alpha = max(50, min(255, alpha))
-            
-            # رسم الجزيء (نور ذهبي)
-            color = (255, 215, 100, alpha)  # ذهبي
-            draw.ellipse([x-size, y-size, x+size, y+size], fill=color)
-            
-            # هالة خفيفة
-            if size > 3:
-                glow_alpha = alpha // 3
-                glow_color = (255, 230, 150, glow_alpha)
-                draw.ellipse([x-size*2, y-size*2, x+size*2, y+size*2], fill=glow_color)
-        
-        frames.append(np.array(img))
-    
-    # إنشاء فيديو من الفريمات
-    clip = ImageSequenceClip(frames, fps=20).set_duration(duration)
-    return clip
-
-def create_glow_animation_clip(duration, target_w, target_h, text_y, text_height):
-    """إنشاء توهج متحرك حول منطقة النص"""
-    frames = []
-    num_frames = int(duration * 20)
-    
-    for frame_idx in range(num_frames):
-        img = Image.new('RGBA', (target_w, target_h), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(img)
-        
-        # التوهج ينبض
-        pulse = 0.5 + 0.5 * math.sin(frame_idx * 0.2)
-        
-        # منطقة التوهج
-        glow_y = text_y - 20
-        glow_h = text_height + 40
-        
-        # رسم طبقات التوهج
-        for layer in range(5, 0, -1):
-            alpha = int(30 * pulse * (6 - layer) / 5)
-            size = layer * 15
-            color = (255, 200, 100, alpha)  # ذهبي فاتح
-            
-            # مستطيل دائري
-            rect = [target_w * 0.1 - size, glow_y - size, 
-                    target_w * 0.9 + size, glow_y + glow_h + size]
-            draw.rounded_rectangle(rect, radius=20, fill=color)
-        
-        frames.append(np.array(img))
-    
-    clip = ImageSequenceClip(frames, fps=20).set_duration(duration)
-    return clip
-
-def apply_wave_to_text(text_clip, duration, amplitude=5, frequency=1.5):
-    """تطبيق تأثير موجي على النص"""
-    def wave_effect(get_frame, t):
-        frame = get_frame(t)
-        offset_y = int(amplitude * math.sin(2 * math.pi * frequency * t / duration))
-        return np.roll(frame, offset_y, axis=0)
-    
-    return text_clip.fl(wave_effect, apply_to=['mask'])
-
 def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     pool =[]
     active_key = user_key if user_key and len(user_key) > 10 else random.choice(PEXELS_API_KEYS) if PEXELS_API_KEYS else ""
@@ -938,7 +855,7 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
 # ==========================================
 # ⚡ Optimized Video Builder (Segmented / Chunked)
 # ==========================================
-def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, use_particles, use_glow_animation, use_wave_effect, style):
+def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, style):
     job = get_job(job_id)
     if not job:
         raise Exception(f"Job {job_id} not found - cannot process video")
@@ -1089,27 +1006,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 
                 # ز. تجميع القطعة
                 segment_overlays =[o.set_duration(actual_duration) for o in overlays_static]
-                
-                # ✨ إضافة التأثيرات البصرية
-                layers = [bg_slice] + segment_overlays
-                
-                # جزيئات النور
-                if use_particles:
-                    particles_clip = create_particles_clip(actual_duration, target_w, target_h, num_particles=25)
-                    layers.append(particles_clip)
-                
-                # توهج متحرك
-                if use_glow_animation:
-                    glow_clip = create_glow_animation_clip(actual_duration, target_w, target_h, ar_y_pos, ac.h + ec.h + 20)
-                    layers.append(glow_clip)
-                
-                layers.extend([ac, ec])
-                
-                # تأثير موجي على النص
-                if use_wave_effect:
-                    ac = apply_wave_to_text(ac, actual_duration, amplitude=3, frequency=2.0)
-                
-                full_segment = CompositeVideoClip(layers).set_audio(chunk_audio)
+                full_segment = CompositeVideoClip([bg_slice] + segment_overlays + [ac, ec]).set_audio(chunk_audio)
                 final_segments.append(full_segment)
 
                 # تحديث الوقت للقطعة القادمة
@@ -1411,9 +1308,6 @@ def gen():
             d.get('dynamicBg',False), 
             d.get('useGlow',False), 
             d.get('useVignette',False),
-            d.get('useParticles',False),
-            d.get('useGlowAnimation',False),
-            d.get('useWaveEffect',False),
             style_settings
         ), 
         daemon=True
@@ -1726,9 +1620,6 @@ def recover_pending_jobs():
                         cfg.get('dynamicBg', False),
                         cfg.get('useGlow', False),
                         cfg.get('useVignette', False),
-                        cfg.get('useParticles', False),
-                        cfg.get('useGlowAnimation', False),
-                        cfg.get('useWaveEffect', False),
                         style
                     ),
                     daemon=True
@@ -1857,9 +1748,6 @@ def process_batch_queue():
                         config.get('dynamicBg', False),
                         config.get('useGlow', False),
                         config.get('useVignette', False),
-                        config.get('useParticles', False),
-                        config.get('useGlowAnimation', False),
-                        config.get('useWaveEffect', False),
                         style_settings
                     )
                     
