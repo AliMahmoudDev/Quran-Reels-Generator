@@ -1098,11 +1098,10 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 ac = create_text_clip(display_ar, actual_duration, target_w, scale, use_glow, style=style, font_path=font_path)
                 ec = create_english_clip(en_chunk, actual_duration, target_w, scale, use_glow, style=style, font_path=font_path_en)
                 
-                # ✅ Fade للنص في كل سطر (chunk) - مش بس الآية
-                TEXT_FADE = 0.35  # مدة fade النص
-                # استخدام fadein/fadeout بدل crossfadein/crossfadeout لتجنب تكرار الصوت
-                ac = ac.fadein(TEXT_FADE).fadeout(TEXT_FADE)
-                ec = ec.fadein(TEXT_FADE).fadeout(TEXT_FADE)
+                # ✅ Crossfade للنص
+                TEXT_FADE = 0.35  # مدة crossfade النص
+                ac = ac.crossfadein(TEXT_FADE).crossfadeout(TEXT_FADE)
+                ec = ec.crossfadein(TEXT_FADE).crossfadeout(TEXT_FADE)
                 
                 is_first_chunk = (chunk_idx == 0)
                 is_last_chunk = (chunk_idx == len(ar_chunks) - 1)
