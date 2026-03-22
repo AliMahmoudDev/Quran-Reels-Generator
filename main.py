@@ -476,7 +476,6 @@ NEW_RECITERS_CONFIG = {
     'رعد الكردي': (221, "https://server6.mp3quran.net/kurdi/"),
     'أحمد العجمي': (5, "https://server10.mp3quran.net/ajm/"),
     'محمود خليل الحصري': (118, "https://server13.mp3quran.net/husr/Rewayat-Qalon-A-n-Nafi/"),
-    'محمد صديق المنشاوي': (112, "https://server10.mp3quran.net/minsh/Almusshaf-Al-Mo-lim/"),
 }
 
 OLD_RECITERS_MAP = {
@@ -486,7 +485,8 @@ OLD_RECITERS_MAP = {
     'ماهر المعيقلي': 'Maher_AlMuaiqly_64kbps', 
     'سعود الشريم': 'Saood_ash-Shuraym_64kbps', 
     'مشاري العفاسي': 'Alafasy_64kbps',
-    'ناصر القطامي': 'Nasser_Alqatami_128kbps', 
+    'ناصر القطامي': 'Nasser_Alqatami_128kbps',
+    'محمد صديق المنشاوي': 'Minshawy_Murattal_128kbps',
 }
 
 # خريطة عكسية لتحويل الـ ID للاسم العربي
