@@ -1028,6 +1028,40 @@
                         </div>
                     </div>
 
+                    <!-- تأثيرات بصرية متقدمة -->
+                    <div class="toggle-group" style="margin-bottom: 18px;">
+                        <div class="toggle-item">
+                            <div class="toggle-info">
+                                <h4>🌟 جزيئات النور</h4>
+                                <span>جزيئات متطايرة حول النص</span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="useParticles">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-item">
+                            <div class="toggle-info">
+                                <h4>💫 توهج متحرك</h4>
+                                <span>توهج ينبض حول الآية</span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="useGlowAnimation">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-item">
+                            <div class="toggle-info">
+                                <h4>🌊 تأثير موجي</h4>
+                                <span>النص يتحرك كموجة</span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="useWaveEffect">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- خيارات متقدمة -->
                     <div class="advanced-toggle" onclick="toggleAdvanced()">
                         <span>⚡</span>
@@ -1762,6 +1796,9 @@
                 dynamicBg: dynamicBg.checked,
                 useGlow: useGlow.checked,
                 useVignette: useVignette.checked,
+                useParticles: document.getElementById('useParticles').checked,
+                useGlowAnimation: document.getElementById('useGlowAnimation').checked,
+                useWaveEffect: document.getElementById('useWaveEffect').checked,
                 bgQuery: useSearch.checked ? bgQuery.value : '',
                 pexelsKey: localStorage.getItem('user_pexels_key') || '',
                 style: style
