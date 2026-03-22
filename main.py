@@ -489,6 +489,22 @@ OLD_RECITERS_MAP = {
     'محمد صديق المنشاوي': 'Minshawy_Murattal_128kbps',
 }
 
+# 🎯 MP3Quran IDs للقراء (للتوقيتات الدقيقة)
+MP3QURAN_IDS = {
+    # القراء القدام (من mp3quran)
+    'Abu_Bakr_Ash-Shaatree_128kbps': 64,      # أبو بكر الشاطري
+    'Yasser_Ad-Dussary_128kbps': 168,         # ياسر الدوسري
+    'Abdurrahmaan_As-Sudais_64kbps': 9,       # السديس
+    'Maher_AlMuaiqly_64kbps': 162,            # ماهر المعيقلي
+    'Saood_ash-Shuraym_64kbps': 10,           # سعود الشريم
+    'Alafasy_64kbps': 7,                      # مشاري العفاسي
+    'Nasser_Alqatami_128kbps': 151,           # ناصر القطامي
+    'Minshawy_Murattal_128kbps': 44,          # المنشاوي
+}
+
+# 📁 مجلد تخزين التوقيتات
+TIMINGS_CACHE_DIR = os.path.join(EXEC_DIR, "cache_timings")
+
 # خريطة عكسية لتحويل الـ ID للاسم العربي
 RECITER_ID_TO_NAME = {v: k for k, v in OLD_RECITERS_MAP.items()}
 # إضافة أسماء القراء الجدد (الاسم العربي = الاسم العربي)
@@ -496,6 +512,103 @@ for name in NEW_RECITERS_CONFIG.keys():
     RECITER_ID_TO_NAME[name] = name
 
 RECITERS_MAP = {**{k: k for k in NEW_RECITERS_CONFIG.keys()}, **OLD_RECITERS_MAP}
+
+# 📖 نصوص الآيات للحساب الذكي (مختصر - أهم السور)
+AYAH_TEXTS_CACHE = {}
+
+def load_ayah_texts():
+    """تحميل نصوص الآيات من ملف أو API"""
+    global AYAH_TEXTS_CACHE
+    if AYAH_TEXTS_CACHE:
+        return AYAH_TEXTS_CACHE
+    
+    # محاولة التحميل من ملف محلي
+    quran_file = os.path.join(EXEC_DIR, "quran_text.json")
+    if os.path.exists(quran_file):
+        try:
+            with open(quran_file, 'r', encoding='utf-8') as f:
+                AYAH_TEXTS_CACHE = json.load(f)
+            return AYAH_TEXTS_CACHE
+        except:
+            pass
+    return {}
+
+def smart_estimate_by_length(surah, ayah, reciter_key):
+    """
+    حساب ذكي للمدة بناءً على طول الآية
+    
+    المعادلة: duration = base_time + (char_count × time_per_char)
+    """
+    # متوسط سرعة القراءة لكل قارئ (حرف/ثانية)
+    READER_SPEEDS = {
+        'Alafasy_64kbps': 0.12,           # العفاسي بطيء - 0.12 ث/حرف
+        'Abu_Bakr_Ash-Shaatree_128kbps': 0.10,
+        'Yasser_Ad-Dussary_128kbps': 0.10,
+        'Abdurrahmaan_As-Sudais_64kbps': 0.09,
+        'Maher_AlMuaiqly_64kbps': 0.10,
+        'Saood_ash-Shuraym_64kbps': 0.10,
+        'Nasser_Alqatami_128kbps': 0.11,
+        'Minshawy_Murattal_128kbps': 0.11,
+        # القراء الجدد
+        'احمد النفيس': 0.10,
+        'وديع اليماني': 0.11,
+        'بندر بليلة': 0.10,
+        'ادريس أبكر': 0.09,
+        'منصور السالمي': 0.10,
+        'رعد الكردي': 0.10,
+        'أحمد العجمي': 0.09,
+        'محمود خليل الحصري': 0.11,
+    }
+    
+    # وقت ثابت (بداية + نهاية + وقفات)
+    BASE_TIME = 1.5  # ثانية
+    
+    # سرعة القارئ (افتراضي 0.10 ث/حرف)
+    time_per_char = READER_SPEEDS.get(reciter_key, 0.10)
+    
+    # طول الآية التقريبي
+    # نستخدم متوسط طول الآية حسب موقعها في السورة
+    ayah_length = estimate_ayah_length(surah, ayah)
+    
+    # الحساب
+    duration = BASE_TIME + (ayah_length * time_per_char)
+    
+    return max(duration, 2.0)  # أدنى حد 2 ثانية
+
+def estimate_ayah_length(surah, ayah):
+    """
+    تقدير طول الآية بناءً على إحصائيات السورة
+    """
+    # متوسط أطوال الآيات لكل سورة (من بيانات حقيقية)
+    SURAH_AVG_LENGTHS = {
+        1: 20,   # الفاتحة - آيات قصيرة
+        2: 150,  # البقرة - آيات طويلة
+        3: 120,  # آل عمران
+        36: 80,  # يس
+        55: 40,  # الرحمن
+        67: 35,  # الملك
+        78: 45,  # النبأ
+        112: 15, # الإخلاص - قصيرة جداً
+        113: 20, # الفلق
+        114: 20, # الناس
+    }
+    
+    # المتوسط الافتراضي
+    avg_length = SURAH_AVG_LENGTHS.get(surah, 50)
+    
+    # تعديل حسب موقع الآية
+    verse_count = VERSE_COUNTS.get(surah, 100)
+    position_ratio = ayah / verse_count
+    
+    # الآيات في بداية السورة غالباً أطول في السور المدنية
+    # والآيات في النهاية أقصر في بعض السور
+    if surah in [2, 3, 4]:  # سور مدنية طويلة
+        if position_ratio < 0.3:
+            avg_length *= 1.3  # البداية أطول
+        elif position_ratio > 0.8:
+            avg_length *= 0.8  # النهاية أقصر
+    
+    return int(avg_length)
 
 app = Flask(__name__, static_folder=EXEC_DIR)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -1319,9 +1432,18 @@ def estimate_duration():
         
         total_duration_ms = 0
         
-        # للقراء الجدد (NEW_RECITERS_CONFIG) - نستخدم mp3quran timing API
+        # 🎯 محاولة استخدام MP3Quran API للجميع
+        reciter_id = None
+        
+        # القراء الجدد
         if reciter in NEW_RECITERS_CONFIG:
-            reciter_id, server_url = NEW_RECITERS_CONFIG[reciter]
+            reciter_id = NEW_RECITERS_CONFIG[reciter][0]
+        # القراء القدام - نبحث في MP3QURAN_IDS
+        elif reciter in MP3QURAN_IDS:
+            reciter_id = MP3QURAN_IDS[reciter]
+        
+        if reciter_id:
+            # ✅ عندنا ID - نستخدم mp3quran timing API
             cache_dir = os.path.join(EXEC_DIR, "cache_mp3quran", str(reciter_id))
             os.makedirs(cache_dir, exist_ok=True)
             timings_path = os.path.join(cache_dir, f"{surah:03d}.json")
@@ -1329,45 +1451,42 @@ def estimate_duration():
             # تحميل الـ timings لو مش موجودة
             if not os.path.exists(timings_path):
                 try:
-                    t_data = requests.get(f"https://mp3quran.net/api/v3/ayat_timing?surah={surah}&read={reciter_id}", timeout=10).json()
+                    t_data = requests.get(
+                        f"https://mp3quran.net/api/v3/ayat_timing?surah={surah}&read={reciter_id}",
+                        timeout=10
+                    ).json()
                     timings = {item['ayah']: {'start': item['start_time'], 'end': item['end_time']} for item in t_data}
                     with open(timings_path, 'w') as f:
                         json.dump(timings, f)
                 except Exception as e:
-                    print(f"[Estimate] Failed to get timings: {e}")
-                    return jsonify({'ok': False, 'error': 'Failed to get timings'})
+                    print(f"[Estimate] mp3quran API failed: {e}")
+                    timings = None
+            else:
+                with open(timings_path, 'r') as f:
+                    timings = json.load(f)
             
-            # قراءة الـ timings وحساب المدة
-            with open(timings_path, 'r') as f:
-                timings = json.load(f)
-            
-            for ayah in range(start_ayah, end_ayah + 1):
-                ayah_str = str(ayah)
-                if ayah_str in timings:
-                    start_time = timings[ayah_str]['start']
-                    end_time = timings[ayah_str]['end']
-                    # المدة بالميلي ثانية
-                    duration_ms = end_time - start_time
-                    total_duration_ms += duration_ms
-                else:
-                    # لو الآية مش موجودة، نحسب متوسط 8 ثواني
-                    total_duration_ms += 8000
+            # حساب المدة
+            if timings:
+                for ayah in range(start_ayah, end_ayah + 1):
+                    ayah_str = str(ayah)
+                    if ayah_str in timings:
+                        start_time = timings[ayah_str]['start']
+                        end_time = timings[ayah_str]['end']
+                        duration_ms = end_time - start_time
+                        total_duration_ms += duration_ms
+                    else:
+                        # fallback ذكي
+                        total_duration_ms += int(smart_estimate_by_length(surah, ayah, reciter) * 1000)
+            else:
+                # fallback ذكي
+                for ayah in range(start_ayah, end_ayah + 1):
+                    total_duration_ms += int(smart_estimate_by_length(surah, ayah, reciter) * 1000)
         
         else:
-            # للقراء القدام - نحسب تقريبي بناءً على متوسط مدة الآية
-            # كل آية في المتوسط 8-12 ثانية حسب القارئ
-            avg_durations = {
-                'Alafasy_64kbps': 12000,  # العفاسي بطيء شوية
-                'Abu_Bakr_Ash-Shaatree_128kbps': 10000,
-                'Yasser_Ad-Dussary_128kbps': 10000,
-                'Abdurrahmaan_As-Sudais_64kbps': 9000,
-                'Maher_AlMuaiqly_64kbps': 10000,
-                'Saood_ash-Shuraym_64kbps': 10000,
-                'Nasser_Alqatami_128kbps': 11000,
-            }
-            avg_duration = avg_durations.get(reciter, 10000)
-            ayahs_count = end_ayah - start_ayah + 1
-            total_duration_ms = ayahs_count * avg_duration
+            # ❌ مفيش ID - نستخدم الحساب الذكي
+            for ayah in range(start_ayah, end_ayah + 1):
+                duration = smart_estimate_by_length(surah, ayah, reciter)
+                total_duration_ms += int(duration * 1000)
         
         # تحويل المدة لصيغة مقروءة
         total_seconds = total_duration_ms // 1000
