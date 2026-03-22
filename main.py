@@ -855,7 +855,7 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
 # ==========================================
 # ⚡ Optimized Video Builder (Segmented / Chunked)
 # ==========================================
-def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, style):
+def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, quality, bg_query, fps, dynamic_bg, use_glow, use_vignette, aspect_ratio, style):
     job = get_job(job_id)
     if not job:
         raise Exception(f"Job {job_id} not found - cannot process video")
@@ -864,7 +864,18 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
     if not workspace:
         raise Exception(f"Job {job_id} has no workspace")
     
-    target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
+    # تحديد الأبعاد بناءً على aspect_ratio و quality
+    # 9:16 = ريلز/تيك توك (portrait), 1:1 = سوير (square), 16:9 = يوتيوب (landscape)
+    if aspect_ratio == '1:1':
+        # مربع (سوير/انستجرام)
+        target_w, target_h = (1080, 1080) if quality == '1080' else (720, 720)
+    elif aspect_ratio == '16:9':
+        # أفقي (يوتيوب)
+        target_w, target_h = (1920, 1080) if quality == '1080' else (1280, 720)
+    else:
+        # 9:16 - الافتراضي (ريلز/تيك توك)
+        target_w, target_h = (1080, 1920) if quality == '1080' else (720, 1280)
+    
     scale = 1.0 if quality == '1080' else 0.67
     last = min(end if end else start+9, VERSE_COUNTS.get(surah, 286))
     total_ayahs = (last - start) + 1
@@ -1308,6 +1319,7 @@ def gen():
             d.get('dynamicBg',False), 
             d.get('useGlow',False), 
             d.get('useVignette',False),
+            d.get('aspectRatio','9:16'),
             style_settings
         ), 
         daemon=True
@@ -1620,6 +1632,7 @@ def recover_pending_jobs():
                         cfg.get('dynamicBg', False),
                         cfg.get('useGlow', False),
                         cfg.get('useVignette', False),
+                        cfg.get('aspectRatio', '9:16'),
                         style
                     ),
                     daemon=True
@@ -1748,6 +1761,7 @@ def process_batch_queue():
                         config.get('dynamicBg', False),
                         config.get('useGlow', False),
                         config.get('useVignette', False),
+                        config.get('aspectRatio', '9:16'),
                         style_settings
                     )
                     
