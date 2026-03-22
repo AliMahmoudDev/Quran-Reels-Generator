@@ -841,9 +841,20 @@ def create_english_clip(text, duration, target_w, scale_factor=1.0, glow=False, 
     clip = ImageClip(np.array(img)).set_duration(duration)
     return clip
 
-def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
+def fetch_video_pool(user_key, custom_query, count=1, job_id=None, aspect_ratio='9:16'):
     pool =[]
     active_key = user_key if user_key and len(user_key) > 10 else random.choice(PEXELS_API_KEYS) if PEXELS_API_KEYS else ""
+
+    # ✅ تحديد اتجاه الفيديو حسب الأبعاد
+    if aspect_ratio == '16:9':
+        orientation = 'landscape'  # أفقي
+        video_filter = lambda vf: vf['width'] > vf['height']  # فيديو أفقي
+    elif aspect_ratio == '1:1':
+        orientation = 'square'  # مربع
+        video_filter = lambda vf: True  # أي فيديو
+    else:
+        orientation = 'portrait'  # عمودي (الافتراضي)
+        video_filter = lambda vf: vf['height'] > vf['width']  # فيديو عمودي
     
     # ✅ الكلمات الآمنة المسموح بها
     SAFE_WHITELIST =[
@@ -895,7 +906,9 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
     if active_key:
         try:
             check_stop(job_id)
-            url = f"https://api.pexels.com/videos/search?query={q}&per_page={count+10}&page={random.randint(1, 10)}&orientation=portrait"
+            # ✅ استخدام الـ orientation المناسب حسب الأبعاد
+            pexels_orientation = 'landscape' if aspect_ratio == '16:9' else ('square' if aspect_ratio == '1:1' else 'portrait')
+            url = f"https://api.pexels.com/videos/search?query={q}&per_page={count+10}&page={random.randint(1, 10)}&orientation={pexels_orientation}"
             r = requests.get(url, headers={'Authorization': active_key}, timeout=10)
             if r.status_code == 200:
                 vids = r.json().get('videos',[])
@@ -908,7 +921,16 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None):
                     if not is_video_safe(vid):
                         continue  # نتخطى الفيديو ده
                     
-                    f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), None)
+                    # ✅ اختيار الفيديو المناسب حسب الأبعاد
+                    if aspect_ratio == '16:9':
+                        # أفقي: نختار فيديو عرضه أكبر من ارتفاعه
+                        f = next((vf for vf in vid['video_files'] if vf['width'] <= 1920 and vf['width'] >= vf['height']), None)
+                    elif aspect_ratio == '1:1':
+                        # مربع: أي فيديو
+                        f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080), None)
+                    else:
+                        # عمودي (الافتراضي): نختار فيديو ارتفاعه أكبر من عرضه
+                        f = next((vf for vf in vid['video_files'] if vf['width'] <= 1080 and vf['height'] > vf['width']), None)
                     if not f and vid['video_files']: f = vid['video_files'][0]
                     if f:
                         path = os.path.join(VISION_DIR, f"bg_{vid['id']}.mp4")
@@ -963,13 +985,22 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
 
     try:
         # 1. Fetch Backgrounds
-        vpool = fetch_video_pool(user_pexels_key, bg_query, count=total_ayahs if dynamic_bg else 1, job_id=job_id)
+        vpool = fetch_video_pool(user_pexels_key, bg_query, count=total_ayahs if dynamic_bg else 1, job_id=job_id, aspect_ratio=aspect_ratio)
         
         # 2. Prepare Base Background
         if not vpool:
             base_bg_clip = ColorClip((target_w, target_h), color=(15, 20, 35))
         else:
-            base_bg_clip = VideoFileClip(vpool[0]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
+            bg_clip = VideoFileClip(vpool[0])
+            # ✅ نعمل resize حسب الأبعاد المناسبة
+            if aspect_ratio == '16:9':
+                # أفقي: نعمل resize للعرض
+                bg_clip = bg_clip.resize(width=target_w)
+            else:
+                # عمودي أو مربع: نعمل resize للارتفاع
+                bg_clip = bg_clip.resize(height=target_h)
+            # crop للوسط
+            base_bg_clip = bg_clip.crop(width=target_w, height=target_h, x_center=bg_clip.w/2, y_center=bg_clip.h/2)
             video_clips_to_close.append(base_bg_clip)
 
         overlays_static =[ColorClip((target_w, target_h), color=(0,0,0)).set_opacity(0.45)]  # ✅ زودناه عشان الخلفيات الفاتحة
@@ -1019,7 +1050,13 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             
             # فتح فيديو الخلفية مرة واحدة للآية (إذا كان متغيراً) لتقليل استهلاك الرام
             if dynamic_bg and i < len(vpool):
-                ayah_bg_clip = VideoFileClip(vpool[i % len(vpool)]).resize(height=target_h).crop(width=target_w, height=target_h, x_center=target_w/2, y_center=target_h/2)
+                ayah_raw = VideoFileClip(vpool[i % len(vpool)])
+                # ✅ resize حسب الأبعاد
+                if aspect_ratio == '16:9':
+                    ayah_raw = ayah_raw.resize(width=target_w)
+                else:
+                    ayah_raw = ayah_raw.resize(height=target_h)
+                ayah_bg_clip = ayah_raw.crop(width=target_w, height=target_h, x_center=ayah_raw.w/2, y_center=ayah_raw.h/2)
                 video_clips_to_close.append(ayah_bg_clip)
                 ayah_bg_time = 0.0
 
