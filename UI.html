@@ -1206,30 +1206,65 @@
                 </div>
 
                 <!-- خيارات متقدمة للدفعة -->
-                <div class="form-group" style="margin-top: 16px;">
-                    <label class="form-label">📐 أبعاد الفيديو</label>
-                    <select class="form-select" id="batchAspectRatio">
-                        <option value="9:16">📱 9:16 - ريلز / تيك توك</option>
-                        <option value="1:1">⬜ 1:1 - سوير / انستجرام</option>
-                        <option value="16:9">🖥️ 16:9 - يوتيوب</option>
-                    </select>
+                <div class="advanced-toggle" onclick="toggleBatchAdvanced()">
+                    <span>⚡</span>
+                    <span>خيارات متقدمة</span>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">✒️ خط المصحف</label>
-                    <select class="form-select" id="batchFontSelect">
-                        <option value="Arabic">Arabic - الخط الافتراضي</option>
-                        <option value="Amiri">Amiri - أميري</option>
-                        <option value="Uthmani">Uthmani - عثماني</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">🔤 خط الترجمة</label>
-                    <select class="form-select" id="batchFontEnSelect">
-                        <option value="English">English - الافتراضي</option>
-                        <option value="Cinzel">Cinzel - كلاسيكي</option>
-                        <option value="Playfair">Playfair - أنيق</option>
-                        <option value="Lora">Lora - عصري</option>
-                    </select>
+                
+                <div class="advanced-options" id="batchAdvancedOptions">
+                    <div class="form-group">
+                        <label class="form-label">سلاسة الفيديو (FPS)</label>
+                        <select class="form-select" id="batchFpsSelect">
+                            <option value="15">🚀 15 FPS - سريع جداً</option>
+                            <option value="20" selected>⚖️ 20 FPS - متوازن</option>
+                            <option value="24">🎬 24 FPS - سينمائي</option>
+                            <option value="30">💎 30 FPS - الأكثر سلاسة</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">جودة الفيديو</label>
+                        <select class="form-select" id="batchQualitySelect">
+                            <option value="720">⚡ 720p HD - الأسرع</option>
+                            <option value="1080">🌟 1080p FHD</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">📐 أبعاد الفيديو</label>
+                        <select class="form-select" id="batchAspectRatio">
+                            <option value="9:16">📱 9:16 - ريلز / تيك توك</option>
+                            <option value="1:1">⬜ 1:1 - سوير / انستجرام</option>
+                            <option value="16:9">🖥️ 16:9 - يوتيوب</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">✒️ خط المصحف</label>
+                        <select class="form-select" id="batchFontSelect">
+                            <option value="Arabic">Arabic - الخط الافتراضي</option>
+                            <option value="Amiri">Amiri - أميري</option>
+                            <option value="Uthmani">Uthmani - عثماني</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">🔤 خط الترجمة</label>
+                        <select class="form-select" id="batchFontEnSelect">
+                            <option value="English">English - الافتراضي</option>
+                            <option value="Cinzel">Cinzel - كلاسيكي</option>
+                            <option value="Playfair">Playfair - أنيق</option>
+                            <option value="Lora">Lora - عصري</option>
+                        </select>
+                    </div>
+                    <div class="toggle-item" style="border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px;">
+                        <div class="toggle-info">
+                            <h4>بحث خلفية مخصص</h4>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="batchUseSearch" onchange="toggleBatchSearchInput()">
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group" id="batchSearchInputGroup" style="display: none;">
+                        <input type="text" class="form-input" id="batchBgQuery" placeholder="اكتب: بحر، سماء، جبال...">
+                    </div>
                 </div>
 
                 <!-- أزرار التحكم -->
@@ -1848,6 +1883,17 @@
         function toggleAdvanced() {
             const options = document.getElementById('advancedOptions');
             options.classList.toggle('show');
+        }
+
+        function toggleBatchAdvanced() {
+            const options = document.getElementById('batchAdvancedOptions');
+            options.classList.toggle('show');
+        }
+
+        function toggleBatchSearchInput() {
+            const input = document.getElementById('batchSearchInputGroup');
+            const checkbox = document.getElementById('batchUseSearch');
+            input.style.display = checkbox.checked ? 'block' : 'none';
         }
 
         function toggleSearchInput() {
@@ -2591,11 +2637,14 @@
                 useVignette: document.getElementById('batchUseVignette').checked
             };
 
-            // ✅ إعدادات الفيديو
+            // ✅ إعدادات الفيديو الكاملة
             const videoSettings = {
+                fps: parseInt(document.getElementById('batchFpsSelect')?.value || 20),
+                quality: document.getElementById('batchQualitySelect')?.value || '720',
                 aspectRatio: document.getElementById('batchAspectRatio')?.value || '9:16',
                 font: document.getElementById('batchFontSelect')?.value || 'Arabic',
-                fontEn: document.getElementById('batchFontEnSelect')?.value || 'English'
+                fontEn: document.getElementById('batchFontEnSelect')?.value || 'English',
+                bgQuery: document.getElementById('batchUseSearch')?.checked ? (document.getElementById('batchBgQuery')?.value || '') : ''
             };
 
             batchItems.push({
@@ -2739,10 +2788,11 @@
                     useVignette: item.effects?.useVignette ?? true,
                     aspectRatio: item.aspectRatio || '9:16',
                     font: item.font || 'Arabic',
-                    fontEn: item.fontEn || 'English'
+                    fontEn: item.fontEn || 'English',
+                    fps: item.fps || 20,
+                    quality: item.quality || '720',
+                    bgQuery: item.bgQuery || ''
                 })),
-                quality: document.getElementById('qualitySelect')?.value || '720',
-                fps: parseInt(document.getElementById('fpsSelect')?.value || 20),
                 pexelsKey: localStorage.getItem('user_pexels_key') || '',
                 style: getStyleSettings()
             };

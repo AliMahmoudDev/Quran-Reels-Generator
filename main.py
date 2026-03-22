@@ -2004,6 +2004,12 @@ def create_batch():
             job_config['font'] = item['font']
         if item.get('fontEn'):
             job_config['fontEn'] = item['fontEn']
+        if item.get('fps'):
+            job_config['fps'] = item['fps']
+        if item.get('quality'):
+            job_config['quality'] = item['quality']
+        if item.get('bgQuery'):
+            job_config['bgQuery'] = item['bgQuery']
 
         job_id = create_job(job_config, session_id)
         db_add_batch_item(batch_id, job_id, i, item['surah'], item['startAyah'], item['endAyah'])
