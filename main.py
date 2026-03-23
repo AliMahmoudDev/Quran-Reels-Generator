@@ -115,15 +115,9 @@ def get_font_path_en(font_name):
     """الحصول على مسار الخط الإنجليزي بناءً على الاسم"""
     return AVAILABLE_FONTS_EN.get(font_name, FONT_PATH_ENGLISH)
 
-# ==========================================
-# 📁 Data Directory - للـ Volume (بيانات دائمة)
-# ==========================================
-DATA_DIR = os.path.join(EXEC_DIR, "data")
-os.makedirs(DATA_DIR, exist_ok=True)
-
 # Master Temp Directory
 BASE_TEMP_DIR = os.path.join(EXEC_DIR, "temp_workspaces")
-OUTPUTS_DIR = os.path.join(DATA_DIR, "outputs")  # ✅ داخل data
+OUTPUTS_DIR = os.path.join(EXEC_DIR, "outputs")
 os.makedirs(BASE_TEMP_DIR, exist_ok=True)
 os.makedirs(OUTPUTS_DIR, exist_ok=True)
 os.makedirs(VISION_DIR, exist_ok=True)
@@ -131,7 +125,7 @@ os.makedirs(VISION_DIR, exist_ok=True)
 # ==========================================
 # 🗄️ Database Setup (SQLite for Persistence)
 # ==========================================
-DB_PATH = os.path.join(DATA_DIR, "quran_jobs.db")  # ✅ داخل data
+DB_PATH = os.path.join(EXEC_DIR, "quran_jobs.db")
 
 def get_db():
     """Get database connection for current request"""
