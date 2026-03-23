@@ -468,6 +468,9 @@ def db_get_pending_batches():
 VERSE_COUNTS = {1: 7, 2: 286, 3: 200, 4: 176, 5: 120, 6: 165, 7: 206, 8: 75, 9: 129, 10: 109, 11: 123, 12: 111, 13: 43, 14: 52, 15: 99, 16: 128, 17: 111, 18: 110, 19: 98, 20: 135, 21: 112, 22: 78, 23: 118, 24: 64, 25: 77, 26: 227, 27: 93, 28: 88, 29: 69, 30: 60, 31: 34, 32: 30, 33: 73, 34: 54, 35: 45, 36: 83, 37: 182, 38: 88, 39: 75, 40: 85, 41: 54, 42: 53, 43: 89, 44: 59, 45: 37, 46: 35, 47: 38, 48: 29, 49: 18, 50: 45, 51: 60, 52: 49, 53: 62, 54: 55, 55: 78, 56: 96, 57: 29, 58: 22, 59: 24, 60: 13, 61: 14, 62: 11, 63: 11, 64: 18, 65: 12, 66: 12, 67: 30, 68: 52, 69: 52, 70: 44, 71: 28, 72: 28, 73: 20, 74: 56, 75: 40, 76: 31, 77: 50, 78: 40, 79: 46, 80: 42, 81: 29, 82: 19, 83: 36, 84: 25, 85: 22, 86: 17, 87: 19, 88: 26, 89: 30, 90: 20, 91: 15, 92: 21, 93: 11, 94: 8, 95: 8, 96: 19, 97: 5, 98: 8, 99: 8, 100: 11, 101: 11, 102: 8, 103: 3, 104: 9, 105: 5, 106: 4, 107: 7, 108: 3, 109: 6, 110: 3, 111: 5, 112: 4, 113: 5, 114: 6}
 SURAH_NAMES =['الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه', 'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم', 'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر', 'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق', 'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة', 'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج', 'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد', 'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس']
 
+# ✅ مواضيع آمنة للخلفيات العشوائية (للـ Batch Export)
+SAFE_TOPICS = ['sky clouds timelapse', 'galaxy stars space', 'ocean waves slow motion', 'forest trees drone', 'waterfall nature', 'mountains fog', 'mosque architecture', 'islamic pattern', 'nature landscape', 'sunrise golden hour', 'night stars milky way', 'desert sand dunes', 'autumn forest', 'spring flowers', 'rain drops', 'snow falling', 'northern lights aurora', 'lake reflection', 'river flowing', 'birds flying sunset']
+
 # ==========================================
 # ✅ Input Validation - التحقق من صحة المدخلات
 # ==========================================
@@ -1046,8 +1049,8 @@ def fetch_video_pool(user_key, custom_query, count=1, job_id=None, aspect_ratio=
         'snow', 'winter', 'landscape', 'river', 'fog', 'mist', 'earth', 'bird'
     ]
 
-    # ✅ مواضيع آمنة جاهزة
-    safe_topics =['sky clouds timelapse', 'galaxy stars space', 'ocean waves slow motion', 'forest trees drone', 'waterfall nature', 'mountains fog', 'mosque architecture', 'islamic pattern']
+    # ✅ مواضيع آمنة جاهزة (نسخة محلية من SAFE_TOPICS)
+    safe_topics = SAFE_TOPICS
 
     # 🚫 كلمات خطيرة - لو موجودة في النتيجة نرفضها
     BLACKLIST_WORDS = [
@@ -2124,17 +2127,22 @@ def process_batch_queue():
             
             # معالجة الـ items
             items = db_get_batch_items(batch_id)
-            print(f"  📋 Found {len(items)} items to process")
+            print(f"  📋 Found {len(items)} items to process (3 parallel)")
             
-            for item in items:
+            # ═══════════════════════════════════════
+            # 🚀 Parallel Processing - 3 فيديوهات بالتوازي
+            # ═══════════════════════════════════════
+            PARALLEL_WORKERS = 3  # عدد الفيديوهات المتوازية
+            
+            def process_single_video(item, items_count):
+                """معالجة فيديو واحد - تُستدعى بالتوازي"""
                 try:
+                    job_id = item['job_id']
+                    
                     # التحقق من الإيقاف
                     batch = db_get_batch(batch_id)
                     if batch and batch.get('status') == 'cancelled':
-                        print(f"⚠️ Batch {batch_id[:8]}... cancelled")
-                        break
-                    
-                    job_id = item['job_id']
+                        return 'cancelled'
                     
                     # الحصول على الـ config
                     job = db_get_job(job_id)
@@ -2143,16 +2151,19 @@ def process_batch_queue():
                         db_update_batch_item(batch_id, job_id, status='error', error='Config missing')
                         batch = db_get_batch(batch_id)
                         db_update_batch(batch_id, failed_jobs=(batch['failed_jobs'] or 0) + 1)
-                        continue
+                        return 'error'
                     
                     config = json.loads(job['config_json'])
+                    
+                    # ✅ توليد Query عشوائي لكل فيديو
+                    random_bg_query = random.choice(SAFE_TOPICS)
                     
                     # تحديث حالة الـ item مع وقت البداية
                     video_start_time = time.time()
                     db_update_batch_item(batch_id, job_id, status='processing', video_started_at=video_start_time)
                     db_update_batch(batch_id, current_job_id=job_id, current_job_index=item['position'])
                     
-                    print(f"  🎬 Processing video {item['position'] + 1}/{len(items)}: Surah {item['surah']}, Ayah {item['start_ayah']}")
+                    print(f"  🎬 [{item['position'] + 1}/{items_count}] Surah {item['surah']}, Ayah {item['start_ayah']} | Query: {random_bg_query}")
                     
                     # معالجة الفيديو
                     style_settings = config.get('style', {})
@@ -2165,7 +2176,7 @@ def process_batch_queue():
                         item['start_ayah'],
                         item['end_ayah'],
                         config.get('quality', '720'),
-                        config.get('bgQuery', ''),
+                        random_bg_query,  # ✅ Query عشوائي لكل فيديو
                         int(config.get('fps', 20)),
                         config.get('dynamicBg', False),
                         config.get('useGlow', False),
@@ -2193,7 +2204,8 @@ def process_batch_queue():
                     # حساب المتوسط الجديد
                     new_avg = ((old_avg * (completed - 1)) + video_time) / completed
                     db_update_batch(batch_id, completed_jobs=completed, avg_video_time=new_avg)
-                    print(f"  ✅ Video {item['position'] + 1} complete! (took {video_time:.1f}s, avg: {new_avg:.1f}s)")
+                    print(f"  ✅ [{item['position'] + 1}/{items_count}] Done! ({video_time:.1f}s, avg: {new_avg:.1f}s)")
+                    return 'success'
                     
                 except Exception as item_error:
                     print(f"  ❌ Video {item.get('position', '?') + 1} failed: {item_error}")
@@ -2201,6 +2213,28 @@ def process_batch_queue():
                     db_update_batch_item(batch_id, item['job_id'], status='error', error=str(item_error))
                     batch = db_get_batch(batch_id)
                     db_update_batch(batch_id, failed_jobs=(batch['failed_jobs'] or 0) + 1)
+                    return 'error'
+            
+            # معالجة الفيديوهات بالتوازي
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            
+            with ThreadPoolExecutor(max_workers=PARALLEL_WORKERS) as executor:
+                # إرسال كل الفيديوهات للمعالجة
+                future_to_item = {
+                    executor.submit(process_single_video, item, len(items)): item 
+                    for item in items
+                }
+                
+                # انتظار النتائج
+                for future in as_completed(future_to_item):
+                    item = future_to_item[future]
+                    try:
+                        result = future.result()
+                        if result == 'cancelled':
+                            print(f"⚠️ Batch cancelled, stopping...")
+                            break
+                    except Exception as e:
+                        print(f"  ❌ Unexpected error: {e}")
             
             # إنهاء الباتش
             batch = db_get_batch(batch_id)
