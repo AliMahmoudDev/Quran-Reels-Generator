@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  quran-reels:
+    build: .
+    container_name: quran-reels-generator
+    ports:
+      - "7860:7860"
+    
+    # ✅ Named Volume للبيانات الدائمة
+    volumes:
+      - quran_data:/app/data
+    
+    # Environment variables
+    environment:
+      - PEXELS_API_KEYS=${PEXELS_API_KEYS:-}
+      - FLASK_APP=main.py
+    
+    # إعدادات إضافية
+    restart: unless-stopped
+    
+    # موارد الحاوية (اختياري)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 4G
+
+# ✅ Named Volume - Docker يديره
+volumes:
+  quran_data:
+    name: quran_reels_data
