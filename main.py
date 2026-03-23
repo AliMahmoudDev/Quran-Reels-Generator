@@ -2221,7 +2221,6 @@ def process_batch_queue():
             # ✅ معالجة بالتوازي باستخدام Threading (آمن مع SQLite Lock)
             import threading
             
-            threads = []
             for i in range(0, len(items), PARALLEL_WORKERS):
                 # التحقق من الإيقاف
                 batch = db_get_batch(batch_id)
@@ -2231,25 +2230,39 @@ def process_batch_queue():
                 
                 # أخذ مجموعة من الفيديوهات (3 أو أقل)
                 batch_items = items[i:i + PARALLEL_WORKERS]
+                print(f"  📦 Processing chunk {i//PARALLEL_WORKERS + 1}: videos {i+1}-{min(i+PARALLEL_WORKERS, len(items))} of {len(items)}")
                 
-                # تشغيل threads للمجموعة
-                results = ['pending'] * len(batch_items)
-                
-                def run_video(idx, item):
-                    results[idx] = process_single_video(item, len(items))
-                
+                # تشغيل threads للمجموعة مع results محمية
+                chunk_results = []
                 threads = []
+                
                 for idx, item in enumerate(batch_items):
-                    t = threading.Thread(target=run_video, args=(idx, item))
+                    # ✅ نستخدم قائمة لتخزين النتيجة (آمنة من closure issues)
+                    result_holder = ['pending']
+                    chunk_results.append(result_holder)
+                    
+                    def run_video(holder, itm, total):
+                        try:
+                            holder[0] = process_single_video(itm, total)
+                        except Exception as e:
+                            print(f"  ❌ Thread error: {e}")
+                            holder[0] = 'error'
+                    
+                    t = threading.Thread(target=run_video, args=(result_holder, item, len(items)))
                     t.start()
                     threads.append(t)
                 
                 # انتظار انتهاء المجموعة
                 for t in threads:
-                    t.join()
+                    t.join(timeout=600)  # timeout 10 دقائق لكل فيديو
+                
+                # طباعة نتائج المجموعة
+                for idx, holder in enumerate(chunk_results):
+                    status = holder[0]
+                    print(f"    📹 Video {batch_items[idx]['position'] + 1}: {status}")
                 
                 # التحقق من الإلغاء
-                if 'cancelled' in results:
+                if any(r[0] == 'cancelled' for r in chunk_results):
                     print(f"⚠️ Batch cancelled, stopping...")
                     break
             
