@@ -2127,7 +2127,7 @@ def process_batch_queue():
             
             # معالجة الـ items
             items = db_get_batch_items(batch_id)
-            print(f"  📋 Found {len(items)} items to process (3 parallel)")
+            print(f"  📋 Found {len(items)} items to process")
             
             # ═══════════════════════════════════════
             # 🚀 Parallel Processing - 3 فيديوهات بالتوازي
@@ -2210,31 +2210,48 @@ def process_batch_queue():
                 except Exception as item_error:
                     print(f"  ❌ Video {item.get('position', '?') + 1} failed: {item_error}")
                     traceback.print_exc()
-                    db_update_batch_item(batch_id, item['job_id'], status='error', error=str(item_error))
-                    batch = db_get_batch(batch_id)
-                    db_update_batch(batch_id, failed_jobs=(batch['failed_jobs'] or 0) + 1)
+                    try:
+                        db_update_batch_item(batch_id, item['job_id'], status='error', error=str(item_error))
+                        batch = db_get_batch(batch_id)
+                        db_update_batch(batch_id, failed_jobs=(batch['failed_jobs'] or 0) + 1)
+                    except:
+                        pass
                     return 'error'
             
-            # معالجة الفيديوهات بالتوازي
-            from concurrent.futures import ThreadPoolExecutor, as_completed
+            # ✅ معالجة بالتوازي باستخدام Threading (آمن مع SQLite Lock)
+            import threading
             
-            with ThreadPoolExecutor(max_workers=PARALLEL_WORKERS) as executor:
-                # إرسال كل الفيديوهات للمعالجة
-                future_to_item = {
-                    executor.submit(process_single_video, item, len(items)): item 
-                    for item in items
-                }
+            threads = []
+            for i in range(0, len(items), PARALLEL_WORKERS):
+                # التحقق من الإيقاف
+                batch = db_get_batch(batch_id)
+                if batch and batch.get('status') == 'cancelled':
+                    print(f"⚠️ Batch cancelled, stopping...")
+                    break
                 
-                # انتظار النتائج
-                for future in as_completed(future_to_item):
-                    item = future_to_item[future]
-                    try:
-                        result = future.result()
-                        if result == 'cancelled':
-                            print(f"⚠️ Batch cancelled, stopping...")
-                            break
-                    except Exception as e:
-                        print(f"  ❌ Unexpected error: {e}")
+                # أخذ مجموعة من الفيديوهات (3 أو أقل)
+                batch_items = items[i:i + PARALLEL_WORKERS]
+                
+                # تشغيل threads للمجموعة
+                results = ['pending'] * len(batch_items)
+                
+                def run_video(idx, item):
+                    results[idx] = process_single_video(item, len(items))
+                
+                threads = []
+                for idx, item in enumerate(batch_items):
+                    t = threading.Thread(target=run_video, args=(idx, item))
+                    t.start()
+                    threads.append(t)
+                
+                # انتظار انتهاء المجموعة
+                for t in threads:
+                    t.join()
+                
+                # التحقق من الإلغاء
+                if 'cancelled' in results:
+                    print(f"⚠️ Batch cancelled, stopping...")
+                    break
             
             # إنهاء الباتش
             batch = db_get_batch(batch_id)
