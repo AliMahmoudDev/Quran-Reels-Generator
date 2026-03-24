@@ -2061,227 +2061,170 @@ def recover_pending_jobs():
     print(f"🚀 Resume complete - {len(pending)} jobs restarted")
 
 # ==========================================
-# 📦 Batch Export System
+# 📦 Batch Export System - Multiple Batches in Parallel
 # ==========================================
 
 BATCH_QUEUE = []  # قائمة الانتظار
 BATCH_QUEUE_LOCK = threading.Lock()
 ACTIVE_BATCHES = {}  # الباتشات النشطة
+MAX_PARALLEL_BATCHES = 3  # عدد الدفعات المتوازية (كل مستخدم دفعته)
 
-def process_batch_queue():
-    """معالجة الباتشات في الخلفية - فيديو واحد في المرة"""
-    print("📦 Batch processor thread started and waiting for batches...")
-    
-    while True:
-        try:
-            batch_id = None
-            should_wait = False
-            
-            # الحصول على batch_id من الـ queue (تحت lock سريع)
-            with BATCH_QUEUE_LOCK:
-                if not BATCH_QUEUE:
-                    # لا يوجد باتشات
-                    pass
-                else:
-                    batch_id = BATCH_QUEUE[0]
-            
-            # لو مفيش باتشات - نستنى شوية
-            if not batch_id:
-                time.sleep(1)
-                continue
-            
-            # التحقق من الباتش (بره الـ lock)
-            batch = db_get_batch(batch_id)
-            if not batch:
-                print(f"⚠️ Batch {batch_id[:8]}... not found in database, removing from queue")
-                with BATCH_QUEUE_LOCK:
-                    if batch_id in BATCH_QUEUE:
-                        BATCH_QUEUE.remove(batch_id)
-                continue
-            
-            print(f"📊 Batch {batch_id[:8]}... status: {batch['status']}")
-            
-            # لو الباتش مكتمل أو ملغي - نحذفه من القائمة
-            if batch['status'] in ['complete', 'cancelled']:
-                print(f"✅ Batch {batch_id[:8]}... is {batch['status']}, removing from queue")
-                with BATCH_QUEUE_LOCK:
-                    if batch_id in BATCH_QUEUE:
-                        BATCH_QUEUE.remove(batch_id)
-                continue
-            
-            # لو الباتش شغال - نتأكد إنه فعلاً شغال
-            if batch['status'] == 'running':
-                started_at = batch.get('started_at')
-                if started_at and (time.time() - started_at) > 300:  # أكتر من 5 دقايق
-                    print(f"🔄 Batch {batch_id[:8]}... stuck for >5min, resetting to pending")
-                    db_update_batch(batch_id, status='pending')
-                    continue
-                else:
-                    print(f"⏳ Batch {batch_id[:8]}... already running, waiting...")
-                    time.sleep(3)
-                    continue
-            
-            # لو الباتش pending - نبدأ المعالجة فوراً
-            print(f"🎬 Starting batch processing: {batch_id[:8]}...")
-            db_update_batch(batch_id, status='running', started_at=time.time())
-            
-            # معالجة الـ items
-            items = db_get_batch_items(batch_id)
-            print(f"  📋 Found {len(items)} items to process")
-            
-            # ═══════════════════════════════════════
-            # 🚀 Parallel Processing - 3 فيديوهات بالتوازي
-            # ═══════════════════════════════════════
-            PARALLEL_WORKERS = 3  # عدد الفيديوهات المتوازية
-            
-            def process_single_video(item, items_count):
-                """معالجة فيديو واحد - تُستدعى بالتوازي"""
-                try:
-                    job_id = item['job_id']
-                    
-                    # التحقق من الإيقاف
-                    batch = db_get_batch(batch_id)
-                    if batch and batch.get('status') == 'cancelled':
-                        return 'cancelled'
-                    
-                    # الحصول على الـ config
-                    job = db_get_job(job_id)
-                    if not job or not job.get('config_json'):
-                        print(f"  ❌ Job {job_id[:8]}... has no config")
-                        db_update_batch_item(batch_id, job_id, status='error', error='Config missing')
-                        batch = db_get_batch(batch_id)
-                        db_update_batch(batch_id, failed_jobs=(batch['failed_jobs'] or 0) + 1)
-                        return 'error'
-                    
-                    config = json.loads(job['config_json'])
-                    
-                    # ✅ توليد Query عشوائي لكل فيديو
-                    random_bg_query = random.choice(SAFE_TOPICS)
-                    
-                    # تحديث حالة الـ item مع وقت البداية
-                    video_start_time = time.time()
-                    db_update_batch_item(batch_id, job_id, status='processing', video_started_at=video_start_time)
-                    db_update_batch(batch_id, current_job_id=job_id, current_job_index=item['position'])
-                    
-                    print(f"  🎬 [{item['position'] + 1}/{items_count}] Surah {item['surah']}, Ayah {item['start_ayah']} | Query: {random_bg_query}")
-                    
-                    # معالجة الفيديو
-                    style_settings = config.get('style', {})
-
-                    build_video_task(
-                        job_id,
-                        config.get('pexelsKey', ''),
-                        config.get('reciter', ''),
-                        item['surah'],
-                        item['start_ayah'],
-                        item['end_ayah'],
-                        config.get('quality', '720'),
-                        random_bg_query,  # ✅ Query عشوائي لكل فيديو
-                        int(config.get('fps', 20)),
-                        config.get('dynamicBg', False),
-                        config.get('useGlow', False),
-                        config.get('useVignette', False),
-                        config.get('aspectRatio', '9:16'),
-                        style_settings,
-                        config.get('font', 'Arabic'),
-                        config.get('fontEn', 'English')
-                    )
-                    
-                    # حساب وقت الفيديو
-                    video_time = time.time() - video_start_time
-                    
-                    # إعادة الحصول على الـ job بعد المعالجة
-                    updated_job = db_get_job(job_id)
-                    output_path = updated_job.get('output_path') if updated_job else None
-                    
-                    # تحديث حالة الـ item
-                    db_update_batch_item(batch_id, job_id, status='complete', output_path=output_path)
-                    
-                    # تحديث الـ batch counter ومتوسط الوقت
-                    batch = db_get_batch(batch_id)
-                    completed = (batch['completed_jobs'] or 0) + 1
-                    old_avg = batch.get('avg_video_time') or 0
-                    # حساب المتوسط الجديد
-                    new_avg = ((old_avg * (completed - 1)) + video_time) / completed
-                    db_update_batch(batch_id, completed_jobs=completed, avg_video_time=new_avg)
-                    print(f"  ✅ [{item['position'] + 1}/{items_count}] Done! ({video_time:.1f}s, avg: {new_avg:.1f}s)")
-                    return 'success'
-                    
-                except Exception as item_error:
-                    print(f"  ❌ Video {item.get('position', '?') + 1} failed: {item_error}")
-                    traceback.print_exc()
-                    try:
-                        db_update_batch_item(batch_id, item['job_id'], status='error', error=str(item_error))
-                        batch = db_get_batch(batch_id)
-                        db_update_batch(batch_id, failed_jobs=(batch['failed_jobs'] or 0) + 1)
-                    except:
-                        pass
-                    return 'error'
-            
-            # ✅ معالجة بالتوازي باستخدام Threading (آمن مع SQLite Lock)
-            import threading
-            
-            for i in range(0, len(items), PARALLEL_WORKERS):
+def process_single_batch(batch_id):
+    """معالجة دفعة واحدة - فيديو ورا فيديو (تسلسلي)"""
+    try:
+        print(f"🎬 Starting batch: {batch_id[:8]}...")
+        db_update_batch(batch_id, status='running', started_at=time.time())
+        
+        # معالجة الـ items
+        items = db_get_batch_items(batch_id)
+        print(f"  📋 Batch {batch_id[:8]}: {len(items)} videos to process")
+        
+        for item in items:
+            try:
                 # التحقق من الإيقاف
                 batch = db_get_batch(batch_id)
                 if batch and batch.get('status') == 'cancelled':
-                    print(f"⚠️ Batch cancelled, stopping...")
+                    print(f"⚠️ Batch {batch_id[:8]}... cancelled")
                     break
                 
-                # أخذ مجموعة من الفيديوهات (3 أو أقل)
-                batch_items = items[i:i + PARALLEL_WORKERS]
-                print(f"  📦 Processing chunk {i//PARALLEL_WORKERS + 1}: videos {i+1}-{min(i+PARALLEL_WORKERS, len(items))} of {len(items)}")
+                job_id = item['job_id']
                 
-                # تشغيل threads للمجموعة مع results محمية
-                chunk_results = []
-                threads = []
+                # الحصول على الـ config
+                job = db_get_job(job_id)
+                if not job or not job.get('config_json'):
+                    print(f"  ❌ Job {job_id[:8]}... has no config")
+                    db_update_batch_item(batch_id, job_id, status='error', error='Config missing')
+                    batch = db_get_batch(batch_id)
+                    db_update_batch(batch_id, failed_jobs=(batch['failed_jobs'] or 0) + 1)
+                    continue
                 
-                for idx, item in enumerate(batch_items):
-                    # ✅ نستخدم قائمة لتخزين النتيجة (آمنة من closure issues)
-                    result_holder = ['pending']
-                    chunk_results.append(result_holder)
-                    
-                    def run_video(holder, itm, total):
-                        try:
-                            holder[0] = process_single_video(itm, total)
-                        except Exception as e:
-                            print(f"  ❌ Thread error: {e}")
-                            holder[0] = 'error'
-                    
-                    t = threading.Thread(target=run_video, args=(result_holder, item, len(items)))
-                    t.start()
-                    threads.append(t)
+                config = json.loads(job['config_json'])
                 
-                # انتظار انتهاء المجموعة
-                for t in threads:
-                    t.join(timeout=600)  # timeout 10 دقائق لكل فيديو
+                # ✅ توليد Query عشوائي لكل فيديو
+                random_bg_query = random.choice(SAFE_TOPICS)
                 
-                # طباعة نتائج المجموعة
-                for idx, holder in enumerate(chunk_results):
-                    status = holder[0]
-                    print(f"    📹 Video {batch_items[idx]['position'] + 1}: {status}")
+                # تحديث حالة الـ item مع وقت البداية
+                video_start_time = time.time()
+                db_update_batch_item(batch_id, job_id, status='processing', video_started_at=video_start_time)
+                db_update_batch(batch_id, current_job_id=job_id, current_job_index=item['position'])
                 
-                # التحقق من الإلغاء
-                if any(r[0] == 'cancelled' for r in chunk_results):
-                    print(f"⚠️ Batch cancelled, stopping...")
-                    break
+                print(f"  🎬 [{item['position'] + 1}/{len(items)}] Surah {item['surah']}, Ayah {item['start_ayah']} | Query: {random_bg_query}")
+                
+                # معالجة الفيديو
+                style_settings = config.get('style', {})
+
+                build_video_task(
+                    job_id,
+                    config.get('pexelsKey', ''),
+                    config.get('reciter', ''),
+                    item['surah'],
+                    item['start_ayah'],
+                    item['end_ayah'],
+                    config.get('quality', '720'),
+                    random_bg_query,
+                    int(config.get('fps', 20)),
+                    config.get('dynamicBg', False),
+                    config.get('useGlow', False),
+                    config.get('useVignette', False),
+                    config.get('aspectRatio', '9:16'),
+                    style_settings,
+                    config.get('font', 'Arabic'),
+                    config.get('fontEn', 'English')
+                )
+                
+                # حساب وقت الفيديو
+                video_time = time.time() - video_start_time
+                
+                # إعادة الحصول على الـ job بعد المعالجة
+                updated_job = db_get_job(job_id)
+                output_path = updated_job.get('output_path') if updated_job else None
+                
+                # تحديث حالة الـ item
+                db_update_batch_item(batch_id, job_id, status='complete', output_path=output_path)
+                
+                # تحديث الـ batch counter ومتوسط الوقت
+                batch = db_get_batch(batch_id)
+                completed = (batch['completed_jobs'] or 0) + 1
+                old_avg = batch.get('avg_video_time') or 0
+                new_avg = ((old_avg * (completed - 1)) + video_time) / completed
+                db_update_batch(batch_id, completed_jobs=completed, avg_video_time=new_avg)
+                print(f"  ✅ [{item['position'] + 1}/{len(items)}] Done! ({video_time:.1f}s)")
+                
+            except Exception as item_error:
+                print(f"  ❌ Video {item.get('position', '?') + 1} failed: {item_error}")
+                traceback.print_exc()
+                try:
+                    db_update_batch_item(batch_id, item['job_id'], status='error', error=str(item_error))
+                    batch = db_get_batch(batch_id)
+                    db_update_batch(batch_id, failed_jobs=(batch['failed_jobs'] or 0) + 1)
+                except:
+                    pass
+        
+        # إنهاء الباتش
+        batch = db_get_batch(batch_id)
+        db_update_batch(batch_id, status='complete', completed_at=time.time())
+        print(f"📦 Batch {batch_id[:8]}... complete: {batch['completed_jobs']}/{batch['total_jobs']} videos")
+        
+    except Exception as e:
+        print(f"❌ Batch {batch_id[:8]}... error: {e}")
+        traceback.print_exc()
+        db_update_batch(batch_id, status='error', error=str(e))
+    
+    finally:
+        # إزالة من ACTIVE_BATCHES
+        with BATCH_QUEUE_LOCK:
+            if batch_id in ACTIVE_BATCHES:
+                del ACTIVE_BATCHES[batch_id]
+        print(f"🔄 Batch {batch_id[:8]}... released slot (active: {len(ACTIVE_BATCHES)})")
+
+def process_batch_queue():
+    """مراقبة قائمة الانتظار وتشغيل دفعات متعددة بالتوازي"""
+    print("📦 Batch processor started - can run up to 3 batches in parallel")
+    
+    while True:
+        try:
+            # عدد الدفعات النشطة
+            active_count = len(ACTIVE_BATCHES)
             
-            # إنهاء الباتش
-            batch = db_get_batch(batch_id)
-            db_update_batch(batch_id, status='complete', completed_at=time.time())
-            print(f"📦 Batch {batch_id[:8]}... complete: {batch['completed_jobs']}/{batch['total_jobs']} videos")
+            # لو فيه مكان لدفعات جديدة
+            if active_count < MAX_PARALLEL_BATCHES:
+                # البحث عن دفعة pending في الـ queue
+                with BATCH_QUEUE_LOCK:
+                    for batch_id in BATCH_QUEUE[:]:  # نسخة من القائمة
+                        # تجاهل لو الدفعة دي شغالة
+                        if batch_id in ACTIVE_BATCHES:
+                            continue
+                        
+                        # التحقق من الحالة
+                        batch = db_get_batch(batch_id)
+                        if not batch:
+                            BATCH_QUEUE.remove(batch_id)
+                            continue
+                        
+                        # لو الدفعة مكتملة أو ملغاة
+                        if batch['status'] in ['complete', 'cancelled']:
+                            BATCH_QUEUE.remove(batch_id)
+                            continue
+                        
+                        # لو الدفعة pending - نبدأها
+                        if batch['status'] == 'pending':
+                            ACTIVE_BATCHES[batch_id] = True
+                            print(f"🚀 Starting batch {batch_id[:8]}... (active: {active_count + 1}/{MAX_PARALLEL_BATCHES})")
+                            
+                            # تشغيل في thread منفصل
+                            t = threading.Thread(
+                                target=process_single_batch,
+                                args=(batch_id,),
+                                daemon=True
+                            )
+                            t.start()
+                            break  # نبدأ دفعة واحدة كل مرة
             
-            # إزالة من قائمة الانتظار
-            with BATCH_QUEUE_LOCK:
-                if batch_id in BATCH_QUEUE:
-                    BATCH_QUEUE.remove(batch_id)
-            
-            # استراحة قصيرة بين الباتشات
+            # استراحة قصيرة
             time.sleep(1)
-                    
-        except Exception as batch_error:
-            print(f"❌ Batch processing error: {batch_error}")
-            traceback.print_exc()
+            
+        except Exception as e:
+            print(f"❌ Batch queue error: {e}")
             time.sleep(2)
 
 def recover_pending_batches():
