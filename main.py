@@ -1352,9 +1352,10 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         
         # 🎬 إعدادات الضغط (قيم ثابتة للحصول على أفضل توازن)
         # CRF 24 = جودة عالية مع ضغط ممتاز (مثالي للقرآن - نص ثابت + خلفية)
-        # Preset fast = سرعة جيدة + ضغط كفء
+        # Preset medium = ضغط أفضل بـ 5% مع وقت إضافي معقول
+        # Audio 128k = نفس جودة السماع مع توفير 33%
         crf_value = 24
-        preset_value = 'fast'
+        preset_value = 'medium'
         
         update_job_status(job_id, 90, "Rendering Video (Mixing)...")
         final_video.write_videofile(
@@ -1362,7 +1363,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             fps=fps, 
             codec='libx264', 
             audio_codec='aac', 
-            audio_bitrate='192k',
+            audio_bitrate='128k',
             preset=preset_value,
             threads=os.cpu_count() or 4,
             ffmpeg_params=['-crf', str(crf_value)],
@@ -1375,7 +1376,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
             f'ffmpeg -y -i "{temp_mix_path}" '
             f'-af "{STUDIO_DRY_FILTER}" '
             f'-c:v copy '
-            f'-c:a aac -b:a 192k '
+            f'-c:a aac -b:a 128k '
             f'"{final_output_path}"'
         )
         
