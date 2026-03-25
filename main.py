@@ -1351,9 +1351,9 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
         temp_mix_path = os.path.join(workspace, f"temp_mix_{job_id}.mp4")
         
         # 🎬 إعدادات الضغط (قيم ثابتة للحصول على أفضل توازن)
-        # CRF 23 = جودة عالية مع ضغط ممتاز (لا يُرى فرق بالعين)
+        # CRF 24 = جودة عالية مع ضغط ممتاز (مثالي للقرآن - نص ثابت + خلفية)
         # Preset fast = سرعة جيدة + ضغط كفء
-        crf_value = 23
+        crf_value = 24
         preset_value = 'fast'
         
         update_job_status(job_id, 90, "Rendering Video (Mixing)...")
