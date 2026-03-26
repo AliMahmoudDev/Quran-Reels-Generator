@@ -1562,6 +1562,8 @@ def estimate_duration():
                     timings = json.load(f)
             
             # حساب المدة
+            TEXT_FADE_PER_AYAH = 0.7  # crossfade in + out لكل آية
+            ayah_count = 0
             if timings:
                 for ayah in range(start_ayah, end_ayah + 1):
                     ayah_str = str(ayah)
@@ -1570,19 +1572,29 @@ def estimate_duration():
                         end_time = timings[ayah_str]['end']
                         duration_ms = end_time - start_time
                         total_duration_ms += duration_ms
+                        ayah_count += 1
                     else:
                         # fallback ذكي
                         total_duration_ms += int(smart_estimate_by_length(surah, ayah, reciter) * 1000)
+                        ayah_count += 1
+                # إضافة crossfade لكل آية
+                total_duration_ms += int(ayah_count * TEXT_FADE_PER_AYAH * 1000)
             else:
                 # fallback ذكي
                 for ayah in range(start_ayah, end_ayah + 1):
                     total_duration_ms += int(smart_estimate_by_length(surah, ayah, reciter) * 1000)
+                # إضافة crossfade
+                total_duration_ms += int((end_ayah - start_ayah + 1) * TEXT_FADE_PER_AYAH * 1000)
         
         else:
             # ❌ مفيش ID - نستخدم الحساب الذكي
+            TEXT_FADE_PER_AYAH = 0.7  # crossfade in + out لكل آية
+            ayah_count = end_ayah - start_ayah + 1
             for ayah in range(start_ayah, end_ayah + 1):
                 duration = smart_estimate_by_length(surah, ayah, reciter)
                 total_duration_ms += int(duration * 1000)
+            # إضافة crossfade
+            total_duration_ms += int(ayah_count * TEXT_FADE_PER_AYAH * 1000)
         
         # تحويل المدة لصيغة مقروءة
         total_seconds = total_duration_ms // 1000
