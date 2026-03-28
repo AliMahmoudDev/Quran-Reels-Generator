@@ -561,6 +561,15 @@ for name in NEW_RECITERS_CONFIG.keys():
 
 RECITERS_MAP = {**{k: k for k in NEW_RECITERS_CONFIG.keys()}, **OLD_RECITERS_MAP}
 
+# ✅ خريطة من الـ ID (اللي في OLD_RECITERS_MAP) للـ mp3quran ID (لو موجود)
+# القراء القدام اللي عندهم توقيتات في mp3quran
+OLD_RECITER_TO_MP3QURAN_ID = {
+    'Yasser_Ad-Dussary_128kbps': None,      # مش موجود في mp3quran
+    'Maher_AlMuaiqly_64kbps': None,          # مش موجود في mp3quran  
+    'Nasser_Alqatami_128kbps': None,         # مش موجود في mp3quran
+    'Minshawy_Murattal_128kbps': None,       # مش موجود في mp3quran
+}
+
 # 📖 نصوص الآيات للحساب الذكي (مختصر - أهم السور)
 AYAH_TEXTS_CACHE = {}
 
@@ -1528,15 +1537,18 @@ def estimate_duration():
         
         total_duration_ms = 0
         
+        # 🎯 تحويل الـ reciter للاسم العربي (لو كان ID)
+        reciter_name = RECITER_ID_TO_NAME.get(reciter, reciter)
+        
         # 🎯 محاولة استخدام MP3Quran API للجميع
         reciter_id = None
         
         # القراء الجدد
         if reciter in NEW_RECITERS_CONFIG:
             reciter_id = NEW_RECITERS_CONFIG[reciter][0]
-        # القراء القدام - نبحث في MP3QURAN_IDS
-        elif reciter in MP3QURAN_IDS:
-            reciter_id = MP3QURAN_IDS[reciter]
+        # القراء القدام - نبحث في MP3QURAN_IDS بالاسم العربي
+        elif reciter_name in MP3QURAN_IDS:
+            reciter_id = MP3QURAN_IDS[reciter_name]
         
         if reciter_id:
             # ✅ عندنا ID - نستخدم mp3quran timing API
@@ -1575,14 +1587,14 @@ def estimate_duration():
                         ayah_count += 1
                     else:
                         # fallback ذكي
-                        total_duration_ms += int(smart_estimate_by_length(surah, ayah, reciter) * 1000)
+                        total_duration_ms += int(smart_estimate_by_length(surah, ayah, reciter_name) * 1000)
                         ayah_count += 1
                 # إضافة crossfade لكل آية
                 total_duration_ms += int(ayah_count * TEXT_FADE_PER_AYAH * 1000)
             else:
                 # fallback ذكي
                 for ayah in range(start_ayah, end_ayah + 1):
-                    total_duration_ms += int(smart_estimate_by_length(surah, ayah, reciter) * 1000)
+                    total_duration_ms += int(smart_estimate_by_length(surah, ayah, reciter_name) * 1000)
                 # إضافة crossfade
                 total_duration_ms += int((end_ayah - start_ayah + 1) * TEXT_FADE_PER_AYAH * 1000)
         
@@ -1591,7 +1603,7 @@ def estimate_duration():
             TEXT_FADE_PER_AYAH = 0.7  # crossfade in + out لكل آية
             ayah_count = end_ayah - start_ayah + 1
             for ayah in range(start_ayah, end_ayah + 1):
-                duration = smart_estimate_by_length(surah, ayah, reciter)
+                duration = smart_estimate_by_length(surah, ayah, reciter_name)
                 total_duration_ms += int(duration * 1000)
             # إضافة crossfade
             total_duration_ms += int(ayah_count * TEXT_FADE_PER_AYAH * 1000)
