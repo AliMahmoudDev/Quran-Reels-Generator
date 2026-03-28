@@ -1267,6 +1267,23 @@
                     </div>
                 </div>
 
+                <!-- 🎤 اختيار القراء للعشوائي -->
+                <div class="form-group" style="margin-top: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleReciterFilter()">
+                        <label class="form-label" style="margin: 0;">🎤 قراء العشوائي</label>
+                        <span id="reciterFilterToggle" style="font-size: 1.2rem; transition: transform 0.3s;">▼</span>
+                    </div>
+                    <div id="reciterFilterSection" style="display: none; margin-top: 12px; padding: 12px; background: var(--bg-input); border-radius: 8px; max-height: 200px; overflow-y: auto;">
+                        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                            <button type="button" class="btn-secondary" style="flex: 1; padding: 6px; font-size: 0.75rem;" onclick="selectAllReciters()">تحديد الكل</button>
+                            <button type="button" class="btn-secondary" style="flex: 1; padding: 6px; font-size: 0.75rem;" onclick="deselectAllReciters()">إلغاء الكل</button>
+                        </div>
+                        <div id="reciterCheckboxes" style="display: flex; flex-direction: column; gap: 6px;">
+                            <!-- سيتم ملؤها بالجافاسكريبت -->
+                        </div>
+                    </div>
+                </div>
+
                 <!-- أزرار التحكم -->
                 <div class="btn-row">
                     <button type="button" class="btn-secondary" onclick="randomizeBatch()">🎲 عشوائي</button>
@@ -2575,12 +2592,107 @@
         let batchItems = [];
         let currentBatchId = null;
         let batchCancelled = false;
+        let selectedRecitersForRandom = []; // القراء المحددين للعشوائي
+
+        // 🎤 إدارة قراء العشوائي
+        function toggleReciterFilter() {
+            const section = document.getElementById('reciterFilterSection');
+            const toggle = document.getElementById('reciterFilterToggle');
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                toggle.style.transform = 'rotate(180deg)';
+            } else {
+                section.style.display = 'none';
+                toggle.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function initReciterCheckboxes() {
+            const container = document.getElementById('reciterCheckboxes');
+            const reciterSelect = document.getElementById('batchReciterSelect');
+            if (!container || !reciterSelect) return;
+
+            container.innerHTML = '';
+            
+            // تحميل الاختيارات المحفوظة
+            const saved = localStorage.getItem('selectedRecitersForRandom');
+            if (saved) {
+                try {
+                    selectedRecitersForRandom = JSON.parse(saved);
+                } catch (e) {
+                    selectedRecitersForRandom = [];
+                }
+            }
+
+            // إنشاء checkboxes
+            for (let i = 0; i < reciterSelect.options.length; i++) {
+                const option = reciterSelect.options[i];
+                const reciterValue = option.value;
+                const reciterName = option.text;
+                
+                // لو مفيش محفوظات، نحدد الكل افتراضياً
+                const isChecked = selectedRecitersForRandom.length === 0 || selectedRecitersForRandom.includes(reciterValue);
+                
+                const label = document.createElement('label');
+                label.style.cssText = 'display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: background 0.2s;';
+                label.innerHTML = `
+                    <input type="checkbox" value="${reciterValue}" ${isChecked ? 'checked' : ''} onchange="updateSelectedReciters()" style="width: 16px; height: 16px; cursor: pointer;">
+                    <span style="font-size: 0.85rem;">${reciterName}</span>
+                `;
+                label.onmouseenter = () => label.style.background = 'var(--bg-card)';
+                label.onmouseleave = () => label.style.background = 'transparent';
+                container.appendChild(label);
+            }
+
+            // تحديث القائمة المحددة
+            updateSelectedReciters();
+        }
+
+        function updateSelectedReciters() {
+            const checkboxes = document.querySelectorAll('#reciterCheckboxes input[type="checkbox"]');
+            selectedRecitersForRandom = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    selectedRecitersForRandom.push(cb.value);
+                }
+            });
+            
+            // حفظ في localStorage
+            localStorage.setItem('selectedRecitersForRandom', JSON.stringify(selectedRecitersForRandom));
+        }
+
+        function selectAllReciters() {
+            const checkboxes = document.querySelectorAll('#reciterCheckboxes input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = true);
+            updateSelectedReciters();
+        }
+
+        function deselectAllReciters() {
+            const checkboxes = document.querySelectorAll('#reciterCheckboxes input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+            updateSelectedReciters();
+            // لازم على الأقل قارئ واحد يكون محدد
+            if (checkboxes.length > 0) {
+                checkboxes[0].checked = true;
+                updateSelectedReciters();
+            }
+        }
 
         function randomizeBatch() {
             const reciterSelect = document.getElementById('batchReciterSelect');
             const surahSelect = document.getElementById('batchSurahSelect');
             
-            if (reciterSelect.options.length > 0) {
+            // 🎯 اختيار قارئ عشوائي من المحددين فقط
+            if (selectedRecitersForRandom.length > 0) {
+                const randomReciter = selectedRecitersForRandom[Math.floor(Math.random() * selectedRecitersForRandom.length)];
+                // البحث عن الـ index في الـ select
+                for (let i = 0; i < reciterSelect.options.length; i++) {
+                    if (reciterSelect.options[i].value === randomReciter) {
+                        reciterSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            } else if (reciterSelect.options.length > 0) {
                 reciterSelect.selectedIndex = Math.floor(Math.random() * reciterSelect.options.length);
             }
             
@@ -2985,6 +3097,9 @@
             if (batchReciterSelect && mainReciterSelect) {
                 batchReciterSelect.innerHTML = mainReciterSelect.innerHTML;
             }
+
+            // 🎤 تهيئة checkboxes القراء للعشوائي
+            initReciterCheckboxes();
         }
 
         document.querySelectorAll('.tab-btn').forEach(btn => {
