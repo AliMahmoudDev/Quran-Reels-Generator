@@ -49,5 +49,6 @@ USER user
 ENV HOME=/home/user \
     PATH=/home/user/.local/bin:$PATH
 
+# بعد (صحيح)
 ENV FLASK_APP=main.py
 CMD ["flask", "run", "--host=0.0.0.0", "--port=7860"]
