@@ -3010,25 +3010,48 @@ def youtube_disconnect():
 # 🚀 Application Startup (Correct Order!)
 # ==========================================
 
+# ✅ كشف بيئة HuggingFace
+IS_HUGGINGFACE = bool(os.environ.get('SPACE_ID')) or bool(os.environ.get('SPACE_AUTHOR_NAME'))
+
 # 1. Initialize database FIRST (before any threads)
 print("📦 Initializing database...")
 init_db()
 
-# 2. Recover pending jobs from previous session
-print("🔄 Recovering pending jobs...")
-try:
-    recover_pending_jobs()
-except Exception as e:
-    print(f"⚠️ Failed to recover pending jobs: {e}")
+# 2. Handle pending jobs from previous session
+if IS_HUGGINGFACE:
+    # ✅ على HuggingFace: إلغاء Jobs القديمة بدل استئنافها
+    # عشان متهنش الـ CPU/RAM وتبقى الـ Space unresponsive
+    print("🔄 HuggingFace detected - cancelling stale jobs...")
+    try:
+        stale_jobs = db_get_pending_jobs()
+        for job in stale_jobs:
+            db_update_job(job['id'], status='error', error='Server restarted (HuggingFace sleep)')
+        if stale_jobs:
+            print(f"🧹 Cancelled {len(stale_jobs)} stale jobs")
+        
+        # إلغاء الباتشات المعلقة كمان
+        stale_batches = db_get_pending_batches()
+        for batch in stale_batches:
+            db_update_batch(batch['id'], status='error', error='Server restarted (HuggingFace sleep)')
+        if stale_batches:
+            print(f"🧹 Cancelled {len(stale_batches)} stale batches")
+    except Exception as e:
+        print(f"⚠️ Failed to clean stale jobs: {e}")
+else:
+    # على السيرفر المحلي: استئناف الـ jobs كالعادي
+    print("🔄 Recovering pending jobs...")
+    try:
+        recover_pending_jobs()
+    except Exception as e:
+        print(f"⚠️ Failed to recover pending jobs: {e}")
 
-# 3. Recover pending batches
-print("📦 Recovering pending batches...")
-try:
-    recover_pending_batches()
-except Exception as e:
-    print(f"⚠️ Failed to recover pending batches: {e}")
+    print("📦 Recovering pending batches...")
+    try:
+        recover_pending_batches()
+    except Exception as e:
+        print(f"⚠️ Failed to recover pending batches: {e}")
 
-# 4. Start background threads AFTER database is ready
+# 3. Start background threads AFTER database is ready
 print("🧵 Starting background threads...")
 
 # Start batch processor thread
@@ -3041,8 +3064,10 @@ cleanup_thread = threading.Thread(target=background_cleanup, daemon=True, name="
 cleanup_thread.start()
 print("✅ Cleanup thread started")
 
+print("🚀 Quran Reels Generator ready!")
+
 if __name__ == "__main__":
-    print("🚀 Quran Reels Generator starting...")
+    print("🚀 Starting Flask development server...")
     app.run(host='0.0.0.0', port=7860, threaded=True)
 
 

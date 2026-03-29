@@ -49,6 +49,11 @@ USER user
 ENV HOME=/home/user \
     PATH=/home/user/.local/bin:$PATH
 
-# بعد (صحيح)
-ENV FLASK_APP=main.py
-CMD ["flask", "run", "--host=0.0.0.0", "--port=7860"]
+# ✅ إضافة EXPOSE لـ HuggingFace Spaces (مهم جداً!)
+EXPOSE 7860
+
+# ✅ استخدام gunicorn بدل flask run (Production WSGI Server)
+# -w 1 = عامل واحد (عشان الـ threads الداخلية)
+# --threads 4 = 4 threads للطلبات المتزامنة
+# --timeout 300 = 5 دقائق timeout (الفيديو بياخد وقت)
+CMD ["gunicorn", "-w", "1", "--threads", "4", "-b", "0.0.0.0:7860", "--timeout", "300", "main:app"]
