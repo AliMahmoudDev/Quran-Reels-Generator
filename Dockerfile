@@ -52,8 +52,6 @@ ENV HOME=/home/user \
 # ✅ إضافة EXPOSE لـ HuggingFace Spaces (مهم جداً!)
 EXPOSE 7860
 
-# ✅ استخدام gunicorn بدل flask run (Production WSGI Server)
-# -w 1 = عامل واحد (عشان الـ threads الداخلية)
-# --threads 4 = 4 threads للطلبات المتزامنة
-# --timeout 300 = 5 دقائق timeout (الفيديو بياخد وقت)
-CMD ["gunicorn", "-w", "1", "--threads", "4", "-b", "0.0.0.0:7860", "--timeout", "300", "main:app"]
+# ✅ استخدام start.sh (Production WSGI Server مع logging)
+# start.sh بيقرأ PORT من Environment variable (HuggingFace بتخليه)
+CMD ["bash", "start.sh"]

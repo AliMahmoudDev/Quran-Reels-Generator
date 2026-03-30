@@ -1692,6 +1692,13 @@ def health_check():
 @app.route('/')
 def ui(): return send_file(UI_PATH) if os.path.exists(UI_PATH) else "API Running"
 
+# ✅ HuggingFace Health Check Endpoint - مهم جداً!
+# HuggingFace بتعمل ping على الـ '/' route عشان تتأكد إن التطبيق شغال
+@app.route('/healthz')
+def hf_health():
+    """HuggingFace Spaces health check endpoint"""
+    return '', 200
+
 @app.route('/api/generate', methods=['POST'])
 @limiter.limit("20 per hour")  # 🛡️ 20 فيديو في الساعة
 def gen():
