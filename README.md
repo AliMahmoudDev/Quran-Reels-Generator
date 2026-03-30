@@ -1,3 +1,13 @@
+---
+title: Quran Reels Generator
+emoji: 📖
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # 🎥 Quran Reels Generator | صانع الريلز القرآني
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
