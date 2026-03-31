@@ -2123,7 +2123,29 @@ def process_single_batch(batch_id):
                 
                 # الحصول على الـ config
                 job = db_get_job(job_id)
-                if not job or not job.get('config_json'):
+                config = None
+                
+                # أولوية: من الـ job نفسه
+                if job and job.get('config_json'):
+                    try:
+                        config = json.loads(job['config_json'])
+                    except:
+                        pass
+                
+                # ثانوية: من batch config (fallback)
+                if not config:
+                    batch_data = db_get_batch(batch_id)
+                    if batch_data and batch_data.get('config_json'):
+                        try:
+                            config = json.loads(batch_data['config_json'])
+                            # دمج بيانات الـ item الحالي
+                            config['surah'] = item['surah']
+                            config['startAyah'] = item['start_ayah']
+                            config['endAyah'] = item['end_ayah']
+                        except:
+                            pass
+                
+                if not config:
                     print(f"  ❌ Job {job_id[:8]}... has no config")
                     db_update_batch_item(batch_id, job_id, status='error', error='Config missing')
                     batch = db_get_batch(batch_id)
@@ -2144,6 +2166,10 @@ def process_single_batch(batch_id):
                 
                 # معالجة الفيديو
                 style_settings = config.get('style', {})
+
+                # تحديث config_json في الـ job (لو كان فاضيه من الـ fallback)
+                if job and not job.get('config_json'):
+                    db_update_job(job_id, config_json=json.dumps(config))
 
                 build_video_task(
                     job_id,
@@ -3026,22 +3052,34 @@ init_db()
 
 # 2. Handle pending jobs from previous session
 if IS_HUGGINGFACE:
-    # ✅ على HuggingFace: إلغاء Jobs القديمة بدل استئنافها
-    # عشان متهنش الـ CPU/RAM وتبقى الـ Space unresponsive
-    print("🔄 HuggingFace detected - cancelling stale jobs...")
+    # ✅ على HuggingFace: تنظيف بس المشlugل - مستني الباتشات تاني
+    print("🔄 HuggingFace detected - cleaning stale single jobs...")
     try:
         stale_jobs = db_get_pending_jobs()
         for job in stale_jobs:
-            db_update_job(job['id'], status='error', error='Server restarted (HuggingFace sleep)')
-        if stale_jobs:
-            print(f"🧹 Cancelled {len(stale_jobs)} stale jobs")
+            # شيك لو الـ job ده مش جزء من batch
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute("SELECT batch_id FROM batch_items WHERE job_id = ?", (job['id'],))
+            batch_check = c.fetchone()
+            conn.close()
+            
+            if batch_check is None:
+                # ده job فردي (مش جزء من batch) - نلغيه
+                db_update_job(job['id'], status='error', error='Server restarted (HuggingFace sleep)')
+            else:
+                # ده جزء من batch - نسيبه_pending عشان batch processor يعالجه
+                pass
         
-        # إلغاء الباتشات المعلقة كمان
+        if stale_jobs:
+            print(f"🧹 Checked {len(stale_jobs)} stale jobs (batch jobs preserved)")
+        
+        # إعادة الباتشات اللي كانت running لـ pending
         stale_batches = db_get_pending_batches()
         for batch in stale_batches:
-            db_update_batch(batch['id'], status='error', error='Server restarted (HuggingFace sleep)')
-        if stale_batches:
-            print(f"🧹 Cancelled {len(stale_batches)} stale batches")
+            if batch['status'] == 'running':
+                db_update_batch(batch['id'], status='pending')
+                print(f"  🔄 Reset batch {batch['id'][:8]}... to 'pending'")
     except Exception as e:
         print(f"⚠️ Failed to clean stale jobs: {e}")
 else:
