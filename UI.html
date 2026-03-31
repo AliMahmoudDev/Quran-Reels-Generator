@@ -1297,7 +1297,7 @@
                 <!-- قائمة الفيديوهات -->
                 <div class="batch-list-section" style="margin-top: 24px;">
                     <div class="history-header" style="margin-bottom: 12px;">
-                        <h4 style="font-size: 0.95rem;">📋 قائمة الفيديوهات (<span id="batchCount">0</span>/15)</h4>
+                        <h4 style="font-size: 0.95rem;">📋 قائمة الفيديوهات (<span id="batchCount">0</span>/10)</h4>
                         <button class="btn-secondary" style="width: auto; height: 32px; padding: 0 10px; font-size: 0.75rem;" onclick="clearBatchList()">🗑️ مسح الكل</button>
                     </div>
                     <div id="batchList" style="max-height: 350px; overflow-y: auto;">
@@ -2728,7 +2728,7 @@
             updateBatchEstimatedTime();
         }
 
-        const MAX_BATCH_VIDEOS = 15; // الحد الأقصى لعدد الفيديوهات في الدفعة
+        const MAX_BATCH_VIDEOS = 10; // الحد الأقصى لعدد الفيديوهات في الدفعة
 
         function addToBatchList() {
             const reciterSelect = document.getElementById('batchReciterSelect');
