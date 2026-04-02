@@ -1314,7 +1314,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 ar_y_pos = target_h * base_y
                 
                 ac = ac.set_position(('center', ar_y_pos))
-                ec = ec.set_position(('center', ar_y_pos + ac.h + (10 * scale)))
+                ec = ec.set_position(('center', ar_y_pos + ac.h + (2 * scale)))
 
                 # و. معالجة الخلفية للقطعة (نستخدم actual_duration)
                 # ✅ الخلفية تتغير فقط بين الآيات (مش كل سطر)
