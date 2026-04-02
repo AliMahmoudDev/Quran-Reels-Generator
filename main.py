@@ -84,14 +84,15 @@ AudioSegment.ffmpeg = FFMPEG_EXE
 
 # Asset Paths
 FONT_DIR = os.path.join(EXEC_DIR, "fonts")
-FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Arabic.ttf")
+FONT_PATH_ARABIC = os.path.join(FONT_DIR, "Arabic.otf")
 FONT_PATH_ENGLISH = os.path.join(FONT_DIR, "English.otf")
 VISION_DIR = os.path.join(BUNDLE_DIR, "vision")
 UI_PATH = os.path.join(BUNDLE_DIR, "UI.html")
 
 # ✅ الخطوط العربية المتاحة
 AVAILABLE_FONTS = {
-    'Arabic': os.path.join(FONT_DIR, "Arabic.ttf"),
+    'Arabic': os.path.join(FONT_DIR, "Arabic.otf"),
+    'Classic': os.path.join(FONT_DIR, "Classic.ttf"),
     'Amiri': os.path.join(FONT_DIR, "Amiri.ttf"),
     'Uthmani': os.path.join(FONT_DIR, "Uthmani.ttf"),
 }
@@ -903,6 +904,11 @@ def split_into_chunks(text, words_per_chunk=5):
     if not words: return []
     return [" ".join(words[i:i + words_per_chunk]) for i in range(0, len(words), words_per_chunk)]
 
+def to_arabic_numeral(num):
+    """تحويل الأرقام الإنجليزية لعربية"""
+    arabic_digits = '٠١٢٣٤٥٦٧٨٩'
+    return ''.join(arabic_digits[int(d)] for d in str(num))
+
 def create_vignette_mask(w, h):
     Y, X = np.ogrid[:h, :w]
     mask = np.clip((np.sqrt((X - w/2)**2 + (Y - h/2)**2) / np.sqrt((w/2)**2 + (h/2)**2)) * 1.16, 0, 1) ** 3 
@@ -1282,7 +1288,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 end_en = int((chunk_idx + 1) * avg_en_per_ar)
                 if chunk_idx == len(ar_chunks) - 1:
                     en_chunk = " ".join(en_words[start_en:])
-                    display_ar = f"{ar_chunk} ﴿{ayah}﴾"  # ✅ أقواس قرآنية مزخرفة
+                    display_ar = f"{ar_chunk} {to_arabic_numeral(ayah)}"  # رقم آية عربي بدون أقواس
                 else:
                     en_chunk = " ".join(en_words[start_en:end_en])
                     display_ar = ar_chunk
