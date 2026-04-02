@@ -934,8 +934,11 @@ def create_text_clip(text, duration, target_w, scale_factor=1.0, glow=False, sty
     if font_path is None:
         font_path = FONT_PATH_ARABIC
 
+    # ✅ تكبير الخط الافتراضي (UthmanTN1) عشانه صغير بطبيعته
+    font_boost = 1.15 if 'Arabic.otf' in font_path else 1.0
+
     # الخط كبير لأنه سطر واحد
-    final_fs = int(55 * scale_factor * size_mult)
+    final_fs = int(55 * scale_factor * size_mult * font_boost)
     font = get_cached_font(font_path, final_fs)
 
     # ✅ خط Amiri للأقواس المزخرفة (بيظهرها صح)
