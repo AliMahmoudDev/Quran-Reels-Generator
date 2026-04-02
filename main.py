@@ -1288,7 +1288,7 @@ def build_video_task(job_id, user_pexels_key, reciter_id, surah, start, end, qua
                 end_en = int((chunk_idx + 1) * avg_en_per_ar)
                 if chunk_idx == len(ar_chunks) - 1:
                     en_chunk = " ".join(en_words[start_en:])
-                    display_ar = f"{ar_chunk} {to_arabic_numeral(ayah)}"  # رقم آية عربي بدون أقواس
+                    display_ar = f"{ar_chunk} ﴿{to_arabic_numeral(ayah)}﴾"  # رقم آية عربي بأقواس مزخرفة
                 else:
                     en_chunk = " ".join(en_words[start_en:end_en])
                     display_ar = ar_chunk
